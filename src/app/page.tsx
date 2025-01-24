@@ -16,17 +16,30 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  useTheme
+  useTheme,
+  Dialog,
+  DialogTitle,
+  DialogContent,
 } from '@mui/material'
+import { useState } from 'react'
 import Image from 'next/image'
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
 import TokenIcon from '@mui/icons-material/Token'
 import Shield from '@mui/icons-material/Shield'
 
+interface ManualImportInfo {
+  contractAddress?: string;
+  symbol: string;
+  decimals: number;
+  network: string;
+}
+
 export default function Home() {
   const { isConnected } = useAccount()
   const theme = useTheme()
+  const [showManualImportModal, setShowManualImportModal] = useState(false)
+  const [manualImportInfo, setManualImportInfo] = useState<ManualImportInfo | null>(null)
 
   const instructions = [
     {
@@ -35,7 +48,47 @@ export default function Home() {
     },
     {
       icon: <AccessTimeIcon />,
-      text: 'Check your vesting schedule and cliff period for each allocation'
+      text: 'Import $FULA token in your wallet by clicking here',
+      action: (wallet: string | undefined) => {
+        const manualInfo = {
+          contractAddress: process.env.NEXT_PUBLIC_LOCAL_TOKEN_ADDRESS,
+          symbol: 'FULA',
+          decimals: 18,
+          network: 'Ethereum Mainnet'
+        }
+  
+        // If MetaMask is detected
+        if (typeof window.ethereum !== 'undefined' && wallet === 'MetaMask') {
+          return {
+            type: 'metamask',
+            handler: async (setManualImportInfo: Function, setShowManualImportModal: Function) => {
+              try {
+                await window.ethereum.request({
+                  method: 'wallet_watchAsset',
+                  params: {
+                    type: 'ERC20',
+                    options: {
+                      address: process.env.NEXT_PUBLIC_LOCAL_TOKEN_ADDRESS,
+                      symbol: 'FULA',
+                      decimals: 18
+                    },
+                  },
+                })
+              } catch (error) {
+                console.error('Error adding token:', error)
+                // Show manual instructions if MetaMask method fails
+                setManualImportInfo(manualInfo)
+                setShowManualImportModal(true)
+              }
+            }
+          }
+        }
+        // For other wallets, show manual import info
+        return {
+          type: 'manual',
+          info: manualInfo
+        }
+      }
     },
     {
       icon: <TokenIcon />,
@@ -43,7 +96,7 @@ export default function Home() {
     },
     {
       icon: <Shield />,
-      text: 'We suggest you transfer your tokens to a secure wallet after claiming'
+      text: 'We suggest you transfer your tokens to a secure cold or multi-sig wallet after claiming'
     }
   ]
 
@@ -55,6 +108,7 @@ export default function Home() {
         display: 'flex',
         flexDirection: 'column'
       }}>
+        {/* Main Content */}
         <Box sx={{ 
           flex: 1,
           py: 4,
@@ -81,7 +135,7 @@ export default function Home() {
                     WebkitTextFillColor: 'transparent'
                   }}
                 >
-                  Token Vesting Dashboard
+                  $FULA Token Vesting Dashboard
                 </Typography>
                 <Box sx={{ position: 'relative', width: 40, height: 40 }}>
                   <Image
@@ -94,6 +148,7 @@ export default function Home() {
               </Box>
               
               <Divider sx={{ mb: 4 }} />
+              {/* ... rest of your header content ... */}
               
               <ClientOnly>
                 {!isConnected ? (
@@ -119,7 +174,20 @@ export default function Home() {
                     </Stack>
                   </Box>
                 ) : (
-                  <VestingDashboard />
+                  <>
+                    <Box sx={{ 
+                      textAlign: 'center', 
+                      py: 2,
+                      px: 2,
+                      bgcolor: 'grey.50',
+                      borderRadius: 2
+                    }}>
+                      <Stack spacing={0} alignItems="center">
+                        <ConnectButton />
+                      </Stack>
+                    </Box>
+                    <VestingDashboard />
+                  </>
                 )}
               </ClientOnly>
             </Paper>
@@ -144,20 +212,41 @@ export default function Home() {
             </Box>
             
             <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'center',
-              flexWrap: 'wrap',
-              gap: 2
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: '1fr 1fr',
+                md: 'repeat(4, 1fr)',
+              },
+              gap: 3
             }}>
               {instructions.map((instruction, index) => (
-                <Paper key={index} sx={{ 
-                  p: 4, 
-                  maxWidth: 300,
-                  bgcolor: 'rgba(255, 255, 255, 0.1)',
-                  backdropFilter: 'blur(10px)',
-                  color: 'white',
-                  flex: '1 1 250px'
-                }}>
+                <Paper 
+                  key={index} 
+                  sx={{ 
+                    p: 4, 
+                    bgcolor: 'rgba(255, 255, 255, 0.1)',
+                    backdropFilter: 'blur(10px)',
+                    color: 'white',
+                    cursor: instruction.action ? 'pointer' : 'default',
+                    transition: 'transform 0.2s ease-in-out, background-color 0.2s ease-in-out',
+                    '&:hover': instruction.action ? {
+                      transform: 'translateY(-2px)',
+                      bgcolor: 'rgba(255, 255, 255, 0.15)',
+                    } : {}
+                  }}
+                  onClick={async () => {
+                    if (instruction.action) {
+                      const result = instruction.action('MetaMask') // You should get this from your wallet connection
+                      if (result.type === 'metamask') {
+                        await result.handler(setManualImportInfo, setShowManualImportModal)
+                      } else if (result.type === 'manual') {
+                        setManualImportInfo(result.info)
+                        setShowManualImportModal(true)
+                      }
+                    }
+                  }}
+                >
                   <Stack 
                     direction="row" 
                     spacing={1} 
@@ -183,6 +272,50 @@ export default function Home() {
             </Box>
           </Container>
         </Box>
+
+        {/* Manual Import Modal */}
+        <Dialog 
+          open={showManualImportModal} 
+          onClose={() => setShowManualImportModal(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>Manual Token Import</DialogTitle>
+          <DialogContent>
+            <Typography variant="body1" gutterBottom sx={{ mt: 2 }}>
+              To import FULA token manually, add these details to your wallet:
+            </Typography>
+            <List>
+              <ListItem>
+                <ListItemText 
+                  primary="Contract Address" 
+                  secondary={manualImportInfo?.contractAddress} 
+                  secondaryTypographyProps={{ 
+                    sx: { wordBreak: 'break-all' } 
+                  }}
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemText 
+                  primary="Symbol" 
+                  secondary={manualImportInfo?.symbol} 
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemText 
+                  primary="Decimals" 
+                  secondary={manualImportInfo?.decimals} 
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemText 
+                  primary="Network" 
+                  secondary={manualImportInfo?.network} 
+                />
+              </ListItem>
+            </List>
+          </DialogContent>
+        </Dialog>
       </Box>
     </ErrorBoundary>
   )

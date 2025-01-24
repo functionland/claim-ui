@@ -85,7 +85,7 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
               />
               <InfoItem 
                 label="Vesting Term"
-                value={`${vestingData.vestingTerm} months`}
+                value={`${vestingData.vestingTerm} months (every ${vestingData.vestingPlan} months)`}
               />
             </Stack>
           </Grid>
@@ -95,7 +95,6 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
           <ClaimButton 
             capId={vestingData.capId}
             claimableAmount={vestingData.claimable}
-            isCliffReached={isCliffReached}
           />
         </Box>
       </CardContent>
