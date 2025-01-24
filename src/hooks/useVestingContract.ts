@@ -126,17 +126,21 @@ export function useVestingContract() {
 
   const handleClaim = async (capId: number) => {
     if (!userAddress) throw new Error('Wallet not connected')
-
+    if (!contractAddress) throw new Error('Contract not configured')
+  
     try {
-      console.log("claim started")
+      console.log("Initiating claim for capId:", capId)
       const hash = await claimTokens({
         address: contractAddress,
         abi: CONTRACT_ABI,
         functionName: 'claimTokens',
         args: [BigInt(capId), BigInt(chainId || 1)],
       })
+      
+      console.log("Transaction hash:", hash)
       return hash
     } catch (err) {
+      console.error("Claim error:", err)
       throw err instanceof Error ? err : new Error('Claim failed')
     }
   }
