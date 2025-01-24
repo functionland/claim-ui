@@ -128,6 +128,7 @@ export function useVestingContract() {
     if (!userAddress) throw new Error('Wallet not connected')
 
     try {
+      console.log("claim started")
       const hash = await claimTokens({
         address: contractAddress,
         abi: CONTRACT_ABI,
