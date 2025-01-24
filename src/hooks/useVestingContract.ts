@@ -122,15 +122,16 @@ export function useVestingContract() {
     }
   }, [userAddress, contractAddress, walletsInCap, publicClient])
 
-  const { writeContract: claimTokens, isPending: isClaimLoading } = useWriteContract()
+  const { writeContractAsync } = useWriteContract()
 
   const handleClaim = async (capId: number) => {
-    if (!userAddress) throw new Error('Wallet not connected')
-    if (!contractAddress) throw new Error('Contract not configured')
+    if (!userAddress) return Promise.reject(new Error('Wallet not connected'))
+    if (!contractAddress) return Promise.reject(new Error('Contract not configured'))
   
     try {
       console.log("Initiating claim for capId:", capId)
-      const hash = await claimTokens({
+      
+      const hash = await writeContractAsync({
         address: contractAddress,
         abi: CONTRACT_ABI,
         functionName: 'claimTokens',
@@ -140,14 +141,14 @@ export function useVestingContract() {
       console.log("Transaction hash:", hash)
       return hash
     } catch (err) {
-      console.error("Claim error:", err)
-      throw err instanceof Error ? err : new Error('Claim failed')
+      return Promise.reject(err instanceof Error ? err : new Error(String(err))) // Return rejected promise with an Error instance
     }
   }
+  
 
   return {
     vestingData,
-    isLoading: isLoading || isClaimLoading,
+    isLoading: isLoading,
     error,
     claimTokens: handleClaim,
   }

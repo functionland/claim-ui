@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button, CircularProgress, Snackbar, Alert } from '@mui/material'
 import { useVestingContract } from '@/hooks/useVestingContract'
 import { formatEther } from 'viem'
 import { useWaitForTransactionReceipt } from 'wagmi'
 import type { FC } from 'react'
+import { isContractError } from '../../utils/errors';
 
 interface ClaimButtonProps {
   readonly capId: number
@@ -16,41 +17,47 @@ export const ClaimButton: FC<ClaimButtonProps> = ({
   capId,
   claimableAmount,
 }) => {
-  const [isLoading, setIsLoading] = useState(false)
+  const [isWalletLoading, setIsWalletLoading] = useState(false)
   const [transactionHash, setTransactionHash] = useState<`0x${string}` | undefined>()
   const [error, setError] = useState<string | null>(null)
   const { claimTokens } = useVestingContract()
-
-  const { isLoading: isConfirming } = useWaitForTransactionReceipt({
+  const { isLoading: isConfirming, isSuccess: isConfirmed, isError, isLoadingError, isPending } = useWaitForTransactionReceipt({
     hash: transactionHash,
-    onSuccess: () => {
-      setIsLoading(false)
-      setTransactionHash(undefined)
-      // You might want to refresh the vesting data here
-    },
-    onError: (error) => {
-      setError(`Transaction failed: ${error.message}`)
-      setIsLoading(false)
-      setTransactionHash(undefined)
-    },
   })
+
+  useEffect(() => {
+    console.log('isConfirmed:', isConfirmed, 'isConfirming:', isConfirming, 'isError:', isError, 'isLoadingError:', isLoadingError, 'isPending:', isPending)
+    if (isConfirmed) {
+      setIsWalletLoading(false)
+      setTransactionHash(undefined)
+      // Additional success handling
+    }
+  }, [isConfirmed, isConfirming, isError, isLoadingError, isPending])
 
   const handleClaim = async () => {
     try {
-      setIsLoading(true)
+      setIsWalletLoading(true)
       setError(null)
+      
       const hash = await claimTokens(capId)
       if (hash) {
         setTransactionHash(hash)
       }
-    } catch (error) {
-      console.error('Claim error:', error)
-      setError(error instanceof Error ? error.message : 'Claim failed')
-      setIsLoading(false)
+    } catch (err) {
+      console.error('Claim error:', err)
+      if (err.code === -32603) {
+        setError('Transaction failed. Please check your wallet has enough funds for gas fees.')
+      } else {
+        setError(err instanceof Error ? err.message : 'Claim failed')
+      }
+    } finally {
+      setIsWalletLoading(false)
     }
   }
+  
+  
 
-  const isDisabled = claimableAmount <= 0n || isLoading || isConfirming
+  const isDisabled = claimableAmount <= 0n || isWalletLoading || isConfirming
 
   return (
     <>
@@ -61,14 +68,14 @@ export const ClaimButton: FC<ClaimButtonProps> = ({
         fullWidth
         disabled={isDisabled}
         onClick={handleClaim}
-        startIcon={(isLoading || isConfirming) && <CircularProgress size={20} color="inherit" />}
+        startIcon={(isWalletLoading || isConfirming) && <CircularProgress size={20} color="inherit" />}
       >
-        {isLoading
+        {isWalletLoading
           ? 'Confirm in Wallet...'
           : isConfirming
           ? 'Transaction Pending...'
-          : claimableAmount <= 0n
-          ? 'No Tokens Available'
+          : isConfirmed
+          ? 'Transaction Confirmed'
           : `Claim ${formatEther(claimableAmount)} Tokens`}
       </Button>
 
@@ -83,7 +90,7 @@ export const ClaimButton: FC<ClaimButtonProps> = ({
       </Snackbar>
 
       <Snackbar 
-        open={!!transactionHash} 
+        open={!!transactionHash && isConfirming} 
         autoHideDuration={null}
       >
         <Alert severity="info">

@@ -107,5 +107,5 @@ export const CONTRACT_CONFIG = {
 export const RPC_URLS: Record<SupportedChain, string> = {
   mainnet: `https://eth-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
   goerli: `https://eth-goerli.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
-  hardhat: 'http://127.0.0.1:3000',
+  hardhat: 'http://127.0.0.1:8545',
 }
