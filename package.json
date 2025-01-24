@@ -3,25 +3,47 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev --turbopack -p 4000",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "start": "next start -p 4000",
+    "lint": "next lint",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:e2e": "cypress run",
+    "test:ci": "jest && cypress run"
   },
   "dependencies": {
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
+    "@mui/material": "6.4.1",
+    "@rainbow-me/rainbowkit": "^2.2.3",
+    "@svgr/webpack": "^8.0.1",
+    "@tailwindcss/postcss": "^4.0.0",
+    "@tanstack/react-query": "^5.64.2",
+    "crypto-browserify": "^3.12.0",
+    "ethers": "^6.13.5",
+    "https-browserify": "^1.0.0",
+    "next": "15.1.6",
+    "os-browserify": "^0.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "next": "15.1.5"
+    "stream-browserify": "^3.0.0",
+    "stream-http": "^3.2.0",
+    "viem": "^2.22.13",
+    "wagmi": "^2.14.9"
   },
   "devDependencies": {
-    "typescript": "^5",
-    "@types/node": "^20",
+    "@eslint/eslintrc": "^3",
+    "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
+    "autoprefixer": "^10",
     "eslint": "^9",
-    "eslint-config-next": "15.1.5",
-    "@eslint/eslintrc": "^3"
+    "eslint-config-next": "15.1.6",
+    "file-loader": "^6.2.0",
+    "postcss": "^8",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5"
   }
 }
