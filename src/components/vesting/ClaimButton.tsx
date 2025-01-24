@@ -30,6 +30,7 @@ export const ClaimButton: FC<ClaimButtonProps> = ({
     if (isConfirmed) {
       setIsWalletLoading(false)
       setTransactionHash(undefined)
+      claimableAmount = 0n
       // Additional success handling
     }
   }, [isConfirmed, isConfirming, isError, isLoadingError, isPending])
