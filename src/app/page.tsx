@@ -1,5 +1,8 @@
 'use client'
 
+import { Tabs, Tab } from '@mui/material'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { useContractContext } from '@/contexts/ContractContext'
 import { useAccount } from 'wagmi'
 import { VestingDashboard } from '@/components/vesting/VestingDashboard'
 import { ConnectButton } from '@/components/common/ConnectButton'
@@ -21,12 +24,13 @@ import {
   DialogTitle,
   DialogContent,
 } from '@mui/material'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
 import TokenIcon from '@mui/icons-material/Token'
 import Shield from '@mui/icons-material/Shield'
+import { CONTRACT_TYPES } from '@/config/contracts'
 
 interface ManualImportInfo {
   contractAddress?: string;
@@ -40,65 +44,92 @@ export default function Home() {
   const theme = useTheme()
   const [showManualImportModal, setShowManualImportModal] = useState(false)
   const [manualImportInfo, setManualImportInfo] = useState<ManualImportInfo | null>(null)
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const { activeContract, setActiveContract } = useContractContext()
 
-  const instructions = [
-    {
-      icon: <AccountBalanceWalletIcon />,
-      text: 'Put your wallet network on Ethereum Mainnet and Connect your wallet to view your vesting allocations'
-    },
-    {
-      icon: <AccessTimeIcon />,
-      text: 'Import $FULA token in your wallet by clicking here',
-      action: (wallet: string | undefined) => {
-        const manualInfo = {
-          contractAddress: process.env.NEXT_PUBLIC_LOCAL_TOKEN_ADDRESS,
-          symbol: 'FULA',
-          decimals: 18,
-          network: 'Ethereum Mainnet'
-        }
-  
-        // If MetaMask is detected
-        if (typeof window.ethereum !== 'undefined' && wallet === 'MetaMask') {
-          return {
-            type: 'metamask',
-            handler: async (setManualImportInfo: Function, setShowManualImportModal: Function) => {
-              try {
-                await window.ethereum.request({
-                  method: 'wallet_watchAsset',
-                  params: {
-                    type: 'ERC20',
-                    options: {
-                      address: process.env.NEXT_PUBLIC_LOCAL_TOKEN_ADDRESS,
-                      symbol: 'FULA',
-                      decimals: 18
+  // Create a function to get instructions based on contract type
+  const getInstructions = (contractType: string) => {
+    const baseInstructions = [
+      {
+        icon: <AccountBalanceWalletIcon />,
+        text: contractType === CONTRACT_TYPES.VESTING 
+          ? 'Connect your wallet on Ethereum Mainnet to view your vesting allocations'
+          : 'Connect your wallet on Base Network to view your airdrop allocations'
+      },
+      {
+        icon: <AccessTimeIcon />,
+        text: 'Import $FULA token in your wallet by clicking here',
+        action: (wallet: string | undefined) => {
+          const manualInfo = {
+            contractAddress: process.env.NEXT_PUBLIC_LOCAL_TOKEN_ADDRESS,
+            symbol: 'FULA',
+            decimals: 18,
+            network: contractType === CONTRACT_TYPES.VESTING ? 'Ethereum Mainnet' : 'Base Network'
+          }
+    
+          if (typeof window.ethereum !== 'undefined' && wallet === 'MetaMask') {
+            return {
+              type: 'metamask',
+              handler: async (setManualImportInfo: Function, setShowManualImportModal: Function) => {
+                try {
+                  await window.ethereum.request({
+                    method: 'wallet_watchAsset',
+                    params: {
+                      type: 'ERC20',
+                      options: {
+                        address: process.env.NEXT_PUBLIC_LOCAL_TOKEN_ADDRESS,
+                        symbol: 'FULA',
+                        decimals: 18
+                      },
                     },
-                  },
-                })
-              } catch (error) {
-                console.error('Error adding token:', error)
-                // Show manual instructions if MetaMask method fails
-                setManualImportInfo(manualInfo)
-                setShowManualImportModal(true)
+                  })
+                } catch (error) {
+                  console.error('Error adding token:', error)
+                  setManualImportInfo(manualInfo)
+                  setShowManualImportModal(true)
+                }
               }
             }
           }
+          return {
+            type: 'manual',
+            info: manualInfo
+          }
         }
-        // For other wallets, show manual import info
-        return {
-          type: 'manual',
-          info: manualInfo
-        }
+      },
+      {
+        icon: <TokenIcon />,
+        text: contractType === CONTRACT_TYPES.VESTING 
+          ? 'Claim your vested tokens once they become available after the cliff period'
+          : 'Claim your airdrop tokens according to the vesting schedule. Note that the maximum you can claim is equal to whatever $FULA you already have in your wallet.'
+      },
+      {
+        icon: <Shield />,
+        text: 'Transfer your tokens to a secure wallet after claiming'
       }
-    },
-    {
-      icon: <TokenIcon />,
-      text: 'Claim your tokens once they become available after the cliff period'
-    },
-    {
-      icon: <Shield />,
-      text: 'We suggest you transfer your tokens to a secure cold or multi-sig wallet after claiming'
+    ]
+
+    return baseInstructions
+  }
+
+  useEffect(() => {
+    const type = searchParams.get('type')
+    if (type && (type === CONTRACT_TYPES.VESTING || type === CONTRACT_TYPES.AIRDROP) && type !== activeContract) {
+      setActiveContract(type)
+    } else if (!type && activeContract) {
+      router.replace(`?type=${activeContract}`, { scroll: false })
     }
-  ]
+  }, [searchParams])
+  
+
+  const instructions = getInstructions(activeContract)
+  const handleTabChange = (_, newValue: string) => {
+    if (newValue !== activeContract) {
+      setActiveContract(newValue)
+      router.replace(`?type=${newValue}`, { scroll: false })
+    }
+  }  
 
   return (
     <ErrorBoundary>
@@ -135,7 +166,9 @@ export default function Home() {
                     WebkitTextFillColor: 'transparent'
                   }}
                 >
-                  $FULA Token Vesting Dashboard
+                  {activeContract === CONTRACT_TYPES.VESTING 
+                    ? '$FULA Token Vesting Dashboard'
+                    : '$FULA Airdrop Dashboard'}
                 </Typography>
                 <Box sx={{ position: 'relative', width: 40, height: 40 }}>
                   <Image
@@ -148,8 +181,27 @@ export default function Home() {
               </Box>
               
               <Divider sx={{ mb: 4 }} />
-              {/* ... rest of your header content ... */}
+              {/* ... end of header content ... */}
+
+              {/* Contract Selection tabs */}
+              <Box sx={{ mb: 4 }}>
+                <Tabs 
+                  value={activeContract}
+                  onChange={handleTabChange}
+                  centered
+                >
+                  <Tab 
+                    value={CONTRACT_TYPES.VESTING} 
+                    label="Token Vesting" 
+                  />
+                  <Tab 
+                    value={CONTRACT_TYPES.AIRDROP} 
+                    label="Airdrop Vesting" 
+                  />
+                </Tabs>
+              </Box>
               
+              {/* Main Content */}
               <ClientOnly>
                 {!isConnected ? (
                   <Box sx={{ 
@@ -180,7 +232,8 @@ export default function Home() {
                       py: 2,
                       px: 2,
                       bgcolor: 'grey.50',
-                      borderRadius: 2
+                      borderRadius: 2,
+                      transition: 'opacity 0.3s ease-in-out'
                     }}>
                       <Stack spacing={0} alignItems="center">
                         <ConnectButton />

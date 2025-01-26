@@ -2,10 +2,17 @@ import { type Address } from 'viem'
 import { SupportedChain } from './constants'
 
 // Contract Addresses
-export const CONTRACT_ADDRESSES: Record<number, Address> = {
-  1: process.env.NEXT_PUBLIC_MAINNET_CONTRACT_ADDRESS as Address, // mainnet
-  5: process.env.NEXT_PUBLIC_GOERLI_CONTRACT_ADDRESS as Address,  // goerli
-  31337: process.env.NEXT_PUBLIC_LOCAL_CONTRACT_ADDRESS as Address, // local
+export const VESTING_CONTRACT_ADDRESSES: Record<number, Address> = {
+  1: process.env.NEXT_PUBLIC_MAINNET_VESTING_CONTRACT_ADDRESS as Address, // mainnet
+  5: process.env.NEXT_PUBLIC_GOERLI_VESTING_CONTRACT_ADDRESS as Address,  // goerli
+  31337: process.env.NEXT_PUBLIC_LOCAL_VESTING_CONTRACT_ADDRESS as Address, // local
+}
+
+// Contract Addresses
+export const AIRDROP_CONTRACT_ADDRESSES: Record<number, Address> = {
+  1: process.env.NEXT_PUBLIC_MAINNET_AIRDROP_CONTRACT_ADDRESS as Address, // mainnet
+  5: process.env.NEXT_PUBLIC_GOERLI_AIRDROP_CONTRACT_ADDRESS as Address,  // goerli
+  31337: process.env.NEXT_PUBLIC_LOCAL_AIRDROP_CONTRACT_ADDRESS as Address, // local
 }
 
 // Token Addresses
@@ -95,11 +102,154 @@ export const CONTRACT_ABI = [
     stateMutability: 'view',
     type: 'function',
   },
+
+  // Custom Errors
+  {
+    type: "error",
+    name: "TGENotInitiated",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "NothingDue",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "LowContractBalance",
+    inputs: [
+      { name: "available", type: "uint256" },
+      { name: "required", type: "uint256" }
+    ]
+  },
+  {
+    type: "error",
+    name: "TransferFailed",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "InvalidAllocationParameters",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "NothingToClaim",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "CliffNotReached",
+    inputs: [
+      { name: "currentTime", type: "uint256" },
+      { name: "startDate", type: "uint256" },
+      { name: "cliffEnd", type: "uint256" }
+    ]
+  },
+  {
+    type: "error",
+    name: "OperationFailed",
+    inputs: [
+      { name: "status", type: "uint8" }
+    ]
+  },
+  {
+    type: "error",
+    name: "TGEAlreadyInitiated",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "AllocationTooHigh",
+    inputs: [
+      { name: "wallet", type: "address" },
+      { name: "allocated", type: "uint256" },
+      { name: "maximum", type: "uint256" },
+      { name: "capId", type: "uint256" }
+    ]
+  },
+  {
+    type: "error",
+    name: "InsufficientContractBalance",
+    inputs: [
+      { name: "required", type: "uint256" },
+      { name: "available", type: "uint256" }
+    ]
+  },
+  {
+    type: "error",
+    name: "CapExists",
+    inputs: [
+      { name: "capId", type: "uint256" }
+    ]
+  },
+  {
+    type: "error",
+    name: "InvalidAllocation",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "InitialReleaseTooLarge",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "OutOfRangeVestingPlan",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "CapHasWallets",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "ExceedsMaximumSupply",
+    inputs: [
+      { name: "amount", type: "uint256" }
+    ]
+  },
+  {
+    type: "error",
+    name: "StartDateNotSet",
+    inputs: [
+      { name: "capId", type: "uint256" }
+    ]
+  },
+  {
+    type: "error",
+    name: "WalletExistsInCap",
+    inputs: [
+      { name: "wallet", type: "address" },
+      { name: "capId", type: "uint256" }
+    ]
+  },
+  {
+    type: "error",
+    name: "InvalidCapId",
+    inputs: [
+      { name: "capId", type: "uint256" }
+    ]
+  },
+  {
+    type: "error",
+    name: "WalletNotInCap",
+    inputs: [
+      { name: "wallet", type: "address" },
+      { name: "capId", type: "uint256" }
+    ]
+  },
+  {
+    type: "error",
+    name: "NoWalletBalance",
+    inputs: []
+  },
 ] as const
 
 // Contract Config
 export const CONTRACT_CONFIG = {
-  address: CONTRACT_ADDRESSES,
+  address: VESTING_CONTRACT_ADDRESSES,
   abi: CONTRACT_ABI,
 } as const
 
@@ -109,3 +259,10 @@ export const RPC_URLS: Record<SupportedChain, string> = {
   goerli: `https://eth-goerli.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
   hardhat: 'http://127.0.0.1:8545',
 }
+
+export const CONTRACT_TYPES = {
+  VESTING: 'vesting',
+  AIRDROP: 'airdrop'
+} as const
+
+export type ContractType = typeof CONTRACT_TYPES[keyof typeof CONTRACT_TYPES]

@@ -50,7 +50,9 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
           {vestingData.name || 'Unnamed Cap'}
         </Typography>
         <Divider sx={{ mb: 3 }} />
-        
+        {vestingData.errorMessage ? (
+          <Typography color="error">{vestingData.errorMessage}</Typography>
+        ) : (
         <Grid container spacing={4}>
           <Grid item xs={12} md={6}>
             <Stack spacing={3}>
@@ -90,6 +92,7 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
             </Stack>
           </Grid>
         </Grid>
+        )}
 
         <Box sx={{ mt: 4 }}>
           <ClaimButton 

@@ -1,16 +1,29 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useVestingContract } from '@/hooks/useVestingContract'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
-import { Alert } from '@mui/material'
+import { Alert, Typography } from '@mui/material'
 import { VestingInfo } from './VestingInfo'
 import ClientOnly from '@/components/common/ClientOnly'
+import { useContractContext } from '@/contexts/ContractContext'
+import { CONTRACT_TYPES } from '@/config/contracts'
 
 export function VestingDashboard() {
+  const { activeContract } = useContractContext()
   const { vestingData, isLoading, error } = useVestingContract()
+
+  const getTitle = () => {
+    return activeContract === CONTRACT_TYPES.VESTING 
+      ? "Token Vesting Allocations"
+      : "Airdrop Vesting Allocations"
+  }
 
   return (
     <ClientOnly>
+      <Typography variant="h5" gutterBottom>
+        {getTitle()}
+      </Typography>
       <div className="space-y-6">
         {isLoading ? (
           <LoadingSpinner />
@@ -31,3 +44,4 @@ export function VestingDashboard() {
     </ClientOnly>
   )
 }
+

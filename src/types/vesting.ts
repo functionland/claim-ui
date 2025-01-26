@@ -11,6 +11,7 @@ export interface VestingData {
   vestingTerm: number
   vestingPlan: number
   startDate: number
+  errorMessage?: string
 }
 
 export interface VestingCap {

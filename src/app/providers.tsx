@@ -8,6 +8,7 @@ import CssBaseline from '@mui/material/CssBaseline'
 import { config, chains } from '@/lib/wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode, FC } from 'react'
+import { ContractProvider } from '@/contexts/ContractContext'
 
 const materialTheme = createTheme({
   palette: {
@@ -39,15 +40,17 @@ export const Providers: FC<ProvidersProps> = ({ children }) => {
   }))
 
   return (
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider chains={chains}>
-          <ThemeProvider theme={materialTheme}>
-            <CssBaseline />
-            {children}
-          </ThemeProvider>
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <ContractProvider>
+      <WagmiProvider config={config}>
+        <QueryClientProvider client={queryClient}>
+          <RainbowKitProvider chains={chains}>
+            <ThemeProvider theme={materialTheme}>
+              <CssBaseline />
+              {children}
+            </ThemeProvider>
+          </RainbowKitProvider>
+        </QueryClientProvider>
+      </WagmiProvider>
+    </ContractProvider>
   )
 }
