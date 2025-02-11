@@ -256,6 +256,16 @@ export const CONTRACT_ABI = [
 
 export const TESTNET_MINING_ABI = [
   {
+    inputs: [{ name: "wallet", type: "address" }],
+    name: "getSubstrateRewards",
+    outputs: [
+      { name: "lastUpdate", type: "uint256" },
+      { name: "amount", type: "uint256" }
+    ],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
     inputs: [
       { name: "wallet", type: "address" },
       { name: "substrateWallet", type: "string" },

@@ -49,65 +49,74 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
     <Card elevation={2} sx={{ 
       borderRadius: 2,
       '&:hover': { 
-        boxShadow: theme.shadows[4],
-        transition: 'box-shadow 0.3s ease-in-out'
-      }
+        boxShadow: theme.shadows[4]
+      },
+      height: '100%'
     }}>
-      <CardContent sx={{ p: 3 }}>
-        <Typography variant="h5" gutterBottom sx={{ mb: 3, fontWeight: 'bold' }}>
-          {vestingData.name || 'Unnamed Cap'}
-        </Typography>
-        <Divider sx={{ mb: 3 }} />
-        {vestingData.errorMessage ? (
-          <Typography color="error">{vestingData.errorMessage}</Typography>
-        ) : (
-        <Grid container spacing={4}>
-          <Grid item xs={12} md={6}>
-            <Stack spacing={3}>
-              <InfoItem 
-                label="Total Allocation"
-                value={`${formatBigIntToEther(vestingData.totalAllocation)} Tokens`}
-              />
-              <InfoItem 
-                label="Claimed Amount"
-                value={`${formatBigIntToEther(vestingData.walletInfo.claimed)} Tokens`}
-              />
-              <InfoItem 
-                label="Available to Claim"
-                value={`${formatBigIntToEther(vestingData.walletInfo.claimableAmount)} Tokens`}
-              />
-            </Stack>
+      <CardContent>
+        <Stack spacing={2}>
+          <Box>
+            <Typography variant="h5" component="div" gutterBottom>
+              {vestingData.name}
+              {vestingData.ratio && vestingData.substrateRewards && (
+                <Typography component="span" variant="body2" sx={{ ml: 1, color: 'text.secondary' }}>
+                  (Total Testnet Tokens: {formatBigIntToEther(vestingData.substrateRewards.amount)} at ratio of {vestingData.ratio}:1 $FULA)
+                </Typography>
+              )}
+            </Typography>
+          </Box>
+          <Divider sx={{ mb: 3 }} />
+          {vestingData.errorMessage ? (
+            <Typography color="error">{vestingData.errorMessage}</Typography>
+          ) : (
+          <Grid container spacing={4}>
+            <Grid item xs={12} md={6}>
+              <Stack spacing={3}>
+                <InfoItem 
+                  label="Total Allocation To Cap"
+                  value={`${formatBigIntToEther(vestingData.totalAllocation)} Tokens`}
+                />
+                <InfoItem 
+                  label="Claimed Amount"
+                  value={`${formatBigIntToEther(vestingData.walletInfo.claimed)} Tokens`}
+                />
+                <InfoItem 
+                  label="Available to Claim"
+                  value={`${formatBigIntToEther(vestingData.walletInfo.claimableAmount)} Tokens`}
+                />
+              </Stack>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <Stack spacing={3}>
+                <InfoItem 
+                  label="Vesting Start Date"
+                  value={new Date(Number(vestingData.startDate)).toLocaleString()}
+                />
+                <InfoItem 
+                  label="Initial Release"
+                  value={`${Number(vestingData.initialRelease)}%`}
+                />
+                <InfoItem 
+                  label="Cliff Period"
+                  value={`${Number(vestingData.cliff / BigInt(24 * 60 * 60))} days`}
+                />
+                <InfoItem 
+                  label="Vesting Term"
+                  value={`${Number(vestingData.vestingTerm / BigInt(30 * 24 * 60 * 60))} months (every ${Number(vestingData.vestingPlan / BigInt(30 * 24 * 60 * 60))} months)`}
+                />
+              </Stack>
+            </Grid>
           </Grid>
-          
-          <Grid item xs={12} md={6}>
-            <Stack spacing={3}>
-              <InfoItem 
-                label="Vesting Start Date"
-                value={new Date(Number(vestingData.startDate)).toLocaleString()}
-              />
-              <InfoItem 
-                label="Initial Release"
-                value={`${Number(vestingData.initialRelease)}%`}
-              />
-              <InfoItem 
-                label="Cliff Period"
-                value={`${Number(vestingData.cliff / BigInt(24 * 60 * 60))} days`}
-              />
-              <InfoItem 
-                label="Vesting Term"
-                value={`${Number(vestingData.vestingTerm / BigInt(30 * 24 * 60 * 60))} months (every ${Number(vestingData.vestingPlan / BigInt(30 * 24 * 60 * 60))} months)`}
-              />
-            </Stack>
-          </Grid>
-        </Grid>
-        )}
+          )}
 
-        <Box sx={{ mt: 4 }}>
-          <ClaimButton 
-            capId={vestingData.capId}
-            claimableAmount={vestingData.walletInfo?.claimableAmount || BigInt(0)}
-          />
-        </Box>
+          <Box sx={{ mt: 4 }}>
+            <ClaimButton 
+              capId={vestingData.capId}
+              claimableAmount={vestingData.walletInfo?.claimableAmount || BigInt(0)}
+            />
+          </Box>
+        </Stack>
       </CardContent>
     </Card>
   )

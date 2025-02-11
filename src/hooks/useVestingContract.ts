@@ -132,6 +132,7 @@ export function useVestingContract() {
             let errorMessage = ''
 
             try {
+              console.log("substrateWallet:", substrateWallet);
               if (substrateWallet) {
                 claimableAmount = await publicClient.readContract({
                   address: contractAddress,
@@ -139,11 +140,19 @@ export function useVestingContract() {
                   functionName: 'calculateDueTokens',
                   args: [userAddress as Address, substrateWallet, capId],
                 }) as bigint
+                console.log("Claimable amount:", claimableAmount);
               }
             } catch (error) {
               errorMessage = error instanceof Error ? error.message : String(error)
               console.error('Claim calculation error:', error)
             }
+
+            const substrateRewards = await publicClient.readContract({
+              address: contractAddress,
+              abi: contractAbi,
+              functionName: 'getSubstrateRewards',
+              args: [userAddress as Address],
+            }) as [bigint, bigint]
 
             const [_capId, walletName, amount, claimed, monthlyClaimedRewards, lastClaimMonth] = walletInfo
             const [totalAllocation, name, cliff, vestingTerm, vestingPlan, initialRelease, startDate, allocatedToWallets, maxRewardsPerMonth, ratio] = cap
@@ -169,6 +178,10 @@ export function useVestingContract() {
                 lastClaimMonth,
                 claimableAmount,
                 errorMessage
+              },
+              substrateRewards: {
+                lastUpdate: substrateRewards[0],
+                amount: substrateRewards[1]
               }
             })
           }
@@ -358,6 +371,13 @@ export function useVestingContract() {
                 console.error('Claim calculation error:', error)
               }
 
+              const substrateRewards = await publicClient.readContract({
+                address: contractAddress,
+                abi: contractAbi,
+                functionName: 'getSubstrateRewards',
+                args: [userAddress as Address],
+              }) as [bigint, bigint]
+
               const [_capId, walletName, amount, claimed, monthlyClaimedRewards, lastClaimMonth] = walletInfo
               const [totalAllocation, name, cliff, vestingTerm, vestingPlan, initialRelease, startDate, allocatedToWallets, maxRewardsPerMonth, ratio] = cap
 
@@ -382,6 +402,10 @@ export function useVestingContract() {
                   lastClaimMonth,
                   claimableAmount,
                   errorMessage
+                },
+                substrateRewards: {
+                  lastUpdate: substrateRewards[0],
+                  amount: substrateRewards[1]
                 }
               })
             }
