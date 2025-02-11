@@ -48,13 +48,23 @@ export default function Home() {
   const router = useRouter()
   const { activeContract, setActiveContract } = useContractContext()
 
+  const getTitle = () => {
+    return activeContract === CONTRACT_TYPES.VESTING 
+      ? '$FULA Token Vesting Dashboard'
+      : activeContract === CONTRACT_TYPES.TESTNET_MINING
+        ? 'Testnet Mining Dashboard'
+        : '$FULA Airdrop Dashboard'
+  }
+
   // Create a function to get instructions based on contract type
-  const getInstructions = (contractType: string) => {
+  const getInstructions = (contractType: typeof CONTRACT_TYPES[keyof typeof CONTRACT_TYPES]) => {
     const baseInstructions = [
       {
         icon: <AccountBalanceWalletIcon />,
         text: contractType === CONTRACT_TYPES.VESTING 
           ? 'Connect your wallet on Ethereum Mainnet to view your vesting allocations'
+          : contractType === CONTRACT_TYPES.TESTNET_MINING
+          ? 'Connect your wallet on Base Network to view your testnet mining allocations'
           : 'Connect your wallet on Base Network to view your airdrop allocations'
       },
       {
@@ -102,6 +112,8 @@ export default function Home() {
         icon: <TokenIcon />,
         text: contractType === CONTRACT_TYPES.VESTING 
           ? 'Claim your vested tokens once they become available after the cliff period'
+          : contractType === CONTRACT_TYPES.TESTNET_MINING
+          ? 'Enter your Blox Account Id to claim your testnet mining rewards'
           : 'Claim your airdrop tokens according to the vesting schedule. Note that the maximum you can claim is equal to whatever $FULA you already have in your wallet.'
       },
       {
@@ -115,7 +127,7 @@ export default function Home() {
 
   useEffect(() => {
     const type = searchParams.get('type')
-    if (type && (type === CONTRACT_TYPES.VESTING || type === CONTRACT_TYPES.AIRDROP) && type !== activeContract) {
+    if (type && (type === CONTRACT_TYPES.VESTING || type === CONTRACT_TYPES.AIRDROP || type === CONTRACT_TYPES.TESTNET_MINING) && type !== activeContract) {
       setActiveContract(type)
     } else if (!type && activeContract) {
       router.replace(`?type=${activeContract}`, { scroll: false })
@@ -166,9 +178,7 @@ export default function Home() {
                     WebkitTextFillColor: 'transparent'
                   }}
                 >
-                  {activeContract === CONTRACT_TYPES.VESTING 
-                    ? '$FULA Token Vesting Dashboard'
-                    : '$FULA Airdrop Dashboard'}
+                  {getTitle()}
                 </Typography>
                 <Box sx={{ position: 'relative', width: 40, height: 40 }}>
                   <Image
@@ -197,6 +207,10 @@ export default function Home() {
                   <Tab 
                     value={CONTRACT_TYPES.AIRDROP} 
                     label="Airdrop Vesting" 
+                  />
+                  <Tab 
+                    value={CONTRACT_TYPES.TESTNET_MINING} 
+                    label="Testnet Mining" 
                   />
                 </Tabs>
               </Box>

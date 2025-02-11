@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useReadContract, useWriteContract, useAccount, usePublicClient } from 'wagmi'
 import { type Address } from 'viem'
-import { CONTRACT_ABI, VESTING_CONTRACT_ADDRESSES, CONTRACT_TYPES, AIRDROP_CONTRACT_ADDRESSES } from '@/config/contracts'
+import { CONTRACT_CONFIG, CONTRACT_TYPES } from '@/config/contracts'
 import { VestingData, VestingCap } from '@/types/vesting'
 import { bytesToString } from 'viem'
 import { decodeBytes32String } from 'ethers'
@@ -16,18 +16,23 @@ export function useVestingContract() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
   const publicClient = usePublicClient()
-  
 
-  const contractAddress = activeContract === CONTRACT_TYPES.VESTING 
-    ? VESTING_CONTRACT_ADDRESSES[chainId as keyof typeof VESTING_CONTRACT_ADDRESSES]
-    : AIRDROP_CONTRACT_ADDRESSES[chainId as keyof typeof AIRDROP_CONTRACT_ADDRESSES]
+  const contractAddress = chainId 
+    ? CONTRACT_CONFIG.address[activeContract][chainId] 
+    : undefined
+
+  const contractAbi = CONTRACT_CONFIG.abi[activeContract]
+
   console.log("Contract Address:", contractAddress)
+  console.log("activeContract:", activeContract)
+  console.log("chainId:", chainId)
 
   const { data: walletsInCap } = useReadContract({
     address: contractAddress,
-    abi: CONTRACT_ABI,
+    abi: contractAbi,
     functionName: 'getWalletsInCap',
     args: [BigInt(1)],
+    enabled: !!contractAddress
   })
 
   console.log("Wallets in Cap 1:", walletsInCap)
@@ -62,57 +67,172 @@ export function useVestingContract() {
 
   useEffect(() => {
     const fetchVestingData = async () => {
+      setIsLoading(true)
+      setError(null)
+
       try {
-        setIsLoading(true)
+        const walletsInCap = await publicClient?.readContract({
+          address: contractAddress as Address,
+          abi: contractAbi,
+          functionName: 'getWalletsInCap',
+          args: [BigInt(0)],
+        }) as Address[]
+
         if (!walletsInCap || !publicClient || !contractAddress) return
-  
+
         const newVestingData = new Map<number, VestingData>()
-        let index = 0
-  
-        while (true) {
-          try {
-            // Read cap ID at current index
-            const capId = await publicClient.readContract({
-              address: contractAddress,
-              abi: CONTRACT_ABI,
-              functionName: 'capIds',
-              args: [BigInt(index)],
-            }) as bigint
-  
-            // Get cap details
-            const cap = await publicClient.readContract({
-              address: contractAddress,
-              abi: CONTRACT_ABI,
-              functionName: 'vestingCaps',
-              args: [capId],
-            }) as VestingCap
-  
-            // Get wallets in this cap
+
+        if (activeContract === CONTRACT_TYPES.TESTNET_MINING) {
+          // For testnet mining, we need to get the cap IDs one by one
+          let index = 0;
+          const foundCapIds: bigint[] = [];
+          
+          while (true) {
+            try {
+              const capId = await publicClient.readContract({
+                address: contractAddress,
+                abi: contractAbi,
+                functionName: 'capIds',
+                args: [BigInt(index)],
+              }) as bigint;
+              
+              foundCapIds.push(capId);
+              index++;
+            } catch (error) {
+              // When we hit an error, we've reached the end of the array
+              break;
+            }
+          }
+
+          for (const capId of foundCapIds) {
             const walletsInThisCap = await publicClient.readContract({
               address: contractAddress,
-              abi: CONTRACT_ABI,
+              abi: contractAbi,
               functionName: 'getWalletsInCap',
               args: [capId],
             }) as Address[]
-  
+
+            if (walletsInThisCap.includes(userAddress as Address)) {
+              const cap = await publicClient.readContract({
+                address: contractAddress,
+                abi: contractAbi,
+                functionName: 'vestingCaps',
+                args: [capId],
+              }) as any
+
+              const walletInfo = await publicClient.readContract({
+                address: contractAddress,
+                abi: contractAbi,
+                functionName: 'vestingWallets',
+                args: [userAddress as Address, capId],
+              }) as any
+
+              let claimableAmount = BigInt(0)
+              let errorMessage = ''
+
+              try {
+                // For testnet mining, we need the substrate wallet
+                const substrateInfo = await publicClient.readContract({
+                  address: contractAddress,
+                  abi: contractAbi,
+                  functionName: 'substrateRewardInfo',
+                  args: [userAddress as Address],
+                }) as [bigint, bigint]
+
+                if (substrateInfo[0] > 0) {
+                  claimableAmount = await publicClient.readContract({
+                    address: contractAddress,
+                    abi: contractAbi,
+                    functionName: 'calculateDueTokens',
+                    args: [userAddress as Address, '', capId],
+                  }) as bigint
+                }
+              } catch (error) {
+                errorMessage = error instanceof Error ? error.message : String(error)
+                console.error('Claim calculation error:', error)
+              }
+
+              const [_capId, walletName, amount, claimed, monthlyClaimedRewards, lastClaimMonth] = walletInfo
+              const [totalAllocation, name, cliff, vestingTerm, vestingPlan, initialRelease, startDate, allocatedToWallets, maxRewardsPerMonth, ratio] = cap
+
+              newVestingData.set(Number(capId), {
+                capId: Number(capId),
+                name: decodeBytes32String(name),
+                totalAllocation,
+                cliff,
+                vestingTerm,
+                vestingPlan,
+                initialRelease,
+                startDate,
+                allocatedToWallets,
+                maxRewardsPerMonth,
+                ratio,
+                walletInfo: {
+                  capId: Number(_capId),
+                  name: decodeBytes32String(walletName),
+                  amount,
+                  claimed,
+                  monthlyClaimedRewards,
+                  lastClaimMonth,
+                  claimableAmount,
+                  errorMessage
+                }
+              })
+            }
+          }
+          setVestingData(newVestingData)
+          setIsLoading(false)
+          return
+        }
+
+        let index = 0
+        while (true) {
+          try {
+            // Read cap ID at current index
+            console.log("Index:", index, "Contract Address:", contractAddress)
+            const capIds = await publicClient.readContract({
+              address: contractAddress,
+              abi: contractAbi,
+              functionName: 'capIds',
+            }) as bigint[]
+
+            if (index >= capIds.length) break
+            const capId = capIds[index]
+
+            // Get cap details
+            const cap = await publicClient.readContract({
+              address: contractAddress,
+              abi: contractAbi,
+              functionName: 'vestingCaps',
+              args: [capId],
+            }) as VestingCap
+
+            // Get wallets in this cap
+            const walletsInThisCap = await publicClient.readContract({
+              address: contractAddress,
+              abi: contractAbi,
+              functionName: 'getWalletsInCap',
+              args: [capId],
+            }) as Address[]
+
             console.log(`Cap ${capId} wallets:`, walletsInThisCap)
             let claimableAmount = BigInt(0);
             let errorMessage = '';
-  
+
             if (walletsInThisCap.includes(userAddress as Address)) {
               // Get wallet info
               const walletInfo = await publicClient.readContract({
                 address: contractAddress,
-                abi: CONTRACT_ABI,
+                abi: contractAbi,
                 functionName: 'vestingWallets',
                 args: [userAddress as Address, capId],
               })
-  
+
               try {
                 // Calculate claimable amount
                 claimableAmount = await publicClient.readContract({
                   address: contractAddress,
-                  abi: CONTRACT_ABI,
+                  abi: contractAbi,
                   functionName: 'calculateDueTokens',
                   args: [userAddress as Address, capId],
                 }) as bigint
@@ -120,10 +240,10 @@ export function useVestingContract() {
                 errorMessage = parseContractError(error);
                 console.error('Claim calculation error:', error);
               }
-  
+
               const [_capId, walletName, amount, claimed] = walletInfo as [bigint, string, bigint, bigint];
               const [totalAllocation, name, cliff, vestingTerm, vestingPlan, initialRelease, startDate] = cap as [bigint, string, bigint, bigint, bigint, bigint, bigint];
-  
+
               console.log("here", capId, walletName, amount, claimed, totalAllocation, name, cliff, vestingTerm, vestingPlan, initialRelease, startDate)
               console.log("here2", {name: name, decodedName: decodeBytes32String(name)})
               newVestingData.set(Number(capId), {
@@ -159,25 +279,24 @@ export function useVestingContract() {
         setIsLoading(false)
       }
     }
-  
+
     if (userAddress && contractAddress) {
       fetchVestingData()
     }
   }, [userAddress, contractAddress, walletsInCap, publicClient])
-  
 
   const { writeContractAsync } = useWriteContract()
 
   const handleClaim = async (capId: number) => {
     if (!userAddress) return Promise.reject(new Error('Wallet not connected'))
     if (!contractAddress) return Promise.reject(new Error('Contract not configured'))
-  
+
     try {
       console.log("Initiating claim for capId:", capId)
       
       const hash = await writeContractAsync({
         address: contractAddress,
-        abi: CONTRACT_ABI,
+        abi: contractAbi,
         functionName: 'claimTokens',
         args: [BigInt(capId), BigInt(chainId || 1)],
       })
@@ -188,7 +307,6 @@ export function useVestingContract() {
       return Promise.reject(err instanceof Error ? err : new Error(String(err))) // Return rejected promise with an Error instance
     }
   }
-  
 
   return {
     vestingData,

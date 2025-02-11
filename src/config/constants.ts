@@ -1,7 +1,7 @@
 export const APP_NAME = 'Token Vesting Dashboard'
 export const APP_DESCRIPTION = 'Manage and claim your vested tokens'
 
-export const SUPPORTED_CHAINS = ['mainnet', 'goerli', 'local'] as const
+export const SUPPORTED_CHAINS = ['mainnet', 'goerli', 'hardhat'] as const
 export type SupportedChain = (typeof SUPPORTED_CHAINS)[number]
 
 export const CHAIN_NAMES = {

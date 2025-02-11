@@ -16,7 +16,9 @@ export function VestingDashboard() {
   const getTitle = () => {
     return activeContract === CONTRACT_TYPES.VESTING 
       ? "Token Vesting Allocations"
-      : "Airdrop Vesting Allocations"
+      : activeContract === CONTRACT_TYPES.TESTNET_MINING
+        ? "Testnet Mining Allocations"
+        : "Airdrop Vesting Allocations"
   }
 
   return (
@@ -44,4 +46,3 @@ export function VestingDashboard() {
     </ClientOnly>
   )
 }
-

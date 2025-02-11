@@ -23,8 +23,16 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
   const theme = useTheme();
 
   const currentTime = Date.now()
-  const cliffEndTime = vestingData.startDate + (vestingData.cliff * 24 * 60 * 60 * 1000)
+  const cliffEndTime = Number(vestingData.startDate) + (Number(vestingData.cliff) * 24 * 60 * 60 * 1000)
   const isCliffReached = currentTime >= cliffEndTime
+
+  const formatBigIntToEther = (value: bigint) => {
+    if (!value) return '0'
+    return Number(formatEther(value)).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 6
+    })
+  }
 
   const InfoItem = ({ label, value }: { label: string, value: string | number }) => (
     <Box sx={{ mb: 3 }}>
@@ -58,15 +66,15 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
             <Stack spacing={3}>
               <InfoItem 
                 label="Total Allocation"
-                value={`${formatEther(vestingData.totalAllocation)} Tokens`}
+                value={`${formatBigIntToEther(vestingData.totalAllocation)} Tokens`}
               />
               <InfoItem 
                 label="Claimed Amount"
-                value={`${formatEther(vestingData.claimed)} Tokens`}
+                value={`${formatBigIntToEther(vestingData.walletInfo.claimed)} Tokens`}
               />
               <InfoItem 
                 label="Available to Claim"
-                value={`${formatEther(vestingData.claimable)} Tokens`}
+                value={`${formatBigIntToEther(vestingData.walletInfo.claimableAmount)} Tokens`}
               />
             </Stack>
           </Grid>
@@ -75,19 +83,19 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
             <Stack spacing={3}>
               <InfoItem 
                 label="Vesting Start Date"
-                value={new Date(vestingData.startDate).toLocaleString()}
+                value={new Date(Number(vestingData.startDate)).toLocaleString()}
               />
               <InfoItem 
                 label="Initial Release"
-                value={`${vestingData.initialRelease}%`}
+                value={`${Number(vestingData.initialRelease)}%`}
               />
               <InfoItem 
                 label="Cliff Period"
-                value={`${vestingData.cliff} days`}
+                value={`${Number(vestingData.cliff / BigInt(24 * 60 * 60))} days`}
               />
               <InfoItem 
                 label="Vesting Term"
-                value={`${vestingData.vestingTerm} months (every ${vestingData.vestingPlan} months)`}
+                value={`${Number(vestingData.vestingTerm / BigInt(30 * 24 * 60 * 60))} months (every ${Number(vestingData.vestingPlan / BigInt(30 * 24 * 60 * 60))} months)`}
               />
             </Stack>
           </Grid>
@@ -97,7 +105,7 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
         <Box sx={{ mt: 4 }}>
           <ClaimButton 
             capId={vestingData.capId}
-            claimableAmount={vestingData.claimable}
+            claimableAmount={vestingData.walletInfo?.claimableAmount || BigInt(0)}
           />
         </Box>
       </CardContent>
