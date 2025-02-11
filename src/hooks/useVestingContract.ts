@@ -286,9 +286,8 @@ export function useVestingContract() {
     }
   }
 
-  const loadTestnetData = async (wallet: string) => {
+  const loadTestnetData = (wallet: string) => {
     setSubstrateWallet(wallet)
-    await fetchVestingData()
   }
 
   useEffect(() => {
@@ -513,7 +512,7 @@ export function useVestingContract() {
     if (userAddress && contractAddress) {
       fetchVestingData()
     }
-  }, [userAddress, contractAddress, walletsInCap, publicClient])
+  }, [userAddress, contractAddress, walletsInCap, publicClient, substrateWallet])
 
   const { writeContractAsync } = useWriteContract()
 
