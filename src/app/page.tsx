@@ -274,7 +274,7 @@ export default function Home() {
                 How to Use the Vesting Dashboard
               </Typography>
               <Typography variant="subtitle1" color="rgba(255, 255, 255, 0.8)">
-                Please ensure the URL starts with https://claim.fx.land
+                Please ensure the URL starts with https://claim.fx.land and if you encoutered issues use Microsoft Edge browser
               </Typography>
             </Box>
             
