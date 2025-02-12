@@ -1,7 +1,7 @@
 export const APP_NAME = 'Token Vesting Dashboard'
 export const APP_DESCRIPTION = 'Manage and claim your vested tokens'
 
-export const SUPPORTED_CHAINS = ['mainnet', 'goerli', 'local'] as const
+export const SUPPORTED_CHAINS = ['mainnet', 'goerli', 'hardhat'] as const
 export type SupportedChain = (typeof SUPPORTED_CHAINS)[number]
 
 export const CHAIN_NAMES = {
@@ -31,6 +31,14 @@ export const UI_CONSTANTS = {
   TRANSACTION_TIMEOUT: 30000, // 30 seconds
   POLLING_INTERVAL: 15000, // 15 seconds
 } as const
+
+export const CONTRACT_TYPES = {
+  VESTING: 'vesting',
+  AIRDROP: 'airdrop',
+  TESTNET_MINING: 'testnet_mining',
+} as const
+
+export type ContractType = typeof CONTRACT_TYPES[keyof typeof CONTRACT_TYPES]
 
 export const LINKS = {
   DOCS: 'https://docs.example.com',

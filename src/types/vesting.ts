@@ -12,6 +12,11 @@ export interface VestingData {
   vestingPlan: number
   startDate: number
   errorMessage?: string
+  ratio?: bigint
+  substrateRewards?: {
+    lastUpdate: bigint
+    amount: bigint
+  }
 }
 
 export interface VestingCap {
