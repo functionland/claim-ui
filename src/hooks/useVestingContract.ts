@@ -217,13 +217,17 @@ export function useVestingContract() {
         }
       })
 
+      // Get the chain ID in the format expected by the contract
+      const targetChainId = BigInt(chainId)
+      console.log("Using chain ID for contract:", targetChainId.toString())
+
       // Simulate the transaction first
       const { request } = await publicClient.simulateContract({
         account: userAddress,
         address: contractAddress,
         abi: CONTRACT_ABI,
         functionName: 'claimTokens',
-        args: [BigInt(capId), BigInt(chainId)],
+        args: [BigInt(capId), targetChainId],
       })
 
       // If simulation succeeds, execute the actual transaction
@@ -234,12 +238,19 @@ export function useVestingContract() {
     } catch (err) {
       console.error("Claim error:", err)
       if (err instanceof Error) {
+        // Add more detailed error information
+        console.error("Error details:", {
+          message: err.message,
+          name: err.name,
+          stack: err.stack
+        })
+        
         if (err.message.includes('simulation failed')) {
           return Promise.reject(new Error('Transaction would fail. Please check your claimable balance and try again.'))
         }
         // Add specific handling for chain-related errors
         if (err.message.includes('0x7a69')) {
-          return Promise.reject(new Error('Chain configuration error. Please make sure you are connected to the correct network.'))
+          return Promise.reject(new Error('Chain configuration error. Make sure you are connected to the local network (chainId: 31337) and the contract is deployed.'))
         }
         return Promise.reject(err)
       }
