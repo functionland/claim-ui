@@ -1,413 +1,370 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAccount, useContractRead, useContractWrite, useChainId } from 'wagmi'
+import { useAccount } from 'wagmi'
 import { 
   Box,
   Typography,
   TextField,
   Button,
-  Paper,
   Grid,
   Alert,
   CircularProgress,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { ethers } from 'ethers'
-import { TOKEN_ADDRESSES, CONTRACT_ABI } from '@/config/contracts'
+import { ConnectButton } from '@/components/common/ConnectButton'
+import { useAdminContract } from '@/hooks/useAdminContract'
+import { CONTRACT_TYPES } from '@/config/contracts'
+import ClientOnly from '../common/ClientOnly'
+import { useContractContext } from '@/contexts/ContractContext'
 
-interface Proposal {
-  id: string
-  type: number
-  target: string
-  amount: string
-  status: string
-  approvals: number
+function DisconnectedView() {
+  return (
+    <Box sx={{ textAlign: 'center', py: 4 }}>
+      <Typography variant="h5" gutterBottom>
+        Connect Wallet
+      </Typography>
+      <Typography variant="body1" sx={{ mb: 3 }}>
+        Please connect your wallet to access the admin features
+      </Typography>
+      <ConnectButton />
+    </Box>
+  )
+}
+
+function ConnectedView({ error, formData, setFormData, handlers, states, data }: any) {
+  return (
+    <Box>
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+
+      <Typography variant="h5" gutterBottom component="h2">
+        Token Administration
+      </Typography>
+
+      <Grid container spacing={3}>
+        {/* Whitelist Management */}
+        <Grid item xs={12}>
+          <Accordion defaultExpanded>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="h6">Whitelist Management</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Box component="form" noValidate sx={{ mt: 1 }}>
+                <TextField
+                  fullWidth
+                  label="Wallet Address"
+                  value={formData.walletAddress}
+                  onChange={(e) => setFormData(prev => ({ ...prev, walletAddress: e.target.value }))}
+                  margin="normal"
+                  disabled={states.isAddingToWhitelist}
+                />
+                <Button
+                  variant="contained"
+                  onClick={handlers.handleAddToWhitelist}
+                  disabled={states.isAddingToWhitelist || !formData.walletAddress}
+                  sx={{ mt: 2 }}
+                >
+                  {states.isAddingToWhitelist ? <CircularProgress size={24} /> : 'Add to Whitelist'}
+                </Button>
+              </Box>
+
+              <TableContainer sx={{ mt: 3 }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Current Whitelisted Addresses
+                </Typography>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Address</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {data.whitelistedAddresses?.map((address) => (
+                      <TableRow key={address}>
+                        <TableCell>{address}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </AccordionDetails>
+          </Accordion>
+        </Grid>
+
+        {/* Transaction Limit */}
+        <Grid item xs={12}>
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="h6">Transaction Limit</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Box component="form" noValidate sx={{ mt: 1 }}>
+                <TextField
+                  fullWidth
+                  label="Transaction Limit (in tokens)"
+                  value={formData.transactionLimit}
+                  onChange={(e) => setFormData(prev => ({ ...prev, transactionLimit: e.target.value }))}
+                  margin="normal"
+                  type="number"
+                  disabled={states.isSettingLimit}
+                />
+                <Button
+                  variant="contained"
+                  onClick={handlers.handleSetTransactionLimit}
+                  disabled={states.isSettingLimit || !formData.transactionLimit}
+                  sx={{ mt: 2 }}
+                >
+                  {states.isSettingLimit ? <CircularProgress size={24} /> : 'Set Transaction Limit'}
+                </Button>
+              </Box>
+            </AccordionDetails>
+          </Accordion>
+        </Grid>
+
+        {/* TGE Time */}
+        <Grid item xs={12}>
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="h6">TGE Time</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Box component="form" noValidate sx={{ mt: 1 }}>
+                <TextField
+                  fullWidth
+                  label="TGE Time"
+                  type="datetime-local"
+                  value={formData.tgeTime}
+                  onChange={(e) => setFormData(prev => ({ ...prev, tgeTime: e.target.value }))}
+                  margin="normal"
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  disabled={states.isSettingTGE}
+                />
+                <Button
+                  variant="contained"
+                  onClick={handlers.handleSetTGE}
+                  disabled={states.isSettingTGE || !formData.tgeTime}
+                  sx={{ mt: 2 }}
+                >
+                  {states.isSettingTGE ? <CircularProgress size={24} /> : 'Set TGE Time'}
+                </Button>
+              </Box>
+            </AccordionDetails>
+          </Accordion>
+        </Grid>
+
+        {/* Proposals */}
+        <Grid item xs={12}>
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="h6">Proposals</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>ID</TableCell>
+                      <TableCell>Description</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {data.tokenProposals?.map((proposal) => (
+                      <TableRow key={proposal.id}>
+                        <TableCell>{proposal.id}</TableCell>
+                        <TableCell>{proposal.description}</TableCell>
+                        <TableCell>{proposal.status}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outlined"
+                            onClick={() => handlers.handleApproveProposal(proposal.id)}
+                            disabled={states.isApproving}
+                            sx={{ mr: 1 }}
+                          >
+                            {states.isApproving ? <CircularProgress size={24} /> : 'Approve'}
+                          </Button>
+                          <Button
+                            variant="contained"
+                            onClick={() => handlers.handleExecuteProposal(proposal.id)}
+                            disabled={states.isExecuting}
+                          >
+                            {states.isExecuting ? <CircularProgress size={24} /> : 'Execute'}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </AccordionDetails>
+          </Accordion>
+        </Grid>
+      </Grid>
+    </Box>
+  )
 }
 
 export function TokenAdmin() {
-  const { address } = useAccount()
-  const chainId = useChainId()
+  const { isConnected } = useAccount()
+  const { setActiveContract } = useContractContext()
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
-    role: '',
-    quorum: '',
+    walletAddress: '',
     transactionLimit: '',
-    whitelistAddress: '',
-    proposalId: '',
-    tgeAmount: '',
     tgeTime: '',
+    proposalId: '',
   })
 
-  // Contract interactions for role management
-  const { write: setQuorum, isLoading: isSettingQuorum } = useContractWrite({
-    address: TOKEN_ADDRESSES[chainId],
-    abi: CONTRACT_ABI,
-    functionName: 'setRoleQuorum',
-  })
+  // Set the active contract to TOKEN when the component mounts
+  useEffect(() => {
+    setActiveContract(CONTRACT_TYPES.TOKEN)
+  }, [setActiveContract])
 
-  const { write: setLimit, isLoading: isSettingLimit } = useContractWrite({
-    address: TOKEN_ADDRESSES[chainId],
-    abi: CONTRACT_ABI,
-    functionName: 'setRoleTransactionLimit',
-  })
+  const {
+    whitelistedAddresses,
+    tokenProposals,
+    addToWhitelist,
+    setTransactionLimit,
+    setTGE,
+    approveProposal,
+    executeProposal,
+  } = useAdminContract()
 
-  // Contract interactions for whitelist management
-  const { write: createWhitelistProposal, isLoading: isCreatingWhitelist } = useContractWrite({
-    address: TOKEN_ADDRESSES[chainId],
-    abi: CONTRACT_ABI,
-    functionName: 'createProposal',
-  })
+  const [isAddingToWhitelist, setIsAddingToWhitelist] = useState(false)
+  const [isSettingLimit, setIsSettingLimit] = useState(false)
+  const [isSettingTGE, setIsSettingTGE] = useState(false)
+  const [isApproving, setIsApproving] = useState(false)
+  const [isExecuting, setIsExecuting] = useState(false)
 
-  // Contract interactions for proposal management
-  const { write: approveProposal, isLoading: isApproving } = useContractWrite({
-    address: TOKEN_ADDRESSES[chainId],
-    abi: CONTRACT_ABI,
-    functionName: 'approveProposal',
-  })
-
-  const { write: executeProposal, isLoading: isExecuting } = useContractWrite({
-    address: TOKEN_ADDRESSES[chainId],
-    abi: CONTRACT_ABI,
-    functionName: 'executeProposal',
-  })
-
-  // Contract interactions for TGE
-  const { write: initiateTGE, isLoading: isInitiatingTGE } = useContractWrite({
-    address: TOKEN_ADDRESSES[chainId],
-    abi: CONTRACT_ABI,
-    functionName: 'initiateTGE',
-  })
-
-  // Read contract data
-  const { data: proposals } = useContractRead({
-    address: TOKEN_ADDRESSES[chainId],
-    abi: CONTRACT_ABI,
-    functionName: 'getProposals',
-    watch: true,
-  }) as { data: Proposal[] }
-
-  const { data: whitelistedAddresses } = useContractRead({
-    address: TOKEN_ADDRESSES[chainId],
-    abi: CONTRACT_ABI,
-    functionName: 'getWhitelistedAddresses',
-    watch: true,
-  }) as { data: string[] }
-
-  const handleSetQuorum = async () => {
+  const handleAddToWhitelist = async () => {
     try {
       setError(null)
-      setQuorum?.({
-        args: [
-          ethers.id(formData.role),
-          BigInt(formData.quorum),
-        ],
-      })
-    } catch (error) {
-      setError('Failed to set quorum')
+      setIsAddingToWhitelist(true)
+      await addToWhitelist(formData.walletAddress)
+      // Clear form
+      setFormData(prev => ({
+        ...prev,
+        walletAddress: '',
+      }))
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setIsAddingToWhitelist(false)
     }
   }
 
   const handleSetTransactionLimit = async () => {
     try {
       setError(null)
-      setLimit?.({
-        args: [
-          ethers.id(formData.role),
-          ethers.parseEther(formData.transactionLimit),
-        ],
-      })
-    } catch (error) {
-      setError('Failed to set transaction limit')
+      setIsSettingLimit(true)
+      await setTransactionLimit(formData.transactionLimit)
+      // Clear form
+      setFormData(prev => ({
+        ...prev,
+        transactionLimit: '',
+      }))
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setIsSettingLimit(false)
     }
   }
 
-  const handleCreateWhitelistProposal = async () => {
+  const handleSetTGE = async () => {
     try {
       setError(null)
-      createWhitelistProposal?.({
-        args: [
-          5, // AddWhitelist type
-          0,
-          formData.whitelistAddress as `0x${string}`,
-          ethers.ZeroHash,
-          0,
-          ethers.ZeroAddress,
-        ],
-      })
-    } catch (error) {
-      setError('Failed to create whitelist proposal')
+      setIsSettingTGE(true)
+      // Convert date string to Unix timestamp
+      const tgeDate = new Date(formData.tgeTime)
+      await setTGE(Math.floor(tgeDate.getTime() / 1000))
+      // Clear form
+      setFormData(prev => ({
+        ...prev,
+        tgeTime: '',
+      }))
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setIsSettingTGE(false)
     }
   }
 
-  const handleApproveProposal = async () => {
+  const handleApproveProposal = async (id: string) => {
     try {
       setError(null)
-      approveProposal?.({
-        args: [formData.proposalId],
-      })
-    } catch (error) {
-      setError('Failed to approve proposal')
+      setIsApproving(true)
+      await approveProposal(id)
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setIsApproving(false)
     }
   }
 
-  const handleExecuteProposal = async () => {
+  const handleExecuteProposal = async (id: string) => {
     try {
       setError(null)
-      executeProposal?.({
-        args: [formData.proposalId],
-      })
-    } catch (error) {
-      setError('Failed to execute proposal')
+      setIsExecuting(true)
+      await executeProposal(id)
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setIsExecuting(false)
     }
   }
 
-  const handleInitiateTGE = async () => {
-    try {
-      setError(null)
-      initiateTGE?.({
-        args: [
-          ethers.parseEther(formData.tgeAmount),
-          BigInt(new Date(formData.tgeTime).getTime() / 1000),
-        ],
-      })
-    } catch (error) {
-      setError('Failed to initiate TGE')
-    }
+  const handlers = {
+    handleAddToWhitelist,
+    handleSetTransactionLimit,
+    handleSetTGE,
+    handleApproveProposal,
+    handleExecuteProposal,
+  }
+
+  const states = {
+    isAddingToWhitelist,
+    isSettingLimit,
+    isSettingTGE,
+    isApproving,
+    isExecuting,
+  }
+
+  const data = {
+    whitelistedAddresses,
+    tokenProposals,
   }
 
   return (
-    <Box>
-      <Typography variant="h5" gutterBottom>
-        Token Contract Administration
-      </Typography>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
+    <ClientOnly>
+      {isConnected ? (
+        <ConnectedView 
+          error={error}
+          formData={formData}
+          setFormData={setFormData}
+          handlers={handlers}
+          states={states}
+          data={data}
+        />
+      ) : (
+        <DisconnectedView />
       )}
-
-      <Accordion defaultExpanded>
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography variant="h6">Role Management</Typography>
-        </AccordionSummary>
-        <AccordionDetails>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Role"
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                helperText="ADMIN_ROLE, CONTRACT_OPERATOR_ROLE, or BRIDGE_OPERATOR_ROLE"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Quorum"
-                type="number"
-                value={formData.quorum}
-                onChange={(e) => setFormData({ ...formData, quorum: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Transaction Limit"
-                value={formData.transactionLimit}
-                onChange={(e) => setFormData({ ...formData, transactionLimit: e.target.value })}
-              />
-            </Grid>
-          </Grid>
-          <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
-            <Button
-              variant="contained"
-              onClick={handleSetQuorum}
-              disabled={isSettingQuorum}
-              startIcon={isSettingQuorum ? <CircularProgress size={20} /> : null}
-            >
-              {isSettingQuorum ? 'Setting...' : 'Set Quorum'}
-            </Button>
-            <Button
-              variant="contained"
-              onClick={handleSetTransactionLimit}
-              disabled={isSettingLimit}
-              startIcon={isSettingLimit ? <CircularProgress size={20} /> : null}
-            >
-              {isSettingLimit ? 'Setting...' : 'Set Transaction Limit'}
-            </Button>
-          </Box>
-        </AccordionDetails>
-      </Accordion>
-
-      <Accordion>
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography variant="h6">Whitelist Management</Typography>
-        </AccordionSummary>
-        <AccordionDetails>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Address to Whitelist"
-                value={formData.whitelistAddress}
-                onChange={(e) => setFormData({ ...formData, whitelistAddress: e.target.value })}
-              />
-            </Grid>
-          </Grid>
-          <Box sx={{ mt: 2 }}>
-            <Button
-              variant="contained"
-              onClick={handleCreateWhitelistProposal}
-              disabled={isCreatingWhitelist}
-              startIcon={isCreatingWhitelist ? <CircularProgress size={20} /> : null}
-            >
-              {isCreatingWhitelist ? 'Creating...' : 'Create Whitelist Proposal'}
-            </Button>
-          </Box>
-          <Box sx={{ mt: 2 }}>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Whitelisted Address</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {whitelistedAddresses?.map((address, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{address}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
-        </AccordionDetails>
-      </Accordion>
-
-      <Accordion>
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography variant="h6">Token Generation Event (TGE)</Typography>
-        </AccordionSummary>
-        <AccordionDetails>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="TGE Amount"
-                value={formData.tgeAmount}
-                onChange={(e) => setFormData({ ...formData, tgeAmount: e.target.value })}
-                helperText="Amount of tokens for TGE"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                type="datetime-local"
-                label="TGE Time"
-                value={formData.tgeTime}
-                onChange={(e) => setFormData({ ...formData, tgeTime: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-          </Grid>
-          <Box sx={{ mt: 2 }}>
-            <Button
-              variant="contained"
-              onClick={handleInitiateTGE}
-              disabled={isInitiatingTGE}
-              startIcon={isInitiatingTGE ? <CircularProgress size={20} /> : null}
-            >
-              {isInitiatingTGE ? 'Initiating...' : 'Initiate TGE'}
-            </Button>
-          </Box>
-        </AccordionDetails>
-      </Accordion>
-
-      <Accordion>
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography variant="h6">Proposal Management</Typography>
-        </AccordionSummary>
-        <AccordionDetails>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Proposal ID"
-                value={formData.proposalId}
-                onChange={(e) => setFormData({ ...formData, proposalId: e.target.value })}
-              />
-            </Grid>
-          </Grid>
-          <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
-            <Button
-              variant="contained"
-              onClick={handleApproveProposal}
-              disabled={isApproving}
-              startIcon={isApproving ? <CircularProgress size={20} /> : null}
-            >
-              {isApproving ? 'Approving...' : 'Approve Proposal'}
-            </Button>
-            <Button
-              variant="contained"
-              onClick={handleExecuteProposal}
-              disabled={isExecuting}
-              startIcon={isExecuting ? <CircularProgress size={20} /> : null}
-            >
-              {isExecuting ? 'Executing...' : 'Execute Proposal'}
-            </Button>
-          </Box>
-          <Box sx={{ mt: 2 }}>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>ID</TableCell>
-                    <TableCell>Type</TableCell>
-                    <TableCell>Target</TableCell>
-                    <TableCell>Amount</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Approvals</TableCell>
-                    <TableCell>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {proposals?.map((proposal) => (
-                    <TableRow key={proposal.id}>
-                      <TableCell>{proposal.id}</TableCell>
-                      <TableCell>{proposal.type}</TableCell>
-                      <TableCell>{proposal.target}</TableCell>
-                      <TableCell>{proposal.amount}</TableCell>
-                      <TableCell>{proposal.status}</TableCell>
-                      <TableCell>{proposal.approvals}</TableCell>
-                      <TableCell>
-                        <Button
-                          size="small"
-                          onClick={() => setFormData({ ...formData, proposalId: proposal.id })}
-                        >
-                          Select
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
-        </AccordionDetails>
-      </Accordion>
-    </Box>
+    </ClientOnly>
   )
 }

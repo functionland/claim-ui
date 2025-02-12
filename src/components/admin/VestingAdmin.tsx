@@ -1,13 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { useAccount, useContractWrite, useWaitForTransaction } from 'wagmi'
+import { useAccount } from 'wagmi'
 import { 
   Box,
   Typography,
   TextField,
   Button,
-  Paper,
   Grid,
   Alert,
   CircularProgress,
@@ -23,37 +22,12 @@ import {
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { ethers } from 'ethers'
-import { CONTRACT_CONFIG, CONTRACT_TYPES } from '@/config/contracts'
-
-interface VestingCap {
-  id: number
-  name: string
-  totalAllocation: string
-  cliff: number
-  vestingTerm: number
-  vestingPlan: number
-  initialRelease: number
-}
-
-interface VestingWallet {
-  address: string
-  capId: number
-  amount: string
-  released: string
-  note: string
-}
-
-interface Proposal {
-  id: string
-  type: number
-  target: string
-  amount: string
-  status: string
-  approvals: number
-}
+import { ConnectButton } from '@/components/common/ConnectButton'
+import { useAdminContract } from '@/hooks/useAdminContract'
+import { CONTRACT_TYPES } from '@/config/contracts'
 
 export function VestingAdmin() {
-  const { address } = useAccount()
+  const { isConnected } = useAccount()
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     capName: '',
@@ -69,94 +43,116 @@ export function VestingAdmin() {
     proposalId: '',
   })
 
-  // Contract interactions
-  const { write: createVestingCap, isLoading: isCreatingCap } = useContractWrite({
-    address: CONTRACT_CONFIG.address[CONTRACT_TYPES.VESTING][1], // Using mainnet for now
-    abi: CONTRACT_CONFIG.abi[CONTRACT_TYPES.VESTING],
-    functionName: 'createVestingCap',
-  })
+  const {
+    vestingCaps,
+    vestingWallets,
+    proposals,
+    createVestingCap,
+    addVestingWallet,
+    approveProposal,
+    executeProposal,
+  } = useAdminContract()
 
-  const { write: addVestingWallet, isLoading: isAddingWallet } = useContractWrite({
-    address: CONTRACT_CONFIG.address[CONTRACT_TYPES.VESTING][1],
-    abi: CONTRACT_CONFIG.abi[CONTRACT_TYPES.VESTING],
-    functionName: 'addVestingWallet',
-  })
-
-  const { write: approveProposal, isLoading: isApproving } = useContractWrite({
-    address: CONTRACT_CONFIG.address[CONTRACT_TYPES.VESTING][1],
-    abi: CONTRACT_CONFIG.abi[CONTRACT_TYPES.VESTING],
-    functionName: 'approveProposal',
-  })
-
-  const { write: executeProposal, isLoading: isExecuting } = useContractWrite({
-    address: CONTRACT_CONFIG.address[CONTRACT_TYPES.VESTING][1],
-    abi: CONTRACT_CONFIG.abi[CONTRACT_TYPES.VESTING],
-    functionName: 'executeProposal',
-  })
+  const [isCreatingCap, setIsCreatingCap] = useState(false)
+  const [isAddingWallet, setIsAddingWallet] = useState(false)
+  const [isApproving, setIsApproving] = useState(false)
+  const [isExecuting, setIsExecuting] = useState(false)
 
   const handleCreateVestingCap = async () => {
     try {
       setError(null)
-      createVestingCap?.({
-        args: [
-          ethers.encodeBytes32String(formData.capName),
-          ethers.parseEther(formData.totalAllocation),
-          BigInt(Number(formData.cliff) * 86400), // Convert days to seconds
-          BigInt(Number(formData.vestingTerm)), // Months
-          BigInt(Number(formData.vestingPlan)), // Months
-          BigInt(Number(formData.initialRelease)),
-        ],
-      })
-    } catch (error) {
-      setError('Failed to create vesting cap')
+      setIsCreatingCap(true)
+      await createVestingCap(
+        formData.capName,
+        formData.totalAllocation,
+        Number(formData.cliff),
+        Number(formData.vestingTerm),
+        Number(formData.vestingPlan),
+        Number(formData.initialRelease)
+      )
+      // Clear form
+      setFormData(prev => ({
+        ...prev,
+        capName: '',
+        totalAllocation: '',
+        cliff: '',
+        vestingTerm: '',
+        vestingPlan: '',
+        initialRelease: '',
+      }))
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setIsCreatingCap(false)
     }
   }
 
   const handleAddVestingWallet = async () => {
     try {
       setError(null)
-      addVestingWallet?.({
-        args: [
-          formData.walletAddress,
-          BigInt(formData.capId),
-          ethers.parseEther(formData.amount),
-          ethers.encodeBytes32String(formData.note),
-        ],
-      })
-    } catch (error) {
-      setError('Failed to add vesting wallet')
+      setIsAddingWallet(true)
+      await addVestingWallet(
+        formData.walletAddress,
+        Number(formData.capId),
+        formData.amount,
+        formData.note || 'Beneficiary'
+      )
+      // Clear form
+      setFormData(prev => ({
+        ...prev,
+        walletAddress: '',
+        capId: '',
+        amount: '',
+        note: '',
+      }))
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setIsAddingWallet(false)
     }
   }
 
   const handleApproveProposal = async () => {
     try {
       setError(null)
-      approveProposal?.({
-        args: [formData.proposalId],
-      })
-    } catch (error) {
-      setError('Failed to approve proposal')
+      setIsApproving(true)
+      await approveProposal(formData.proposalId)
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setIsApproving(false)
     }
   }
 
   const handleExecuteProposal = async () => {
     try {
       setError(null)
-      executeProposal?.({
-        args: [formData.proposalId],
-      })
-    } catch (error) {
-      setError('Failed to execute proposal')
+      setIsExecuting(true)
+      await executeProposal(formData.proposalId)
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setIsExecuting(false)
     }
+  }
+
+  if (!isConnected) {
+    return (
+      <Box sx={{ textAlign: 'center', py: 4 }}>
+        <Typography variant="h6" gutterBottom>
+          Please connect your wallet to access the admin panel
+        </Typography>
+        <Box sx={{ mt: 2 }}>
+          <ConnectButton />
+        </Box>
+      </Box>
+    )
   }
 
   return (
     <Box>
       <Typography variant="h5" gutterBottom>
-        Distribution Contract Administration
-      </Typography>
-      <Typography variant="body2" color="text.secondary" gutterBottom>
-        Manage vesting caps and beneficiaries
+        Vesting Contract Administration
       </Typography>
 
       {error && (
@@ -254,7 +250,17 @@ export function VestingAdmin() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {/* Add vesting caps data here */}
+                {vestingCaps?.map((cap) => (
+                  <TableRow key={cap.id}>
+                    <TableCell>{cap.id}</TableCell>
+                    <TableCell>{cap.name}</TableCell>
+                    <TableCell>{ethers.formatEther(cap.totalAllocation)}</TableCell>
+                    <TableCell>{cap.cliff / 86400}</TableCell>
+                    <TableCell>{cap.vestingTerm}</TableCell>
+                    <TableCell>{cap.vestingPlan}</TableCell>
+                    <TableCell>{cap.initialRelease}</TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </TableContainer>
@@ -329,7 +335,15 @@ export function VestingAdmin() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {/* Add vesting wallets data here */}
+                {vestingWallets?.map((wallet, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{wallet.address}</TableCell>
+                    <TableCell>{wallet.capId}</TableCell>
+                    <TableCell>{ethers.formatEther(wallet.amount)}</TableCell>
+                    <TableCell>{ethers.formatEther(wallet.released)}</TableCell>
+                    <TableCell>{wallet.note}</TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </TableContainer>
@@ -383,7 +397,16 @@ export function VestingAdmin() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {/* Add pending proposals data here */}
+                {proposals?.filter(proposal => proposal.status === 'Pending').map((proposal) => (
+                  <TableRow key={proposal.id}>
+                    <TableCell>{proposal.id}</TableCell>
+                    <TableCell>{proposal.type}</TableCell>
+                    <TableCell>{proposal.target}</TableCell>
+                    <TableCell>{proposal.amount}</TableCell>
+                    <TableCell>{proposal.status}</TableCell>
+                    <TableCell>{proposal.approvals}</TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </TableContainer>

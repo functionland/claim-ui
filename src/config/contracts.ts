@@ -1,5 +1,6 @@
 import { type Address } from 'viem'
 import { SupportedChain } from './constants'
+import { TOKEN_ABI, DISTRIBUTION_ABI, ROLE_TYPES, PROPOSAL_TYPES } from './abis';
 
 // Contract Addresses for vesting
 export const VESTING_CONTRACT_ADDRESSES: Record<number, Address> = {
@@ -360,26 +361,42 @@ export const TESTNET_MINING_ABI = [
 
 // Contract Types
 export const CONTRACT_TYPES = {
+  TOKEN: 'token',
   VESTING: 'vesting',
   AIRDROP: 'airdrop',
-  TESTNET_MINING: 'testnet_mining'
+  TESTNET_MINING: 'testnet_mining',
 } as const
 
-// Contract Config
-export const CONTRACT_CONFIG = {
+export type ContractType = typeof CONTRACT_TYPES[keyof typeof CONTRACT_TYPES];
+
+interface ContractConfig {
   address: {
+    [key in ContractType]: {
+      [chainId: number]: `0x${string}`;
+    };
+  };
+  abi: {
+    [key in ContractType]: readonly any[];
+  };
+}
+
+export const CONTRACT_CONFIG: ContractConfig = {
+  address: {
+    [CONTRACT_TYPES.TOKEN]: TOKEN_ADDRESSES,
     [CONTRACT_TYPES.VESTING]: VESTING_CONTRACT_ADDRESSES,
     [CONTRACT_TYPES.AIRDROP]: AIRDROP_CONTRACT_ADDRESSES,
     [CONTRACT_TYPES.TESTNET_MINING]: TESTNET_MINING_CONTRACT_ADDRESSES
   },
   abi: {
-    [CONTRACT_TYPES.VESTING]: CONTRACT_ABI,
+    [CONTRACT_TYPES.TOKEN]: TOKEN_ABI,
+    [CONTRACT_TYPES.VESTING]: DISTRIBUTION_ABI,
     [CONTRACT_TYPES.AIRDROP]: CONTRACT_ABI,
-    [CONTRACT_TYPES.TESTNET_MINING]: TESTNET_MINING_ABI
-  }
-} as const
+    [CONTRACT_TYPES.TESTNET_MINING]: TESTNET_MINING_ABI,
+  },
+};
 
-export type ContractType = typeof CONTRACT_TYPES[keyof typeof CONTRACT_TYPES]
+// Export common types and constants
+export { ROLE_TYPES, PROPOSAL_TYPES };
 
 // RPC Configuration
 export const RPC_URLS: Record<SupportedChain, string> = {
