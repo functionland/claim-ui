@@ -10,46 +10,96 @@ import {
   Paper,
   Grid,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from '@mui/material'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { ethers } from 'ethers'
 import { CONTRACT_CONFIG, CONTRACT_TYPES } from '@/config/contracts'
+
+interface VestingCap {
+  id: number
+  name: string
+  totalAllocation: string
+  cliff: number
+  vestingTerm: number
+  vestingPlan: number
+  initialRelease: number
+}
+
+interface VestingWallet {
+  address: string
+  capId: number
+  amount: string
+  released: string
+  note: string
+}
+
+interface Proposal {
+  id: string
+  type: number
+  target: string
+  amount: string
+  status: string
+  approvals: number
+}
 
 export function VestingAdmin() {
   const { address } = useAccount()
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
-    capId: '',
-    name: '',
+    capName: '',
     totalAllocation: '',
     cliff: '',
     vestingTerm: '',
     vestingPlan: '',
     initialRelease: '',
-    beneficiaryAddress: '',
-    beneficiaryAmount: '',
+    walletAddress: '',
+    capId: '',
+    amount: '',
+    note: '',
+    proposalId: '',
   })
 
   // Contract interactions
-  const { write: addVestingCap, isLoading: isAddingCap } = useContractWrite({
+  const { write: createVestingCap, isLoading: isCreatingCap } = useContractWrite({
     address: CONTRACT_CONFIG.address[CONTRACT_TYPES.VESTING][1], // Using mainnet for now
     abi: CONTRACT_CONFIG.abi[CONTRACT_TYPES.VESTING],
-    functionName: 'addVestingCap',
+    functionName: 'createVestingCap',
   })
 
-  const { write: createProposal, isLoading: isCreatingProposal } = useContractWrite({
+  const { write: addVestingWallet, isLoading: isAddingWallet } = useContractWrite({
     address: CONTRACT_CONFIG.address[CONTRACT_TYPES.VESTING][1],
     abi: CONTRACT_CONFIG.abi[CONTRACT_TYPES.VESTING],
-    functionName: 'createProposal',
+    functionName: 'addVestingWallet',
   })
 
-  const handleAddCap = async () => {
+  const { write: approveProposal, isLoading: isApproving } = useContractWrite({
+    address: CONTRACT_CONFIG.address[CONTRACT_TYPES.VESTING][1],
+    abi: CONTRACT_CONFIG.abi[CONTRACT_TYPES.VESTING],
+    functionName: 'approveProposal',
+  })
+
+  const { write: executeProposal, isLoading: isExecuting } = useContractWrite({
+    address: CONTRACT_CONFIG.address[CONTRACT_TYPES.VESTING][1],
+    abi: CONTRACT_CONFIG.abi[CONTRACT_TYPES.VESTING],
+    functionName: 'executeProposal',
+  })
+
+  const handleCreateVestingCap = async () => {
     try {
       setError(null)
-      addVestingCap?.({
+      createVestingCap?.({
         args: [
-          BigInt(formData.capId),
-          ethers.encodeBytes32String(formData.name),
+          ethers.encodeBytes32String(formData.capName),
           ethers.parseEther(formData.totalAllocation),
           BigInt(Number(formData.cliff) * 86400), // Convert days to seconds
           BigInt(Number(formData.vestingTerm)), // Months
@@ -58,25 +108,45 @@ export function VestingAdmin() {
         ],
       })
     } catch (error) {
-      setError('Failed to add vesting cap')
+      setError('Failed to create vesting cap')
     }
   }
 
-  const handleAddBeneficiary = async () => {
+  const handleAddVestingWallet = async () => {
     try {
       setError(null)
-      createProposal?.({
+      addVestingWallet?.({
         args: [
-          BigInt(7), // AddDistributionWallets type
+          formData.walletAddress,
           BigInt(formData.capId),
-          formData.beneficiaryAddress as `0x${string}`,
-          ethers.encodeBytes32String('Beneficiary'),
-          ethers.parseEther(formData.beneficiaryAmount),
-          '0x0000000000000000000000000000000000000000',
+          ethers.parseEther(formData.amount),
+          ethers.encodeBytes32String(formData.note),
         ],
       })
     } catch (error) {
-      setError('Failed to add beneficiary')
+      setError('Failed to add vesting wallet')
+    }
+  }
+
+  const handleApproveProposal = async () => {
+    try {
+      setError(null)
+      approveProposal?.({
+        args: [formData.proposalId],
+      })
+    } catch (error) {
+      setError('Failed to approve proposal')
+    }
+  }
+
+  const handleExecuteProposal = async () => {
+    try {
+      setError(null)
+      executeProposal?.({
+        args: [formData.proposalId],
+      })
+    } catch (error) {
+      setError('Failed to execute proposal')
     }
   }
 
@@ -95,113 +165,230 @@ export function VestingAdmin() {
         </Alert>
       )}
 
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Add Vesting Cap
-        </Typography>
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Cap ID"
-              value={formData.capId}
-              onChange={(e) => setFormData({ ...formData, capId: e.target.value })}
-            />
+      <Accordion defaultExpanded>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="h6">Vesting Caps</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Cap Name"
+                value={formData.capName}
+                onChange={(e) => setFormData({ ...formData, capName: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Total Allocation"
+                value={formData.totalAllocation}
+                onChange={(e) => setFormData({ ...formData, totalAllocation: e.target.value })}
+                helperText="In tokens"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Cliff Period"
+                type="number"
+                value={formData.cliff}
+                onChange={(e) => setFormData({ ...formData, cliff: e.target.value })}
+                helperText="In days"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Vesting Term"
+                type="number"
+                value={formData.vestingTerm}
+                onChange={(e) => setFormData({ ...formData, vestingTerm: e.target.value })}
+                helperText="In months"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Vesting Plan"
+                type="number"
+                value={formData.vestingPlan}
+                onChange={(e) => setFormData({ ...formData, vestingPlan: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Initial Release"
+                type="number"
+                value={formData.initialRelease}
+                onChange={(e) => setFormData({ ...formData, initialRelease: e.target.value })}
+                helperText="Percentage (0-100)"
+              />
+            </Grid>
           </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Total Allocation"
-              value={formData.totalAllocation}
-              onChange={(e) => setFormData({ ...formData, totalAllocation: e.target.value })}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Cliff (days)"
-              value={formData.cliff}
-              onChange={(e) => setFormData({ ...formData, cliff: e.target.value })}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Vesting Term (months)"
-              value={formData.vestingTerm}
-              onChange={(e) => setFormData({ ...formData, vestingTerm: e.target.value })}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Vesting Plan (months)"
-              value={formData.vestingPlan}
-              onChange={(e) => setFormData({ ...formData, vestingPlan: e.target.value })}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Initial Release (%)"
-              value={formData.initialRelease}
-              onChange={(e) => setFormData({ ...formData, initialRelease: e.target.value })}
-            />
-          </Grid>
-        </Grid>
-        <Box sx={{ mt: 2 }}>
-          <Button
-            variant="contained"
-            onClick={handleAddCap}
-            disabled={isAddingCap}
-            startIcon={isAddingCap ? <CircularProgress size={20} /> : null}
-          >
-            {isAddingCap ? 'Adding...' : 'Add Cap'}
-          </Button>
-        </Box>
-      </Paper>
+          <Box sx={{ mt: 2, mb: 4 }}>
+            <Button
+              variant="contained"
+              onClick={handleCreateVestingCap}
+              disabled={isCreatingCap}
+              startIcon={isCreatingCap ? <CircularProgress size={20} /> : null}
+            >
+              {isCreatingCap ? 'Creating...' : 'Create Vesting Cap'}
+            </Button>
+          </Box>
 
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Add Beneficiary
-        </Typography>
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Beneficiary Address"
-              value={formData.beneficiaryAddress}
-              onChange={(e) => setFormData({ ...formData, beneficiaryAddress: e.target.value })}
-            />
+          <Typography variant="subtitle1" gutterBottom>Current Vesting Caps</Typography>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>ID</TableCell>
+                  <TableCell>Name</TableCell>
+                  <TableCell>Total Allocation</TableCell>
+                  <TableCell>Cliff (days)</TableCell>
+                  <TableCell>Vesting Term (months)</TableCell>
+                  <TableCell>Vesting Plan</TableCell>
+                  <TableCell>Initial Release (%)</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {/* Add vesting caps data here */}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </AccordionDetails>
+      </Accordion>
+
+      <Accordion defaultExpanded>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="h6">Vesting Wallets</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Wallet Address"
+                value={formData.walletAddress}
+                onChange={(e) => setFormData({ ...formData, walletAddress: e.target.value })}
+                helperText="Beneficiary wallet address"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Cap ID"
+                type="number"
+                value={formData.capId}
+                onChange={(e) => setFormData({ ...formData, capId: e.target.value })}
+                helperText="ID of the vesting cap to use"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Amount"
+                value={formData.amount}
+                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                helperText="Amount of tokens to vest"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Note"
+                value={formData.note}
+                onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                helperText="Optional note for the beneficiary"
+              />
+            </Grid>
           </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Amount"
-              value={formData.beneficiaryAmount}
-              onChange={(e) => setFormData({ ...formData, beneficiaryAmount: e.target.value })}
-            />
+          <Box sx={{ mt: 2, mb: 4 }}>
+            <Button
+              variant="contained"
+              onClick={handleAddVestingWallet}
+              disabled={isAddingWallet}
+              startIcon={isAddingWallet ? <CircularProgress size={20} /> : null}
+            >
+              {isAddingWallet ? 'Creating Proposal...' : 'Add Vesting Wallet'}
+            </Button>
+          </Box>
+
+          <Typography variant="subtitle1" gutterBottom>Current Vesting Wallets</Typography>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Address</TableCell>
+                  <TableCell>Cap ID</TableCell>
+                  <TableCell>Amount</TableCell>
+                  <TableCell>Released</TableCell>
+                  <TableCell>Note</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {/* Add vesting wallets data here */}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </AccordionDetails>
+      </Accordion>
+
+      <Accordion defaultExpanded>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="h6">Pending Proposals</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Grid container spacing={2} sx={{ mb: 2 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Proposal ID"
+                value={formData.proposalId}
+                onChange={(e) => setFormData({ ...formData, proposalId: e.target.value })}
+              />
+            </Grid>
           </Grid>
-        </Grid>
-        <Box sx={{ mt: 2 }}>
-          <Button
-            variant="contained"
-            onClick={handleAddBeneficiary}
-            disabled={isCreatingProposal}
-            startIcon={isCreatingProposal ? <CircularProgress size={20} /> : null}
-          >
-            {isCreatingProposal ? 'Adding...' : 'Add Beneficiary'}
-          </Button>
-        </Box>
-      </Paper>
+          <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
+            <Button
+              variant="contained"
+              onClick={handleApproveProposal}
+              disabled={isApproving}
+              startIcon={isApproving ? <CircularProgress size={20} /> : null}
+            >
+              {isApproving ? 'Approving...' : 'Approve Proposal'}
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleExecuteProposal}
+              disabled={isExecuting}
+              startIcon={isExecuting ? <CircularProgress size={20} /> : null}
+            >
+              {isExecuting ? 'Executing...' : 'Execute Proposal'}
+            </Button>
+          </Box>
+
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>ID</TableCell>
+                  <TableCell>Type</TableCell>
+                  <TableCell>Target</TableCell>
+                  <TableCell>Amount</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Approvals</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {/* Add pending proposals data here */}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </AccordionDetails>
+      </Accordion>
     </Box>
   )
 }
