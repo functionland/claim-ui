@@ -32,6 +32,14 @@ export const UI_CONSTANTS = {
   POLLING_INTERVAL: 15000, // 15 seconds
 } as const
 
+export const CONTRACT_TYPES = {
+  VESTING: 'vesting',
+  AIRDROP: 'airdrop',
+  TESTNET_MINING: 'testnet_mining',
+} as const
+
+export type ContractType = typeof CONTRACT_TYPES[keyof typeof CONTRACT_TYPES]
+
 export const LINKS = {
   DOCS: 'https://docs.example.com',
   TERMS: 'https://example.com/terms',

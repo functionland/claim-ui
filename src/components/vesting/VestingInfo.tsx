@@ -13,6 +13,7 @@ import {
 import { ClaimButton } from './ClaimButton'
 import { formatEther } from 'viem'
 import { useContractContext } from '@/contexts/ContractContext';
+import { CONTRACT_TYPES } from '@/config/constants';
 import type { VestingData } from '@/types/vesting'
 
 interface VestingInfoProps {
@@ -21,16 +22,60 @@ interface VestingInfoProps {
 
 export function VestingInfo({ vestingData }: VestingInfoProps) {
   if (!vestingData || typeof vestingData !== 'object') return null;
+  
+  // Convert BigInt values to strings for logging
+  const loggableData = Object.fromEntries(
+    Object.entries(vestingData).map(([key, value]) => [
+      key,
+      typeof value === 'bigint' ? value.toString() : value
+    ])
+  );
+  
+  console.log("Vesting Data:");
+  console.log(JSON.stringify(loggableData, (key, value) =>
+    typeof value === 'bigint' ? value.toString() : value
+  , 2));
+  
   const theme = useTheme();
   const { activeContract } = useContractContext();
-  const isTestnetMining = activeContract === 'testnetMining';
+  console.log({activeContract});
+  const isTestnetMining = activeContract === CONTRACT_TYPES.TESTNET_MINING;
 
-  const currentTime = Date.now()
-  const cliff = Number(vestingData.cliff || 0)
-  const startDate = Number(vestingData.startDate || 0)
-  const cliffDurationMs = cliff * 24 * 60 * 60 * 1000
-  const cliffEndTime = startDate + cliffDurationMs
-  const isCliffReached = currentTime >= cliffEndTime
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp * (isTestnetMining ? 1000 : 1)).toLocaleDateString();
+  };
+
+  const getClaimed = () => {
+    console.log({isTestnetMining});
+    if (isTestnetMining) {
+      console.log({"no": vestingData.walletInfo?.claimed});
+      let a = vestingData.walletInfo?.claimed || BigInt(0);
+      console.log({"yes": a});
+      return a;
+    }
+    return vestingData.claimed || BigInt(0);
+  };
+
+  const getClaimable = () => {
+    if (isTestnetMining) {
+      return vestingData.walletInfo?.claimableAmount || BigInt(0);
+    }
+    return vestingData.claimable || BigInt(0);
+  };
+
+  const getTotalAllocation = () => {
+    if (isTestnetMining) {
+      return vestingData.walletInfo?.amount || BigInt(0);
+    }
+    return vestingData.totalAllocation || BigInt(0);
+  };
+
+  const getErrorMessage = () => {
+    if (isTestnetMining) {
+      return vestingData.walletInfo?.errorMessage || '';
+    }
+    return vestingData.errorMessage || '';
+  };
 
   const formatValue = (value: string | number | bigint | undefined) => {
     if (value === undefined) return 'N/A';
@@ -64,23 +109,23 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
           {isTestnetMining ? 'Testnet Mining Rewards' : (vestingData.name || 'Unnamed Cap')}
         </Typography>
         <Divider sx={{ mb: 3 }} />
-        {vestingData.errorMessage ? (
-          <Typography color="error">{vestingData.errorMessage}</Typography>
+        {getErrorMessage() ? (
+          <Typography color="error">{getErrorMessage()}</Typography>
         ) : (
         <Grid container spacing={4}>
           <Grid item xs={12} md={6}>
             <Stack spacing={3}>
               <InfoItem 
                 label="Total Mining Rewards"
-                value={vestingData.totalAllocation ? `${formatEther(vestingData.totalAllocation)} Tokens` : undefined}
+                value={`${formatEther(getTotalAllocation())} Tokens`}
               />
               <InfoItem 
                 label={isTestnetMining ? "Claimed Rewards" : "Claimed Amount"}
-                value={vestingData.claimed ? `${formatEther(vestingData.claimed)} Tokens` : undefined}
+                value={`${formatEther(getClaimed())} Tokens`}
               />
               <InfoItem 
                 label={isTestnetMining ? "Available Rewards" : "Available to Claim"}
-                value={vestingData.claimable ? `${formatEther(vestingData.claimable)} Tokens` : undefined}
+                value={`${formatEther(getClaimable())} Tokens`}
               />
             </Stack>
           </Grid>
@@ -91,7 +136,7 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
                 <>
                   <InfoItem 
                     label="Vesting Start Date"
-                    value={vestingData.startDate ? new Date(Number(vestingData.startDate)).toLocaleString() : undefined}
+                    value={vestingData.startDate ? formatDate(Number(vestingData.startDate)) : undefined}
                   />
                   <InfoItem 
                     label="Initial Release"
@@ -133,7 +178,7 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
         <Box sx={{ mt: 4 }}>
           <ClaimButton 
             capId={vestingData.capId}
-            claimableAmount={vestingData.claimable ?? BigInt(0)}
+            claimableAmount={getClaimable()}
           />
         </Box>
       </CardContent>
