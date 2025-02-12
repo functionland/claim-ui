@@ -111,7 +111,6 @@ export function VestingDashboard() {
             <VestingInfo 
               key={data.capId} 
               vestingData={data}
-              substrateWallet={activeContract === CONTRACT_TYPES.TESTNET_MINING ? inputWallet : undefined}
             />
           ))
         )}

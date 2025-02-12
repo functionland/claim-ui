@@ -12,6 +12,7 @@ import {
 } from '@mui/material'
 import { ClaimButton } from './ClaimButton'
 import { formatEther } from 'viem'
+import { useContractContext } from '@/contexts/ContractContext';
 import type { VestingData } from '@/types/vesting'
 
 interface VestingInfoProps {
@@ -19,28 +20,33 @@ interface VestingInfoProps {
 }
 
 export function VestingInfo({ vestingData }: VestingInfoProps) {
-  if (!vestingData) return null;
+  if (!vestingData || typeof vestingData !== 'object') return null;
   const theme = useTheme();
+  const { activeContract } = useContractContext();
+  const isTestnetMining = activeContract === 'testnetMining';
 
   const currentTime = Date.now()
-  const cliffEndTime = Number(vestingData.startDate) + (Number(vestingData.cliff) * 24 * 60 * 60 * 1000)
+  const cliff = Number(vestingData.cliff || 0)
+  const startDate = Number(vestingData.startDate || 0)
+  const cliffDurationMs = cliff * 24 * 60 * 60 * 1000
+  const cliffEndTime = startDate + cliffDurationMs
   const isCliffReached = currentTime >= cliffEndTime
 
-  const formatBigIntToEther = (value: bigint) => {
-    if (!value) return '0'
-    return Number(formatEther(value)).toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 6
-    })
+  const formatValue = (value: string | number | bigint | undefined) => {
+    if (value === undefined) return 'N/A';
+    if (typeof value === 'bigint') {
+      return value.toString();
+    }
+    return String(value);
   }
 
-  const InfoItem = ({ label, value }: { label: string, value: string | number }) => (
+  const InfoItem = ({ label, value }: { label: string, value: string | number | bigint | undefined }) => (
     <Box sx={{ mb: 3 }}>
       <Typography color="text.secondary" variant="subtitle2" gutterBottom>
         {label}
       </Typography>
       <Typography variant="h6" sx={{ fontWeight: 'medium' }}>
-        {value}
+        {formatValue(value)}
       </Typography>
     </Box>
   )
@@ -49,74 +55,87 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
     <Card elevation={2} sx={{ 
       borderRadius: 2,
       '&:hover': { 
-        boxShadow: theme.shadows[4]
-      },
-      height: '100%'
+        boxShadow: theme.shadows[4],
+        transition: 'box-shadow 0.3s ease-in-out'
+      }
     }}>
-      <CardContent>
-        <Stack spacing={2}>
-          <Box>
-            <Typography variant="h5" component="div" gutterBottom>
-              {vestingData.name}
-              {vestingData.ratio && vestingData.substrateRewards && (
-                <Typography component="span" variant="body2" sx={{ ml: 1, color: 'text.secondary' }}>
-                  (Total Testnet Tokens: {formatBigIntToEther(vestingData.substrateRewards.amount)} at ratio of {vestingData.ratio}:1 $FULA)
-                </Typography>
-              )}
-            </Typography>
-          </Box>
-          <Divider sx={{ mb: 3 }} />
-          {vestingData.errorMessage ? (
-            <Typography color="error">{vestingData.errorMessage}</Typography>
-          ) : (
-          <Grid container spacing={4}>
-            <Grid item xs={12} md={6}>
-              <Stack spacing={3}>
-                <InfoItem 
-                  label="Total Allocation To Cap"
-                  value={`${formatBigIntToEther(vestingData.totalAllocation)} Tokens`}
-                />
-                <InfoItem 
-                  label="Claimed Amount"
-                  value={`${formatBigIntToEther(vestingData.walletInfo.claimed)} Tokens`}
-                />
-                <InfoItem 
-                  label="Available to Claim"
-                  value={`${formatBigIntToEther(vestingData.walletInfo.claimableAmount)} Tokens`}
-                />
-              </Stack>
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <Stack spacing={3}>
-                <InfoItem 
-                  label="Vesting Start Date"
-                  value={new Date(Number(vestingData.startDate)).toLocaleString()}
-                />
-                <InfoItem 
-                  label="Initial Release"
-                  value={`${Number(vestingData.initialRelease)}%`}
-                />
-                <InfoItem 
-                  label="Cliff Period"
-                  value={`${Number(vestingData.cliff / BigInt(24 * 60 * 60))} days`}
-                />
-                <InfoItem 
-                  label="Vesting Term"
-                  value={`${Number(vestingData.vestingTerm / BigInt(30 * 24 * 60 * 60))} months (every ${Number(vestingData.vestingPlan / BigInt(30 * 24 * 60 * 60))} months)`}
-                />
-              </Stack>
-            </Grid>
+      <CardContent sx={{ p: 3 }}>
+        <Typography variant="h5" gutterBottom sx={{ mb: 3, fontWeight: 'bold' }}>
+          {isTestnetMining ? 'Testnet Mining Rewards' : (vestingData.name || 'Unnamed Cap')}
+        </Typography>
+        <Divider sx={{ mb: 3 }} />
+        {vestingData.errorMessage ? (
+          <Typography color="error">{vestingData.errorMessage}</Typography>
+        ) : (
+        <Grid container spacing={4}>
+          <Grid item xs={12} md={6}>
+            <Stack spacing={3}>
+              <InfoItem 
+                label="Total Mining Rewards"
+                value={vestingData.totalAllocation ? `${formatEther(vestingData.totalAllocation)} Tokens` : undefined}
+              />
+              <InfoItem 
+                label={isTestnetMining ? "Claimed Rewards" : "Claimed Amount"}
+                value={vestingData.claimed ? `${formatEther(vestingData.claimed)} Tokens` : undefined}
+              />
+              <InfoItem 
+                label={isTestnetMining ? "Available Rewards" : "Available to Claim"}
+                value={vestingData.claimable ? `${formatEther(vestingData.claimable)} Tokens` : undefined}
+              />
+            </Stack>
           </Grid>
-          )}
+          
+          <Grid item xs={12} md={6}>
+            <Stack spacing={3}>
+              {!isTestnetMining && (
+                <>
+                  <InfoItem 
+                    label="Vesting Start Date"
+                    value={vestingData.startDate ? new Date(Number(vestingData.startDate)).toLocaleString() : undefined}
+                  />
+                  <InfoItem 
+                    label="Initial Release"
+                    value={vestingData.initialRelease !== undefined ? `${vestingData.initialRelease}%` : undefined}
+                  />
+                  <InfoItem 
+                    label="Cliff Period"
+                    value={vestingData.cliff !== undefined ? `${vestingData.cliff} days` : undefined}
+                  />
+                  <InfoItem 
+                    label="Vesting Term"
+                    value={vestingData.vestingTerm !== undefined && vestingData.vestingPlan !== undefined ? 
+                      `${vestingData.vestingTerm} months (every ${vestingData.vestingPlan} months)` : 
+                      undefined}
+                  />
+                </>
+              )}
+              {isTestnetMining && vestingData.substrateRewards && (
+                <>
+                  <InfoItem 
+                    label="Last Update"
+                    value={vestingData.substrateRewards.lastUpdate ? 
+                      new Date(Number(vestingData.substrateRewards.lastUpdate)).toLocaleString() : 
+                      undefined}
+                  />
+                  <InfoItem 
+                    label="Substrate Rewards"
+                    value={vestingData.substrateRewards.amount ? 
+                      `${formatEther(vestingData.substrateRewards.amount)} Tokens` : 
+                      undefined}
+                  />
+                </>
+              )}
+            </Stack>
+          </Grid>
+        </Grid>
+        )}
 
-          <Box sx={{ mt: 4 }}>
-            <ClaimButton 
-              capId={vestingData.capId}
-              claimableAmount={vestingData.walletInfo?.claimableAmount || BigInt(0)}
-            />
-          </Box>
-        </Stack>
+        <Box sx={{ mt: 4 }}>
+          <ClaimButton 
+            capId={vestingData.capId}
+            claimableAmount={vestingData.claimable ?? BigInt(0)}
+          />
+        </Box>
       </CardContent>
     </Card>
   )

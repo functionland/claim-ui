@@ -32,19 +32,11 @@ export const TOKEN_ADDRESSES: Record<number, Address> = {
 // Contract ABI
 export const CONTRACT_ABI = [
   {
-    inputs: [], // No inputs for getting the full array
-    name: 'capIds',
-    outputs: [{ internalType: 'uint256[]', name: '', type: 'uint256[]' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-      // Automatically generated getter for array elements
-      inputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
-      name: 'capIds',
-      outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
-      stateMutability: 'view',
-      type: 'function',
+    inputs: [{ name: "", type: "uint256" }],
+    name: "capIds",
+    outputs: [{ type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
   },
   // Add this for getWalletsInCap function
   {
@@ -278,8 +270,8 @@ export const TESTNET_MINING_ABI = [
   },
   {
     inputs: [
-      { name: "substrateWallet", type: "string" },
-      { name: "capId", type: "uint256" }
+      { internalType: 'string',name: "substrateWallet", type: "string" },
+      { internalType: 'uint256', name: "capId", type: "uint256" }
     ],
     name: "claimTokens",
     outputs: [],

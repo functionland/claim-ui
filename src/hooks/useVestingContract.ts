@@ -15,7 +15,13 @@ export function useVestingContract() {
   const [vestingData, setVestingData] = useState<Map<number, VestingData>>(new Map())
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-  const [substrateWallet, setSubstrateWallet] = useState<string | null>(null)
+  const [substrateWallet, setSubstrateWallet] = useState<string | null>(() => {
+    // Initialize from localStorage if available
+    if (typeof window !== 'undefined') {
+      return window.localStorage.getItem('substrateWallet')
+    }
+    return null
+  })
   const publicClient = usePublicClient()
 
   const contractAddress = chainId 
@@ -114,12 +120,24 @@ export function useVestingContract() {
 
           if (walletsInThisCap.includes(userAddress as Address)) {
             console.log("Wallets in this cap:", walletsInThisCap);
-            const cap = await publicClient.readContract({
+            const capTuple = await publicClient.readContract({
               address: contractAddress,
               abi: contractAbi,
               functionName: 'vestingCaps',
               args: [capId],
-            }) as any
+            }) as readonly [bigint, `0x${string}`, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
+
+            const cap: VestingCap = {
+              totalAllocation: capTuple[0],
+              name: capTuple[1],
+              cliff: capTuple[2],
+              vestingTerm: capTuple[3],
+              vestingPlan: capTuple[4],
+              initialRelease: capTuple[5],
+              startDate: capTuple[6],
+              allocatedToWallets: capTuple[7],
+              wallets: [] // This will be populated by the next contract call
+            }
 
             const walletInfo = await publicClient.readContract({
               address: contractAddress,
@@ -155,7 +173,7 @@ export function useVestingContract() {
             }) as [bigint, bigint]
 
             const [_capId, walletName, amount, claimed, monthlyClaimedRewards, lastClaimMonth] = walletInfo
-            const [totalAllocation, name, cliff, vestingTerm, vestingPlan, initialRelease, startDate, allocatedToWallets, maxRewardsPerMonth, ratio] = cap
+            const { totalAllocation, name, cliff, vestingTerm, vestingPlan, initialRelease, startDate, allocatedToWallets, maxRewardsPerMonth, ratio } = cap
 
             newVestingData.set(Number(capId), {
               capId: Number(capId),
@@ -206,12 +224,24 @@ export function useVestingContract() {
           const capId = capIds[index]
 
           // Get cap details
-          const cap = await publicClient.readContract({
+          const capTuple = await publicClient.readContract({
             address: contractAddress,
             abi: contractAbi,
             functionName: 'vestingCaps',
             args: [capId],
-          }) as VestingCap
+          }) as readonly [bigint, `0x${string}`, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
+
+          const cap: VestingCap = {
+            totalAllocation: capTuple[0],
+            name: capTuple[1],
+            cliff: capTuple[2],
+            vestingTerm: capTuple[3],
+            vestingPlan: capTuple[4],
+            initialRelease: capTuple[5],
+            startDate: capTuple[6],
+            allocatedToWallets: capTuple[7],
+            wallets: [] // This will be populated by the next contract call
+          }
 
           // Get wallets in this cap
           const walletsInThisCap = await publicClient.readContract({
@@ -248,7 +278,7 @@ export function useVestingContract() {
             }
 
             const [_capId, walletName, amount, claimed] = walletInfo as [bigint, string, bigint, bigint];
-            const [totalAllocation, name, cliff, vestingTerm, vestingPlan, initialRelease, startDate] = cap as [bigint, string, bigint, bigint, bigint, bigint, bigint];
+            const { totalAllocation, name, cliff, vestingTerm, vestingPlan, initialRelease, startDate } = cap
 
             console.log("here", capId, walletName, amount, claimed, totalAllocation, name, cliff, vestingTerm, vestingPlan, initialRelease, startDate)
             console.log("here2", {name: name, decodedName: decodeBytes32String(name)})
@@ -287,10 +317,16 @@ export function useVestingContract() {
   }
 
   const loadTestnetData = (wallet: string) => {
-    setSubstrateWallet(wallet)
+    console.log("Setting substrate wallet to:", wallet);
+    // Save to localStorage
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('substrateWallet', wallet);
+    }
+    setSubstrateWallet(wallet);
   }
 
   useEffect(() => {
+    console.log("Current substrate wallet:", substrateWallet);
     const fetchVestingData = async () => {
       setIsLoading(true)
       setError(null)
@@ -339,12 +375,24 @@ export function useVestingContract() {
 
             if (walletsInThisCap.includes(userAddress as Address)) {
               console.log("Wallets in this cap:", walletsInThisCap);
-              const cap = await publicClient.readContract({
+              const capTuple = await publicClient.readContract({
                 address: contractAddress,
                 abi: contractAbi,
                 functionName: 'vestingCaps',
                 args: [capId],
-              }) as any
+              }) as readonly [bigint, `0x${string}`, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
+
+              const cap: VestingCap = {
+                totalAllocation: capTuple[0],
+                name: capTuple[1],
+                cliff: capTuple[2],
+                vestingTerm: capTuple[3],
+                vestingPlan: capTuple[4],
+                initialRelease: capTuple[5],
+                startDate: capTuple[6],
+                allocatedToWallets: capTuple[7],
+                wallets: [] // This will be populated by the next contract call
+              }
 
               const walletInfo = await publicClient.readContract({
                 address: contractAddress,
@@ -378,7 +426,7 @@ export function useVestingContract() {
               }) as [bigint, bigint]
 
               const [_capId, walletName, amount, claimed, monthlyClaimedRewards, lastClaimMonth] = walletInfo
-              const [totalAllocation, name, cliff, vestingTerm, vestingPlan, initialRelease, startDate, allocatedToWallets, maxRewardsPerMonth, ratio] = cap
+              const { totalAllocation, name, cliff, vestingTerm, vestingPlan, initialRelease, startDate, allocatedToWallets, maxRewardsPerMonth, ratio } = cap
 
               newVestingData.set(Number(capId), {
                 capId: Number(capId),
@@ -414,27 +462,50 @@ export function useVestingContract() {
           return
         }
 
-        let index = 0
+        let index = 0;
+        const foundCapIds: bigint[] = [];
+        
         while (true) {
           try {
-            // Read cap ID at current index
-            console.log("Index:", index, "Contract Address:", contractAddress)
-            const capIds = await publicClient.readContract({
+            const capId = await publicClient.readContract({
               address: contractAddress,
               abi: contractAbi,
               functionName: 'capIds',
-            }) as bigint[]
-
-            if (index >= capIds.length) break
-            const capId = capIds[index]
+              args: [BigInt(index)],
+            }) as bigint;
+            
+            foundCapIds.push(capId);
+            index++;
+          } catch (error) {
+            // When we hit an error, we've reached the end of the array
+            break;
+          }
+        }
+        for (let i = 0; i < foundCapIds.length; i++) {
+          try {
+            // Read cap ID at current index
+            console.log("Index:", i, "Contract Address:", contractAddress)
+            const capId = foundCapIds[i]
 
             // Get cap details
-            const cap = await publicClient.readContract({
+            const capTuple = await publicClient.readContract({
               address: contractAddress,
               abi: contractAbi,
               functionName: 'vestingCaps',
               args: [capId],
-            }) as VestingCap
+            }) as readonly [bigint, `0x${string}`, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
+
+            const cap: VestingCap = {
+              totalAllocation: capTuple[0],
+              name: capTuple[1],
+              cliff: capTuple[2],
+              vestingTerm: capTuple[3],
+              vestingPlan: capTuple[4],
+              initialRelease: capTuple[5],
+              startDate: capTuple[6],
+              allocatedToWallets: capTuple[7],
+              wallets: [] // This will be populated by the next contract call
+            }
 
             // Get wallets in this cap
             const walletsInThisCap = await publicClient.readContract({
@@ -471,7 +542,7 @@ export function useVestingContract() {
               }
 
               const [_capId, walletName, amount, claimed] = walletInfo as [bigint, string, bigint, bigint];
-              const [totalAllocation, name, cliff, vestingTerm, vestingPlan, initialRelease, startDate] = cap as [bigint, string, bigint, bigint, bigint, bigint, bigint];
+              const { totalAllocation, name, cliff, vestingTerm, vestingPlan, initialRelease, startDate } = cap
 
               console.log("here", capId, walletName, amount, claimed, totalAllocation, name, cliff, vestingTerm, vestingPlan, initialRelease, startDate)
               console.log("here2", {name: name, decodedName: decodeBytes32String(name)})
@@ -514,6 +585,15 @@ export function useVestingContract() {
     }
   }, [userAddress, contractAddress, walletsInCap, publicClient, substrateWallet])
 
+  useEffect(() => {
+    if (activeContract !== CONTRACT_TYPES.TESTNET_MINING) {
+      setSubstrateWallet(null);
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem('substrateWallet');
+      }
+    }
+  }, [activeContract]);
+
   const { writeContractAsync } = useWriteContract()
 
   const handleClaim = async (capId: number) => {
@@ -522,18 +602,100 @@ export function useVestingContract() {
 
     try {
       console.log("Initiating claim for capId:", capId)
-      
-      const hash = await writeContractAsync({
-        address: contractAddress,
-        abi: contractAbi,
-        functionName: 'claimTokens',
-        args: [BigInt(capId), BigInt(chainId || 1)],
-      })
-      
-      console.log("Transaction hash:", hash)
-      return hash
+      console.log("Active Contract:", activeContract)
+      console.log("Substrate Wallet:", substrateWallet)
+      console.log("User Address:", userAddress)
+      console.log("Wallets in Cap:", walletsInCap)
+      console.log("contractAddress:", contractAddress)
+      console.log("contractAbi:", contractAbi)
+
+      if (activeContract === CONTRACT_TYPES.TESTNET_MINING) {
+        if (!substrateWallet) {
+          console.log("Substrate wallet is missing")
+          return Promise.reject(new Error('Substrate wallet not provided'))
+        }
+        try {
+          console.log("Simulating contract call with params:", {
+            account: userAddress,
+            address: contractAddress,
+            functionName: 'claimTokens',
+            args: [substrateWallet, BigInt(capId)]
+          });
+
+          // First simulate the contract call
+          const { request } = await publicClient.simulateContract({
+            account: userAddress,
+            address: contractAddress,
+            abi: contractAbi,
+            functionName: 'claimTokens',
+            args: [substrateWallet, BigInt(capId)],
+            gas: BigInt(3000000),
+          })
+          
+          console.log("Simulation successful, simulation result:", request)
+          
+          // If simulation is successful, proceed with the actual transaction
+          console.log("Proceeding with actual transaction using request:", request)
+          const hash = await writeContractAsync(request)
+          
+          console.log("Transaction hash:", hash)
+          return hash
+        } catch (err) {
+          console.error("Full error object:", err)
+          // Try to extract more detailed error information
+          let errorMessage = err instanceof Error ? err.message : String(err)
+          
+          // Check for specific error types
+          if (err.cause) {
+            console.error("Error cause:", err.cause)
+            errorMessage += ` (Cause: ${err.cause})`
+          }
+          
+          // Log the error stack if available
+          if (err instanceof Error && err.stack) {
+            console.error("Error stack:", err.stack)
+          }
+          
+          console.error("Detailed claim error:", errorMessage)
+          throw new Error(errorMessage)
+        }
+      } else {
+        try {
+          if (!publicClient) {
+            throw new Error('Public client is not initialized');
+          }
+
+          console.log("Simulating non-testnet contract call with params:", {
+            account: userAddress,
+            address: contractAddress,
+            functionName: 'claimTokens',
+            args: [BigInt(capId), BigInt(chainId || 1)]
+          });
+
+          // For other contracts, follow the same pattern
+          const { request } = await publicClient.simulateContract({
+            account: userAddress,
+            address: contractAddress,
+            abi: contractAbi,
+            functionName: 'claimTokens',
+            args: [BigInt(capId), BigInt(chainId || 1)]
+          })
+          
+          console.log("Simulation successful, proceeding with transaction. Request:", request)
+          const hash = await writeContractAsync(request)
+          
+          console.log("Transaction hash:", hash)
+          return hash
+        } catch (err) {
+          console.error("Full error object:", err)
+          const errorMessage = err instanceof Error ? err.message : String(err)
+          console.error("Non-testnet claim error:", errorMessage)
+          throw new Error(errorMessage)
+        }
+      }
     } catch (err) {
-      return Promise.reject(err instanceof Error ? err : new Error(String(err))) // Return rejected promise with an Error instance
+      console.error("Top-level error:", err)
+      return Promise.reject(err instanceof Error ? err : new Error(String(err)))
     }
   }
 
@@ -543,5 +705,6 @@ export function useVestingContract() {
     error,
     claimTokens: handleClaim,
     loadTestnetData,
+    substrateWallet,  // Expose the substrate wallet
   }
 }

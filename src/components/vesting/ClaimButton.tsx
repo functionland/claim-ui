@@ -7,6 +7,7 @@ import { formatEther } from 'viem'
 import { useWaitForTransactionReceipt } from 'wagmi'
 import type { FC } from 'react'
 import { isContractError } from '../../utils/errors';
+import { useContractContext } from '@/contexts/ContractContext';
 
 interface ClaimButtonProps {
   readonly capId: number
@@ -20,7 +21,8 @@ export const ClaimButton: FC<ClaimButtonProps> = ({
   const [isWalletLoading, setIsWalletLoading] = useState(false)
   const [transactionHash, setTransactionHash] = useState<`0x${string}` | undefined>()
   const [error, setError] = useState<string | null>(null)
-  const { claimTokens } = useVestingContract()
+  const { claimTokens, substrateWallet } = useVestingContract()
+  const { activeContract } = useContractContext()
   const { isLoading: isConfirming, isSuccess: isConfirmed, isError, isLoadingError, isPending } = useWaitForTransactionReceipt({
     hash: transactionHash,
   })
