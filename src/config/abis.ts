@@ -891,6 +891,45 @@ export const TOKEN_ABI = [
     "name": "QuorumUpdated",
     "type": "event"
   },
+  // Proposal functions
+  {
+    inputs: [],
+    name: "proposalCount",
+    outputs: [{ type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [{ type: "uint256" }],
+    name: "proposalRegistry",
+    outputs: [{ type: "bytes32" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [{ type: "bytes32" }],
+    name: "proposals",
+    outputs: [
+      { name: "proposalType", type: "uint8" },
+      { name: "target", type: "address" },
+      { name: "id", type: "uint40" },
+      { name: "role", type: "bytes32" },
+      { name: "tokenAddress", type: "address" },
+      { name: "amount", type: "uint96" },
+      { 
+        name: "config",
+        type: "tuple",
+        components: [
+          { name: "expiryTime", type: "uint64" },
+          { name: "executionTime", type: "uint64" },
+          { name: "approvals", type: "uint16" },
+          { name: "status", type: "uint8" }
+        ]
+      }
+    ],
+    stateMutability: "view",
+    type: "function"
+  },
   // Additional Token-specific functions
   {
     inputs: [],

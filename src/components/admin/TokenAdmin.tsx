@@ -150,6 +150,25 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
     return new Date(timestamp * 1000).toLocaleString();
   };
 
+  const getProposalType = (type: number): string => {
+    switch (type) {
+      case 1:
+        return 'Add Role';
+      case 2:
+        return 'Remove Role';
+      case 3:
+        return 'Add Vesting Wallet';
+      case 4:
+        return 'Recovery';
+      case 5:
+        return 'Add Whitelist';
+      case 6:
+        return 'Remove Whitelist';
+      default:
+        return `Unknown (${type})`;
+    }
+  };
+
   console.log('ConnectedView rendered with data:', data);
   console.log('Role check result:', roleCheckResult);
 
@@ -395,40 +414,6 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
           </Accordion>
         </Grid>
 
-
-        {/* TGE Time */}
-        <Grid item xs={12}>
-          <Accordion>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography variant="h6">TGE Time</Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <Box component="form" noValidate sx={{ mt: 1 }}>
-                <TextField
-                  fullWidth
-                  label="TGE Time"
-                  type="datetime-local"
-                  value={formData.tgeTime}
-                  onChange={(e) => setFormData(prev => ({ ...prev, tgeTime: e.target.value }))}
-                  margin="normal"
-                  InputLabelProps={{
-                    shrink: true,
-                  }}
-                  disabled={states.isSettingTGE}
-                />
-                <Button
-                  variant="contained"
-                  onClick={handlers.handleSetTGE}
-                  disabled={states.isSettingTGE || !formData.tgeTime}
-                  sx={{ mt: 2 }}
-                >
-                  {states.isSettingTGE ? <CircularProgress size={24} /> : 'Set TGE Time'}
-                </Button>
-              </Box>
-            </AccordionDetails>
-          </Accordion>
-        </Grid>
-
         {/* Proposals */}
         <Grid item xs={12}>
           <Accordion>
@@ -441,36 +426,83 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
                   <TableHead>
                     <TableRow>
                       <TableCell>ID</TableCell>
-                      <TableCell>Description</TableCell>
+                      <TableCell>Type</TableCell>
+                      <TableCell>Target</TableCell>
+                      <TableCell>Amount</TableCell>
                       <TableCell>Status</TableCell>
+                      <TableCell>Approvals</TableCell>
+                      <TableCell>Expiry</TableCell>
+                      <TableCell>Execution Time</TableCell>
                       <TableCell>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {data.tokenProposals?.map((proposal) => (
-                      <TableRow key={proposal.id}>
-                        <TableCell>{proposal.id}</TableCell>
-                        <TableCell>{proposal.description}</TableCell>
-                        <TableCell>{proposal.status}</TableCell>
-                        <TableCell>
-                          <Button
-                            variant="outlined"
-                            onClick={() => handlers.handleApproveProposal(proposal.id)}
-                            disabled={states.isApproving}
-                            sx={{ mr: 1 }}
-                          >
-                            {states.isApproving ? <CircularProgress size={24} /> : 'Approve'}
-                          </Button>
-                          <Button
-                            variant="contained"
-                            onClick={() => handlers.handleExecuteProposal(proposal.id)}
-                            disabled={states.isExecuting}
-                          >
-                            {states.isExecuting ? <CircularProgress size={24} /> : 'Execute'}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {data.tokenProposals?.map((proposal) => {
+                      const now = Math.floor(Date.now() / 1000);
+                      // Add null checks and type safety
+                      const isExpired = proposal?.config?.expiryTime ? 
+                        Number(proposal.config.expiryTime) < now : false;
+                      const canExecute = proposal?.config?.executionTime && proposal?.config?.status !== undefined ? 
+                        Number(proposal.config.executionTime) <= now && proposal.config.status !== 1 : false;
+                      
+                      // Log the proposal data to help debug
+                      console.log('Processing proposal:', {
+                        proposal,
+                        now,
+                        isExpired,
+                        canExecute
+                      });
+                      
+                      if (!proposal || !proposal.config) {
+                        console.error('Invalid proposal data:', proposal);
+                        return null;
+                      }
+
+                      return (
+                        <TableRow key={proposal.proposalId}>
+                          <TableCell>{proposal.proposalId || 'N/A'}</TableCell>
+                          <TableCell>{getProposalType(proposal.proposalType || 0)}</TableCell>
+                          <TableCell sx={{ fontFamily: 'monospace' }}>{proposal.target || 'N/A'}</TableCell>
+                          <TableCell>{proposal.amount ? ethers.formatEther(proposal.amount) : '0'}</TableCell>
+                          <TableCell>
+                            {proposal.config.status === 1 ? 'Executed' : 
+                             isExpired ? 'Expired' : 'Pending'}
+                          </TableCell>
+                          <TableCell>{proposal.config.approvals?.toString() || '0'}</TableCell>
+                          <TableCell>
+                            {proposal.config.expiryTime ? 
+                              formatDateTime(Number(proposal.config.expiryTime)) : 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {proposal.config.executionTime ? 
+                              formatDateTime(Number(proposal.config.executionTime)) : 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {proposal.config.status !== 1 && !isExpired && (
+                              <>
+                                <Button
+                                  variant="outlined"
+                                  onClick={() => handlers.handleApproveProposal(proposal.proposalId)}
+                                  disabled={states.isApproving}
+                                  sx={{ mr: 1 }}
+                                >
+                                  {states.isApproving ? <CircularProgress size={24} /> : 'Approve'}
+                                </Button>
+                                {canExecute && (
+                                  <Button
+                                    variant="contained"
+                                    onClick={() => handlers.handleExecuteProposal(proposal.proposalId)}
+                                    disabled={states.isExecuting}
+                                  >
+                                    {states.isExecuting ? <CircularProgress size={24} /> : 'Execute'}
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </TableContainer>
@@ -677,6 +709,7 @@ export function TokenAdmin() {
     tokenProposals,
     roleConfigs,
     whitelistedAddresses,
+    proposals: tokenProposals,
   }
 
   return (

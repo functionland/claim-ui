@@ -42,13 +42,6 @@ export function useAdminContract() {
     enabled: !!contractAddress && activeContract === CONTRACT_TYPES.VESTING,
   })
 
-  const { data: proposals } = useReadContract({
-    address: contractAddress,
-    abi: contractAbi,
-    functionName: 'getProposals',
-    enabled: !!contractAddress && activeContract === CONTRACT_TYPES.VESTING,
-  })
-
   type TimeConfig = {
     lastActivityTime: bigint;
     roleChangeTimeLock: bigint;
@@ -334,48 +327,46 @@ export function useAdminContract() {
 
   // Common functions for both contracts
   const approveProposal = async (proposalId: string) => {
-    if (!contractAddress) throw new Error('Contract address not found')
+    if (!contractAddress) throw new Error('Contract address not found');
+    if (!userAddress) throw new Error('Please connect your wallet');
 
     try {
-      // First simulate the transaction
       const { request } = await publicClient.simulateContract({
         address: contractAddress,
         abi: contractAbi,
         functionName: 'approveProposal',
-        args: [proposalId],
+        args: [proposalId as `0x${string}`],
         account: userAddress,
-      })
+      });
 
-      // If simulation succeeds, send the transaction
-      const hash = await writeContractAsync(request)
-      return hash
-    } catch (err: any) {
-      console.error('Error approving proposal:', err)
-      throw new Error(err.message)
+      const hash = await writeContractAsync(request);
+      return hash;
+    } catch (error: any) {
+      console.error('Error in approveProposal:', error);
+      throw error;
     }
-  }
+  };
 
   const executeProposal = async (proposalId: string) => {
-    if (!contractAddress) throw new Error('Contract address not found')
+    if (!contractAddress) throw new Error('Contract address not found');
+    if (!userAddress) throw new Error('Please connect your wallet');
 
     try {
-      // First simulate the transaction
       const { request } = await publicClient.simulateContract({
         address: contractAddress,
         abi: contractAbi,
         functionName: 'executeProposal',
-        args: [proposalId],
+        args: [proposalId as `0x${string}`],
         account: userAddress,
-      })
+      });
 
-      // If simulation succeeds, send the transaction
-      const hash = await writeContractAsync(request)
-      return hash
-    } catch (err: any) {
-      console.error('Error executing proposal:', err)
-      throw new Error(err.message)
+      const hash = await writeContractAsync(request);
+      return hash;
+    } catch (error: any) {
+      console.error('Error in executeProposal:', error);
+      throw error;
     }
-  }
+  };
 
   type RoleConfig = {
     transactionLimit: bigint;
@@ -623,16 +614,148 @@ export function useAdminContract() {
     }
   }, [contractAddress, chainId, activeContract]);
 
+  type ProposalConfig = {
+    expiryTime: bigint;
+    executionTime: bigint;
+    approvals: number;
+    status: number;
+  }
+
+  type UnifiedProposal = {
+    proposalType: number;
+    target: Address;
+    id: number;
+    role: `0x${string}`;
+    tokenAddress: Address;
+    amount: bigint;
+    config: ProposalConfig;
+  }
+
+  const { data: proposalCount } = useReadContract({
+    address: contractAddress,
+    abi: contractAbi,
+    functionName: 'proposalCount',
+    enabled: !!contractAddress && activeContract === CONTRACT_TYPES.TOKEN,
+  })
+
+  const [tokenProposalList, setTokenProposalList] = useState<(UnifiedProposal & { proposalId: string })[]>([])
+
+  const fetchProposals = async () => {
+    if (!contractAddress || !publicClient || !proposalCount) {
+      console.log('Missing requirements:', { 
+        hasContractAddress: !!contractAddress, 
+        hasPublicClient: !!publicClient, 
+        proposalCount 
+      });
+      return;
+    }
+
+    try {
+      console.log('Starting to fetch proposals. Total count:', proposalCount.toString());
+      const proposals = [];
+      
+      for (let i = 0; i < Number(proposalCount); i++) {
+        console.log(`Fetching proposal ${i + 1}/${proposalCount}`);
+        
+        try {
+          // Get proposal ID from registry
+          const proposalId = await publicClient.readContract({
+            address: contractAddress,
+            abi: contractAbi,
+            functionName: 'proposalRegistry',
+            args: [BigInt(i)],
+          }) as `0x${string}`;
+          
+          console.log(`Got proposal ID from registry:`, proposalId);
+
+          if (!proposalId) {
+            console.error(`No proposal ID found for index ${i}`);
+            continue;
+          }
+
+          // Get proposal details
+          const rawProposal = await publicClient.readContract({
+            address: contractAddress,
+            abi: contractAbi,
+            functionName: 'proposals',
+            args: [proposalId],
+          });
+          
+          console.log(`Got raw proposal details for ID ${proposalId}:`, rawProposal);
+
+          // Parse the raw proposal data into our expected format
+          if (Array.isArray(rawProposal)) {
+            const [
+              proposalType,
+              target,
+              id,
+              role,
+              tokenAddress,
+              amount,
+              config
+            ] = rawProposal;
+
+            const proposal = {
+              proposalType: Number(proposalType),
+              target,
+              id: Number(id),
+              role,
+              tokenAddress,
+              amount: BigInt(amount || 0),
+              config: {
+                expiryTime: BigInt(config?.expiryTime || 0),
+                executionTime: BigInt(config?.executionTime || 0),
+                approvals: Number(config?.approvals || 0),
+                status: Number(config?.status || 0)
+              },
+              proposalId
+            };
+
+            console.log('Processed proposal:', proposal);
+            proposals.push(proposal);
+          } else {
+            console.error(`Invalid proposal data format for ID ${proposalId}:`, rawProposal);
+          }
+        } catch (error) {
+          console.error(`Error processing proposal ${i}:`, error);
+        }
+      }
+
+      console.log('Final proposals list:', proposals);
+      setTokenProposalList(proposals);
+    } catch (error) {
+      console.error('Error fetching proposals:', error);
+    }
+  }
+
+  useEffect(() => {
+    console.log('Proposal count updated:', proposalCount?.toString());
+  }, [proposalCount]);
+
+  useEffect(() => {
+    console.log('Token proposal list updated:', tokenProposalList);
+  }, [tokenProposalList]);
+
+  useEffect(() => {
+    if (contractAddress && activeContract === CONTRACT_TYPES.TOKEN) {
+      console.log('Fetching proposals due to dependencies change:', {
+        contractAddress,
+        activeContract,
+        proposalCount: proposalCount?.toString()
+      });
+      fetchProposals();
+    }
+  }, [contractAddress, activeContract, proposalCount]);
+
   return {
     whitelistInfo,
     whitelistedAddresses,
-    tokenProposals,
+    vestingCaps,
+    vestingWallets,
+    tokenProposals: tokenProposalList,
     addToWhitelist,
     setTransactionLimit,
     setTGE,
-    vestingCaps,
-    vestingWallets,
-    proposals,
     createVestingCap,
     addVestingWallet,
     approveProposal,
@@ -646,6 +769,7 @@ export function useAdminContract() {
     checkRoleConfig,
     refetchRoleConfigs: fetchRoleConfigs,
     checkWhitelistConfig,
-    fetchWhitelistedAddresses
+    fetchWhitelistedAddresses,
+    fetchProposals
   }
 }

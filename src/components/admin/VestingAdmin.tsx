@@ -41,6 +41,7 @@ export function VestingAdmin() {
     amount: '',
     note: '',
     proposalId: '',
+    tgeTime: '',
   })
 
   const {
@@ -51,12 +52,14 @@ export function VestingAdmin() {
     addVestingWallet,
     approveProposal,
     executeProposal,
+    setTGE,
   } = useAdminContract()
 
   const [isCreatingCap, setIsCreatingCap] = useState(false)
   const [isAddingWallet, setIsAddingWallet] = useState(false)
   const [isApproving, setIsApproving] = useState(false)
   const [isExecuting, setIsExecuting] = useState(false)
+  const [isSettingTGE, setIsSettingTGE] = useState(false)
 
   const handleCreateVestingCap = async () => {
     try {
@@ -133,6 +136,18 @@ export function VestingAdmin() {
       setError(error.message)
     } finally {
       setIsExecuting(false)
+    }
+  }
+
+  const handleSetTGE = async () => {
+    try {
+      setError(null)
+      setIsSettingTGE(true)
+      await setTGE(formData.tgeTime)
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setIsSettingTGE(false)
     }
   }
 
@@ -264,6 +279,68 @@ export function VestingAdmin() {
               </TableBody>
             </Table>
           </TableContainer>
+        </AccordionDetails>
+      </Accordion>
+
+      <Accordion defaultExpanded>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="h6">Distribution</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <Box component="form" noValidate sx={{ mt: 1, mb: 3 }}>
+                <TextField
+                  fullWidth
+                  label="TGE Time"
+                  type="datetime-local"
+                  value={formData.tgeTime}
+                  onChange={(e) => setFormData(prev => ({ ...prev, tgeTime: e.target.value }))}
+                  margin="normal"
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  disabled={isSettingTGE}
+                />
+                <Button
+                  variant="contained"
+                  onClick={handleSetTGE}
+                  disabled={isSettingTGE || !formData.tgeTime}
+                  sx={{ mt: 2 }}
+                >
+                  {isSettingTGE ? <CircularProgress size={24} /> : 'Set TGE Time'}
+                </Button>
+              </Box>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" gutterBottom>Current Vesting Wallets</Typography>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Address</TableCell>
+                      <TableCell>Cap ID</TableCell>
+                      <TableCell>Amount</TableCell>
+                      <TableCell>Released</TableCell>
+                      <TableCell>Note</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {vestingWallets?.map((wallet, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{wallet.address}</TableCell>
+                        <TableCell>{wallet.capId}</TableCell>
+                        <TableCell>{ethers.formatEther(wallet.amount)}</TableCell>
+                        <TableCell>{ethers.formatEther(wallet.released)}</TableCell>
+                        <TableCell>{wallet.note}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Grid>
+          </Grid>
         </AccordionDetails>
       </Accordion>
 

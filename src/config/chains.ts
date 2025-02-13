@@ -74,7 +74,6 @@ export const getNetworkName = (chainId: number): string => {
 export const hardhat: Chain = {
     id: 31337,
     name: 'Hardhat',
-    network: 'hardhat',
     nativeCurrency: {
       decimals: 18,
       name: 'Placeholder Token',
