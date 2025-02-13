@@ -570,17 +570,17 @@ export function useAdminContract() {
         abi: contractAbi,
         functionName: 'roleConfigs',
         args: [role],
-      }) as readonly [bigint, bigint];
+      }) as readonly [bigint, number];
       
       console.log('Raw role config result:', config);
       
-      // Convert scientific notation to regular number string first
-      const transactionLimitStr = config[1].toString();
-      const transactionLimit = BigInt(transactionLimitStr);
+      // Handle scientific notation by converting to full number first
+      const [base, exponent] = config[1].toString().split('e+').map(Number);
+      const fullNumber = base * Math.pow(10, exponent);
+      const transactionLimit = BigInt(Math.floor(fullNumber));
       const quorum = Number(config[0]);
       
       console.log('Processed role config:', { 
-        transactionLimitStr,
         transactionLimit: transactionLimit.toString(), 
         quorum 
       });
@@ -591,22 +591,6 @@ export function useAdminContract() {
       };
     } catch (error: any) {
       console.error('Error checking role config:', error);
-      if (error.message.includes('Cannot convert') || error.message.includes('overflow')) {
-        // Handle the scientific notation manually
-        try {
-          const [base, exponent] = (config[1].toString() as string).split('e+').map(Number);
-          const fullNumber = base * Math.pow(10, exponent);
-          const transactionLimit = BigInt(Math.floor(fullNumber));
-          console.log('Fallback conversion:', { base, exponent, fullNumber, transactionLimit: transactionLimit.toString() });
-          return {
-            transactionLimit,
-            quorum: Number(config[0])
-          };
-        } catch (conversionError) {
-          console.error('Error in fallback conversion:', conversionError);
-          throw new Error('Failed to process transaction limit value');
-        }
-      }
       throw new Error(`Failed to fetch role configuration: ${error.message}`);
     }
   };
