@@ -1,5 +1,143 @@
 // Common Governance Module ABI used by both Token and Distribution contracts
 export const GOVERNANCE_ABI = [
+  // Custom Errors
+  {
+    type: "error",
+    name: "ExistingActiveProposal",
+    inputs: [
+      {
+        name: "target",
+        type: "address",
+        internalType: "address"
+      }
+    ]
+  },
+  {
+    inputs: [{ type: "uint8" }],
+    name: "ProposalErr",
+    type: "error"
+  },
+  {
+    inputs: [
+      { type: "uint16" },
+      { type: "uint16" }
+    ],
+    name: "InsufficientApprovals",
+    type: "error"
+  },
+  {
+    inputs: [{ type: "uint8" }],
+    name: "InvalidProposalType",
+    type: "error"
+  },
+  {
+    inputs: [{ type: "uint256" }],
+    name: "ExecutionDelayNotMet",
+    type: "error"
+  },
+  {
+    inputs: [
+      { type: "bytes32" },
+      { type: "uint16" }
+    ],
+    name: "InvalidQuorumErr",
+    type: "error"
+  },
+  {
+    inputs: [{ type: "address" }],
+    name: "TimeLockActive",
+    type: "error"
+  },
+  {
+    inputs: [],
+    name: "InvalidAddress",
+    type: "error"
+  },
+  {
+    inputs: [],
+    name: "MinimumRoleNoRequired",
+    type: "error"
+  },
+  {
+    inputs: [],
+    name: "CannotRemoveSelf",
+    type: "error"
+  },
+  {
+    inputs: [{ type: "uint256" }],
+    name: "CoolDownActive",
+    type: "error"
+  },
+  {
+    inputs: [],
+    name: "NotPendingOwner",
+    type: "error"
+  },
+  {
+    inputs: [{ type: "bytes32" }],
+    name: "InvalidRole",
+    type: "error"
+  },
+  {
+    inputs: [{ type: "address" }],
+    name: "AlreadyOwnsRole",
+    type: "error"
+  },
+  {
+    inputs: [],
+    name: "AlreadyUpgraded",
+    type: "error"
+  },
+  {
+    inputs: [
+      { type: "address" },
+      { type: "bytes32" },
+      { type: "uint8" }
+    ],
+    name: "RoleAssignment",
+    type: "error"
+  },
+  {
+    inputs: [],
+    name: "LimitTooHigh",
+    type: "error"
+  },
+  {
+    inputs: [],
+    name: "AmountMustBePositive",
+    type: "error"
+  },
+  {
+    inputs: [],
+    name: "TransferRestricted",
+    type: "error"
+  },
+  {
+    inputs: [{ type: "uint8" }],
+    name: "Failed",
+    type: "error"
+  },
+  {
+    inputs: [
+      { type: "uint256" },
+      { type: "uint256" }
+    ],
+    name: "LowBalance",
+    type: "error"
+  },
+  // Events
+  {
+    type: "event",
+    name: "ProposalExecuted",
+    inputs: [
+      {
+        indexed: false,
+        internalType: "bytes32",
+        name: "proposalId",
+        type: "bytes32"
+      }
+    ]
+  },
   // Read functions
   {
     inputs: [{ name: "proposalId", type: "bytes32" }, { name: "account", type: "address" }],
@@ -300,7 +438,459 @@ export const CONTRACT_ABI = [
 // Token Contract ABI
 export const TOKEN_ABI = [
   ...GOVERNANCE_ABI,
+  // Token-specific errors
+  {
+    type: "error",
+    name: "NotWhitelisted",
+    inputs: [
+      {
+        name: "to",
+        type: "address"
+      }
+    ]
+  },
+  {
+    type: "error",
+    name: "LocktimeActive",
+    inputs: [
+      {
+        name: "to",
+        type: "address"
+      }
+    ]
+  },
+  {
+    type: "error",
+    name: "ExceedsSupply",
+    inputs: [
+      {
+        name: "requested",
+        type: "uint256"
+      },
+      {
+        name: "supply",
+        type: "uint256"
+      }
+    ]
+  },
+  {
+    type: "error",
+    name: "LowAllowance",
+    inputs: [
+      {
+        name: "allowance",
+        type: "uint256"
+      },
+      {
+        name: "limit",
+        type: "uint256"
+      }
+    ]
+  },
+  {
+    type: "error",
+    name: "UsedNonce",
+    inputs: [
+      {
+        name: "nonce",
+        type: "uint256"
+      }
+    ]
+  },
+  {
+    type: "error",
+    name: "Unsupported",
+    inputs: [
+      {
+        name: "chain",
+        type: "uint256"
+      }
+    ]
+  },
+  {
+    type: "error",
+    name: "ExceedsMaximumSupply",
+    inputs: [
+      {
+        name: "requested",
+        type: "uint256"
+      },
+      {
+        name: "maxSupply",
+        type: "uint256"
+      }
+    ]
+  },
+  {
+    type: "error",
+    name: "AlreadyWhitelisted",
+    inputs: [
+      {
+        name: "target",
+        type: "address"
+      }
+    ]
+  },
+  {
+    type: "error",
+    name: "InvalidChain",
+    inputs: [
+      {
+        name: "chainId",
+        type: "uint256"
+      }
+    ]
+  },
+  {
+    type: "error",
+    name: "BlacklistedAddress",
+    inputs: [
+      {
+        name: "account",
+        type: "address"
+      }
+    ]
+  },
+  {
+    type: "error",
+    name: "AccountBlacklisted",
+    inputs: [
+      {
+        name: "target",
+        type: "address"
+      }
+    ]
+  },
+  {
+    type: "error",
+    name: "AccountNotBlacklisted",
+    inputs: [
+      {
+        name: "target",
+        type: "address"
+      }
+    ]
+  },
+  {
+    type: "error",
+    name: "FeeExceedsMax",
+    inputs: [
+      {
+        name: "fee",
+        type: "uint256"
+      }
+    ]
+  },
+  // Token-specific events
+  {
+    type: "event",
+    name: "BridgeOperationDetails",
+    inputs: [
+      {
+        indexed: true,
+        name: "operator",
+        type: "address"
+      },
+      {
+        indexed: false,
+        name: "operation",
+        type: "uint8"
+      },
+      {
+        indexed: false,
+        name: "amount",
+        type: "uint256"
+      },
+      {
+        indexed: false,
+        name: "chainId",
+        type: "uint256"
+      },
+      {
+        indexed: false,
+        name: "timestamp",
+        type: "uint256"
+      }
+    ]
+  },
+  {
+    type: "event",
+    name: "TokensAllocatedToContract",
+    inputs: [
+      {
+        indexed: true,
+        name: "amount",
+        type: "uint256"
+      }
+    ]
+  },
+  {
+    type: "event",
+    name: "SupportedChainChanged",
+    inputs: [
+      {
+        indexed: true,
+        name: "chainId",
+        type: "uint256"
+      },
+      {
+        indexed: false,
+        name: "caller",
+        type: "address"
+      }
+    ]
+  },
+  {
+    type: "event",
+    name: "TransferFromContract",
+    inputs: [
+      {
+        indexed: true,
+        name: "from",
+        type: "address"
+      },
+      {
+        indexed: true,
+        name: "to",
+        type: "address"
+      },
+      {
+        indexed: false,
+        name: "amount",
+        type: "uint256"
+      },
+      {
+        indexed: false,
+        name: "caller",
+        type: "address"
+      }
+    ]
+  },
+  {
+    type: "event",
+    name: "TokensMinted",
+    inputs: [
+      {
+        indexed: false,
+        name: "to",
+        type: "address"
+      },
+      {
+        indexed: false,
+        name: "amount",
+        type: "uint256"
+      }
+    ]
+  },
+  {
+    type: "event",
+    name: "WalletWhitelistedOp",
+    inputs: [
+      {
+        indexed: true,
+        name: "wallet",
+        type: "address"
+      },
+      {
+        indexed: false,
+        name: "caller",
+        type: "address"
+      },
+      {
+        indexed: false,
+        name: "lockUntil",
+        type: "uint256"
+      },
+      {
+        indexed: false,
+        name: "status",
+        type: "uint8"
+      }
+    ]
+  },
+  {
+    type: "event",
+    name: "BlackListOp",
+    inputs: [
+      {
+        indexed: true,
+        name: "account",
+        type: "address"
+      },
+      {
+        indexed: true,
+        name: "by",
+        type: "address"
+      },
+      {
+        indexed: false,
+        name: "status",
+        type: "uint8"
+      }
+    ]
+  },
+  {
+    type: "event",
+    name: "TreasuryDeployed",
+    inputs: [
+      {
+        indexed: true,
+        name: "treasury",
+        type: "address"
+      }
+    ]
+  },
+  {
+    type: "event",
+    name: "PlatformFeeUpdated",
+    inputs: [
+      {
+        indexed: false,
+        name: "newFee",
+        type: "uint256"
+      }
+    ]
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "target",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "name": "operator",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "name": "whitelistLockTime",
+        "type": "uint64"
+      },
+      {
+        "indexed": false,
+        "name": "operation",
+        "type": "uint8"
+      }
+    ],
+    "name": "WalletWhitelistedOp",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "timeConfigs",
+    "outputs": [
+      {
+        "name": "lastActivityTime",
+        "type": "uint64"
+      },
+      {
+        "name": "roleChangeTimeLock",
+        "type": "uint64"
+      },
+      {
+        "name": "whitelistLockTime",
+        "type": "uint64"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
   ...CONTRACT_ABI,
+  {
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32"
+      }
+    ],
+    "name": "roleConfigs",
+    "outputs": [
+      {
+        "name": "transactionLimit",
+        "type": "uint240"
+      },
+      {
+        "name": "quorum",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "name": "limit",
+        "type": "uint240"
+      }
+    ],
+    "name": "setRoleTransactionLimit",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "name": "quorum",
+        "type": "uint16"
+      }
+    ],
+    "name": "setRoleQuorum",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    type: "function"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "limit",
+        "type": "uint240"
+      }
+    ],
+    "name": "TransactionLimitUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "quorum",
+        "type": "uint16"
+      }
+    ],
+    "name": "QuorumUpdated",
+    "type": "event"
+  },
   // Additional Token-specific functions
   {
     inputs: [],
@@ -413,13 +1003,6 @@ export const TESTNET_MINING_ABI = [
     type: "function"
   }
 ] as const;
-
-// Common Role Types
-export const ROLE_TYPES = {
-  ADMIN_ROLE: "0x0000000000000000000000000000000000000000000000000000000000000000",
-  CONTRACT_OPERATOR_ROLE: "0x0000000000000000000000000000000000000000000000000000000000000001",
-  BRIDGE_OPERATOR_ROLE: "0x0000000000000000000000000000000000000000000000000000000000000002"
-} as const;
 
 // Proposal Types
 export const PROPOSAL_TYPES = {

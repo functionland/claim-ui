@@ -1,6 +1,7 @@
 import { type Address } from 'viem'
 import { SupportedChain } from './constants'
-import { TOKEN_ABI, DISTRIBUTION_ABI, ROLE_TYPES, PROPOSAL_TYPES } from './abis';
+import { TOKEN_ABI, DISTRIBUTION_ABI, PROPOSAL_TYPES } from './abis';
+import { ROLES } from './constants';
 
 // Contract Addresses for vesting
 export const VESTING_CONTRACT_ADDRESSES: Record<number, Address> = {
@@ -396,7 +397,7 @@ export const CONTRACT_CONFIG: ContractConfig = {
 };
 
 // Export common types and constants
-export { ROLE_TYPES, PROPOSAL_TYPES };
+export { ROLES, PROPOSAL_TYPES };
 
 // RPC Configuration
 export const RPC_URLS: Record<SupportedChain, string> = {
