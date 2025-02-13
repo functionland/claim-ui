@@ -20,7 +20,8 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  MenuItem
+  MenuItem,
+  Paper
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { ConnectButton } from '@/components/common/ConnectButton'
@@ -29,6 +30,20 @@ import { CONTRACT_TYPES } from '@/config/contracts'
 import ClientOnly from '../common/ClientOnly'
 import { useContractContext } from '@/contexts/ContractContext'
 import { ROLES, ROLE_NAMES } from '@/config/constants'
+
+interface WhitelistTimeConfig {
+  address: string;
+  lastActivityTime: number;
+  roleChangeTimeLock: number;
+  whitelistLockTime: number;
+}
+
+interface TimeConfig {
+  address: string;
+  lastActivityTime: number;
+  roleChangeTimeLock: number;
+  whitelistLockTime: number;
+}
 
 function DisconnectedView() {
   return (
@@ -47,6 +62,8 @@ function DisconnectedView() {
 function ConnectedView({ error, setError, formData, setFormData, handlers, states, data }: any) {
   const [roleCheckResult, setRoleCheckResult] = useState<{ transactionLimit: bigint, quorum: number } | null>(null);
   const [isCheckingRole, setIsCheckingRole] = useState(false);
+  const [timeConfigs, setTimeConfigs] = useState<TimeConfig[]>([]);
+  const [isCheckingWhitelist, setIsCheckingWhitelist] = useState(false);
 
   const handleCheckRole = async () => {
     if (!formData.role) return;
@@ -68,6 +85,26 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
       setError(error.message || 'Failed to check role configuration');
     } finally {
       setIsCheckingRole(false);
+    }
+  };
+
+  const handleCheckWhitelist = async (address: string) => {
+    try {
+      setIsCheckingWhitelist(true);
+      const config = await handlers.checkWhitelistConfig(address);
+      setTimeConfigs(prev => {
+        const existing = prev.findIndex(item => item.address === address);
+        if (existing >= 0) {
+          const updated = [...prev];
+          updated[existing] = { ...config, address };
+          return updated;
+        }
+        return [...prev, { ...config, address }];
+      });
+    } catch (error: any) {
+      setError(error.message || 'Failed to check whitelist configuration');
+    } finally {
+      setIsCheckingWhitelist(false);
     }
   };
 
@@ -105,6 +142,12 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
       console.error('Error parsing transaction limit:', error);
       return BigInt(0);
     }
+  };
+
+  // Add this helper function to format the date
+  const formatDateTime = (timestamp: number) => {
+    if (!timestamp) return '-';
+    return new Date(timestamp * 1000).toLocaleString();
   };
 
   console.log('ConnectedView rendered with data:', data);
@@ -269,28 +312,40 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
             </AccordionSummary>
             <AccordionDetails>
               <Box component="form" noValidate sx={{ mt: 1 }}>
-                <TextField
-                  fullWidth
-                  label="Wallet Address"
-                  value={formData.walletAddress}
-                  onChange={(e) => setFormData(prev => ({ ...prev, walletAddress: e.target.value }))}
-                  margin="normal"
-                  disabled={states.isAddingToWhitelist}
-                />
-                <Button
-                  variant="contained"
-                  onClick={handlers.handleAddToWhitelist}
-                  disabled={states.isAddingToWhitelist || !formData.walletAddress}
-                  sx={{ mt: 2 }}
-                >
-                  {states.isAddingToWhitelist ? <CircularProgress size={24} /> : 'Add to Whitelist'}
-                </Button>
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Address to Whitelist"
+                      value={formData.whitelistAddress || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, whitelistAddress: e.target.value }))}
+                      margin="normal"
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Button
+                      variant="contained"
+                      onClick={() => handlers.handleAddToWhitelist()}
+                      disabled={!formData.whitelistAddress || states.isWhitelisting}
+                      sx={{ mr: 1 }}
+                    >
+                      {states.isWhitelisting ? <CircularProgress size={24} /> : 'Add to Whitelist'}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={() => handleCheckWhitelist(formData.whitelistAddress)}
+                      disabled={!formData.whitelistAddress || isCheckingWhitelist}
+                    >
+                      {isCheckingWhitelist ? <CircularProgress size={24} /> : 'Check Whitelist'}
+                    </Button>
+                  </Grid>
+                </Grid>
               </Box>
 
-              <TableContainer sx={{ mt: 3 }}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Current Whitelisted Addresses ({data.whitelistInfo?.length ?? 0})
-                </Typography>
+              <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
+                Whitelisted Address Details
+              </Typography>
+              <TableContainer component={Paper}>
                 <Table>
                   <TableHead>
                     <TableRow>
@@ -298,34 +353,37 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
                       <TableCell>Last Activity</TableCell>
                       <TableCell>Role Change Lock</TableCell>
                       <TableCell>Whitelist Lock</TableCell>
-                      <TableCell>Operator</TableCell>
-                      <TableCell>Status</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {data.whitelistInfo?.map((info) => {
-                      const now = BigInt(Math.floor(Date.now() / 1000));
-                      const isLocked = info.timeConfig.whitelistLockTime > now;
-                      
+                    {timeConfigs.map((config) => {
+                      const now = Math.floor(Date.now() / 1000);
                       return (
-                        <TableRow key={info.address}>
-                          <TableCell>{info.address}</TableCell>
+                        <TableRow key={config.address}>
+                          <TableCell sx={{ fontFamily: 'monospace' }}>{config.address}</TableCell>
                           <TableCell>
-                            {new Date(Number(info.timeConfig.lastActivityTime) * 1000).toLocaleString()}
+                            {config.lastActivityTime ? 
+                              new Date(config.lastActivityTime * 1000).toLocaleString() : 
+                              '-'}
                           </TableCell>
                           <TableCell>
-                            {new Date(Number(info.timeConfig.roleChangeTimeLock) * 1000).toLocaleString()}
+                            {config.roleChangeTimeLock ? 
+                              `${config.roleChangeTimeLock} seconds` : 
+                              '-'}
                           </TableCell>
                           <TableCell>
-                            {new Date(Number(info.timeConfig.whitelistLockTime) * 1000).toLocaleString()}
-                          </TableCell>
-                          <TableCell>{info.operator}</TableCell>
-                          <TableCell>
-                            {isLocked ? (
-                              <Typography color="warning.main">Locked</Typography>
-                            ) : (
-                              <Typography color="success.main">Unlocked</Typography>
-                            )}
+                            {config.whitelistLockTime ? (
+                              <>
+                                <div>{formatDateTime(config.whitelistLockTime)}</div>
+                                <div style={{ 
+                                  color: config.whitelistLockTime > now ? 'orange' : 'green',
+                                  fontSize: '0.8em',
+                                  fontWeight: 'bold'
+                                }}>
+                                  {config.whitelistLockTime > now ? 'Locked' : 'Unlocked'}
+                                </div>
+                              </>
+                            ) : '-'}
                           </TableCell>
                         </TableRow>
                       );
@@ -471,6 +529,7 @@ export function TokenAdmin() {
     proposalId: '',
     role: '',
     quorum: '',
+    whitelistAddress: '',
   })
 
   // Set the active contract to TOKEN when the component mounts
@@ -492,6 +551,7 @@ export function TokenAdmin() {
     handleSetRoleQuorum,
     roleConfigs,
     checkRoleConfig,
+    checkWhitelistConfig,
   } = useAdminContract()
 
   const [isAddingToWhitelist, setIsAddingToWhitelist] = useState(false)
@@ -499,19 +559,37 @@ export function TokenAdmin() {
   const [isSettingTGE, setIsSettingTGE] = useState(false)
   const [isApproving, setIsApproving] = useState(false)
   const [isExecuting, setIsExecuting] = useState(false)
+  const [isRemovingFromWhitelist, setIsRemovingFromWhitelist] = useState(false)
+  const [isWhitelisting, setIsWhitelisting] = useState(false)
+  const [whitelistedAddresses, setWhitelistedAddresses] = useState<string[]>([]);
+
+  // Add this effect to fetch whitelisted addresses when component mounts
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      try {
+        const addresses = await refetchWhitelistedAddresses();
+        setWhitelistedAddresses(addresses);
+      } catch (error: any) {
+        console.error('Error fetching whitelisted addresses:', error);
+        setError(error.message || 'Failed to fetch whitelisted addresses');
+      }
+    };
+
+    fetchAddresses();
+  }, [refetchWhitelistedAddresses]);
 
   const handleAddToWhitelist = async () => {
     try {
       setError(null)
-      setIsAddingToWhitelist(true)
-      await addToWhitelist(formData.walletAddress)
+      setIsWhitelisting(true)
+      await addToWhitelist(formData.whitelistAddress)
       // Clear the form and refetch the whitelist
-      setFormData(prev => ({ ...prev, walletAddress: '' }))
+      setFormData(prev => ({ ...prev, whitelistAddress: '' }))
       await refetchWhitelistedAddresses()
     } catch (error: any) {
       setError(error.message)
     } finally {
-      setIsAddingToWhitelist(false)
+      setIsWhitelisting(false)
     }
   }
 
@@ -594,6 +672,18 @@ export function TokenAdmin() {
     }
   }
 
+  const handleRemoveFromWhitelist = async (address: string) => {
+    try {
+      setError(null)
+      setIsRemovingFromWhitelist(true)
+      // Implement remove from whitelist logic here
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setIsRemovingFromWhitelist(false)
+    }
+  }
+
   const handlers = {
     handleAddToWhitelist,
     handleSetTransactionLimit,
@@ -602,6 +692,8 @@ export function TokenAdmin() {
     handleExecuteProposal,
     handleSetQuorum,
     checkRoleConfig,
+    checkWhitelistConfig,
+    handleRemoveFromWhitelist,
   }
 
   const states = {
@@ -610,12 +702,15 @@ export function TokenAdmin() {
     isSettingTGE,
     isApproving,
     isExecuting,
+    isRemovingFromWhitelist,
+    isWhitelisting,
   }
 
   const data = {
     whitelistInfo,
     tokenProposals,
     roleConfigs,
+    whitelistedAddresses,
   }
 
   return (

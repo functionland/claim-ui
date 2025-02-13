@@ -62,6 +62,7 @@ export function useAdminContract() {
   };
 
   const [whitelistInfo, setWhitelistInfo] = useState<WhitelistedAddressInfo[]>([]);
+  const [whitelistedAddresses, setWhitelistedAddresses] = useState<string[]>([]);
 
   const isWhitelisted = async (address: string): Promise<boolean> => {
     if (!contractAddress || !publicClient) return false;
@@ -85,7 +86,7 @@ export function useAdminContract() {
   const fetchWhitelistedAddresses = async () => {
     if (!contractAddress || !publicClient) {
       console.log('Missing requirements:', { contractAddress, hasPublicClient: !!publicClient });
-      return;
+      return [];
     }
 
     console.log('Fetching whitelisted addresses for contract:', contractAddress);
@@ -103,55 +104,35 @@ export function useAdminContract() {
       console.log('Found events:', events);
 
       // Process events to track added and removed wallets
-      const whitelistedWallets = new Map<string, { lockTime: bigint, operator: string }>();
+      const whitelistedWallets = new Map<string, boolean>();
 
       for (const event of events) {
-        const { target, operator, whitelistLockTime, operation } = event.args;
+        const { target, operation } = event.args;
         const address = target.toLowerCase();
 
         if (operation === 1n) {
           // Wallet added
-          whitelistedWallets.set(address, {
-            lockTime: whitelistLockTime,
-            operator: operator
-          });
+          whitelistedWallets.set(address, true);
         } else if (operation === 2n) {
           // Wallet removed
           whitelistedWallets.delete(address);
         }
       }
 
-      console.log('Processing whitelisted wallets:', whitelistedWallets);
-
-      // Get time configs for currently whitelisted addresses
-      const whitelistPromises = Array.from(whitelistedWallets.entries()).map(async ([address, info]) => {
-        const timeConfig = await publicClient.readContract({
-          address: contractAddress,
-          abi: contractAbi,
-          functionName: 'timeConfigs',
-          args: [address as Address],
-        });
-
-        return {
-          address,
-          timeConfig,
-          operator: info.operator
-        };
-      });
-
-      const whitelistData = await Promise.all(whitelistPromises);
-      console.log('Final whitelist data:', whitelistData);
-      setWhitelistInfo(whitelistData);
+      const addresses = Array.from(whitelistedWallets.keys());
+      console.log('Current whitelisted addresses:', addresses);
+      return addresses;
     } catch (error) {
       console.error('Error in fetchWhitelistedAddresses:', error);
-      setWhitelistInfo([]);
+      return [];
     }
   };
 
   useEffect(() => {
-    console.log('useEffect triggered with:', { contractAddress, chainId, activeContract });
     if (contractAddress && chainId && activeContract === CONTRACT_TYPES.TOKEN) {
-      fetchWhitelistedAddresses();
+      fetchWhitelistedAddresses().then(addresses => {
+        setWhitelistedAddresses(addresses);
+      }).catch(console.error);
     }
   }, [contractAddress, chainId, activeContract]);
 
@@ -595,6 +576,46 @@ export function useAdminContract() {
     }
   };
 
+  const checkWhitelistConfig = async (address: string) => {
+    if (!address) throw new Error('Address is required');
+    if (!contractAddress) throw new Error('Contract not connected');
+    if (!publicClient) throw new Error('Public client not available');
+    
+    try {
+      console.log('Checking whitelist config for:', { address });
+
+      const config = await publicClient.readContract({
+        address: contractAddress as `0x${string}`,
+        abi: contractAbi,
+        functionName: 'timeConfigs',
+        args: [address],
+      }) as readonly [bigint, bigint, bigint]; // [lastActivityTime, roleChangeTimeLock, whitelistLockTime]
+      
+      console.log('Raw whitelist config result:', config);
+      
+      // Convert BigInt values to numbers and ensure proper handling
+      const lastActivityTime = Number(config[0]);
+      const roleChangeTimeLock = Number(config[1]);
+      const whitelistLockTime = Number(config[2]);
+      
+      console.log('Processed whitelist config:', {
+        address,
+        lastActivityTime,
+        roleChangeTimeLock,
+        whitelistLockTime
+      });
+      
+      return {
+        lastActivityTime,
+        roleChangeTimeLock,
+        whitelistLockTime
+      };
+    } catch (error: any) {
+      console.error('Error checking whitelist config:', error);
+      throw new Error(`Failed to fetch whitelist configuration: ${error.message}`);
+    }
+  };
+
   // Fetch role configs when contract changes
   useEffect(() => {
     if (contractAddress && chainId && activeContract === CONTRACT_TYPES.TOKEN) {
@@ -603,21 +624,17 @@ export function useAdminContract() {
   }, [contractAddress, chainId, activeContract]);
 
   return {
-    // Token contract data
     whitelistInfo,
+    whitelistedAddresses,
     tokenProposals,
-    // Token contract functions
     addToWhitelist,
     setTransactionLimit,
     setTGE,
-    // Vesting contract data
     vestingCaps,
     vestingWallets,
     proposals,
-    // Vesting contract functions
     createVestingCap,
     addVestingWallet,
-    // Common functions
     approveProposal,
     executeProposal,
     error,
@@ -628,5 +645,7 @@ export function useAdminContract() {
     handleSetRoleQuorum,
     checkRoleConfig,
     refetchRoleConfigs: fetchRoleConfigs,
+    checkWhitelistConfig,
+    fetchWhitelistedAddresses
   }
 }
