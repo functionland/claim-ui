@@ -414,6 +414,85 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
           </Accordion>
         </Grid>
 
+        {/* Bridge Operation */}
+        <Grid item xs={12}>
+          <Accordion defaultExpanded>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="h6">Bridge Operation</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Box component="form" noValidate sx={{ mt: 1 }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      label="Chain ID"
+                      type="number"
+                      value={formData.chainId || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, chainId: e.target.value }))}
+                      margin="normal"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      label="Nonce"
+                      type="number"
+                      value={formData.nonce || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, nonce: e.target.value }))}
+                      margin="normal"
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Button
+                      variant="contained"
+                      onClick={handlers.handleSetBridgeOpNonce}
+                      disabled={!formData.chainId || !formData.nonce || states.isSettingNonce}
+                      sx={{ mr: 1 }}
+                    >
+                      {states.isSettingNonce ? <CircularProgress size={24} /> : 'Set Bridge Operation Nonce'}
+                    </Button>
+                  </Grid>
+                </Grid>
+
+                {/* Nonce Events Table */}
+                <Box sx={{ mt: 4 }}>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Bridge Operation History
+                  </Typography>
+                  <TableContainer component={Paper}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Chain ID</TableCell>
+                          <TableCell>Caller</TableCell>
+                          <TableCell>Block Number</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {data.nonceEvents.map((event, index) => (
+                          <TableRow key={`${event.chainId}-${event.blockNumber}-${index}`}>
+                            <TableCell>{event.chainId.toString()}</TableCell>
+                            <TableCell sx={{ fontFamily: 'monospace' }}>{event.caller}</TableCell>
+                            <TableCell>{event.blockNumber.toString()}</TableCell>
+                          </TableRow>
+                        ))}
+                        {data.nonceEvents.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={3} align="center">
+                              No bridge operations found
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+              </Box>
+            </AccordionDetails>
+          </Accordion>
+        </Grid>
+
         {/* Proposals */}
         <Grid item xs={12}>
           <Accordion>
@@ -528,6 +607,8 @@ export function TokenAdmin() {
     role: '',
     quorum: '',
     whitelistAddress: '',
+    chainId: '',
+    nonce: '',
   })
 
   // Set the active contract to TOKEN when the component mounts
@@ -550,6 +631,8 @@ export function TokenAdmin() {
     roleConfigs,
     checkRoleConfig,
     checkWhitelistConfig,
+    setBridgeOpNonce,
+    nonceEvents,
   } = useAdminContract()
 
   const [isAddingToWhitelist, setIsAddingToWhitelist] = useState(false)
@@ -559,6 +642,7 @@ export function TokenAdmin() {
   const [isExecuting, setIsExecuting] = useState(false)
   const [isRemovingFromWhitelist, setIsRemovingFromWhitelist] = useState(false)
   const [isWhitelisting, setIsWhitelisting] = useState(false)
+  const [isSettingNonce, setIsSettingNonce] = useState(false)
   const [whitelistedAddresses, setWhitelistedAddresses] = useState<string[]>([]);
 
   // Add this effect to fetch whitelisted addresses when component mounts
@@ -682,6 +766,31 @@ export function TokenAdmin() {
     }
   }
 
+  const handleSetBridgeOpNonce = async () => {
+    try {
+      setError(null)
+      setIsSettingNonce(true)
+      const { chainId, nonce } = formData
+
+      if (!chainId || !nonce) {
+        throw new Error('Please fill in both Chain ID and Nonce')
+      }
+
+      await setBridgeOpNonce(chainId, nonce)
+
+      // Reset form
+      setFormData(prev => ({
+        ...prev,
+        chainId: '',
+        nonce: '',
+      }))
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setIsSettingNonce(false)
+    }
+  }
+
   const handlers = {
     handleAddToWhitelist,
     handleSetTransactionLimit,
@@ -692,6 +801,7 @@ export function TokenAdmin() {
     checkRoleConfig,
     checkWhitelistConfig,
     handleRemoveFromWhitelist,
+    handleSetBridgeOpNonce,
   }
 
   const states = {
@@ -702,31 +812,33 @@ export function TokenAdmin() {
     isExecuting,
     isRemovingFromWhitelist,
     isWhitelisting,
+    isSettingNonce,
   }
 
   const data = {
     whitelistInfo,
     tokenProposals,
-    roleConfigs,
     whitelistedAddresses,
+    roleConfigs,
     proposals: tokenProposals,
+    nonceEvents,
+  }
+
+  if (!isConnected) {
+    return <DisconnectedView />
   }
 
   return (
     <ClientOnly>
-      {isConnected ? (
-        <ConnectedView 
-          error={error}
-          setError={setError}
-          formData={formData}
-          setFormData={setFormData}
-          handlers={handlers}
-          states={states}
-          data={data}
-        />
-      ) : (
-        <DisconnectedView />
-      )}
+      <ConnectedView
+        error={error}
+        setError={setError}
+        formData={formData}
+        setFormData={setFormData}
+        handlers={handlers}
+        states={states}
+        data={data}
+      />
     </ClientOnly>
   )
 }

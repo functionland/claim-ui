@@ -947,11 +947,63 @@ export function useAdminContract() {
     }
   }, [contractAddress, activeContract, proposalCount]);
 
+  const [isSettingNonce, setIsSettingNonce] = useState(false)
+  const [nonceEvents, setNonceEvents] = useState<{ chainId: bigint, caller: string, blockNumber: bigint }[]>([])
+
+  useEffect(() => {
+    const fetchNonceEvents = async () => {
+      if (!contractAddress || !publicClient) return;
+
+      try {
+        const events = await publicClient.getLogs({
+          address: contractAddress,
+          event: parseAbiItem('event SupportedChainChanged(uint256 indexed chainId, address caller)'),
+          fromBlock: 'earliest'
+        })
+
+        const formattedEvents = events.map(event => ({
+          chainId: event.args.chainId!,
+          caller: event.args.caller!,
+          blockNumber: event.blockNumber
+        }))
+
+        setNonceEvents(formattedEvents)
+      } catch (err) {
+        console.error('Error fetching nonce events:', err)
+      }
+    }
+
+    fetchNonceEvents()
+  }, [contractAddress, publicClient])
+
+  const setBridgeOpNonce = async (chainId: string, nonce: string) => {
+    if (!contractAddress || !chainId || !nonce) {
+      throw new Error('Missing required parameters')
+    }
+
+    try {
+      setIsSettingNonce(true)
+      setError(null)
+
+      const { request } = await publicClient.simulateContract({
+        address: contractAddress,
+        abi: contractAbi,
+        functionName: 'setBridgeOpNonce',
+        args: [BigInt(chainId), BigInt(nonce)],
+      })
+
+      await writeContractAsync(request)
+    } catch (err) {
+      console.error('Error setting bridge operation nonce:', err)
+      throw err
+    } finally {
+      setIsSettingNonce(false)
+    }
+  }
+
   return {
     whitelistInfo,
     whitelistedAddresses,
-    vestingCaps,
-    vestingWallets,
     tokenProposals: tokenProposalList,
     vestingProposals: vestingProposalList,
     addToWhitelist,
@@ -965,16 +1017,14 @@ export function useAdminContract() {
     error,
     refetchWhitelistedAddresses,
     isWhitelisted,
-    roleConfigs,
-    handleSetRoleTransactionLimit,
-    handleSetRoleQuorum,
-    checkRoleConfig,
-    refetchRoleConfigs: fetchRoleConfigs,
+    isLoading,
     checkWhitelistConfig,
     fetchWhitelistedAddresses,
     fetchProposals,
     vestingCapTable,
-    isLoading,
     tgeStatus,
+    setBridgeOpNonce,
+    isSettingNonce,
+    nonceEvents,
   }
 }
