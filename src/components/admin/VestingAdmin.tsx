@@ -63,30 +63,51 @@ export function VestingAdmin() {
   const [isExecuting, setIsExecuting] = useState(false)
   const [isSettingTGE, setIsSettingTGE] = useState(false)
 
-  const handleCreateVestingCap = async () => {
+  const handleCreateCap = async () => {
     try {
-      setError(null)
       setIsCreatingCap(true)
+      setError(null)
+
+      const {
+        capName,
+        totalAllocation,
+        cliff,
+        vestingTerm,
+        vestingPlan,
+        initialRelease,
+      } = formData
+
+      if (!capName || !totalAllocation || !cliff || !vestingTerm || !vestingPlan || !initialRelease) {
+        throw new Error('Please fill in all fields')
+      }
+
       await createVestingCap(
-        formData.capName,
-        formData.totalAllocation,
-        Number(formData.cliff),
-        Number(formData.vestingTerm),
-        Number(formData.vestingPlan),
-        Number(formData.initialRelease)
+        capName,
+        totalAllocation,
+        cliff,
+        vestingTerm,
+        vestingPlan,
+        initialRelease
       )
-      // Clear form
-      setFormData(prev => ({
-        ...prev,
+
+      // Reset form
+      setFormData({
         capName: '',
         totalAllocation: '',
         cliff: '',
         vestingTerm: '',
         vestingPlan: '',
         initialRelease: '',
-      }))
-    } catch (error: any) {
-      setError(error.message)
+        walletAddress: '',
+        capId: '',
+        amount: '',
+        note: '',
+        proposalId: '',
+        tgeTime: '',
+      })
+    } catch (err) {
+      console.error('Error creating vesting cap:', err)
+      setError(err instanceof Error ? err.message : 'Failed to create vesting cap')
     } finally {
       setIsCreatingCap(false)
     }
@@ -169,7 +190,7 @@ export function VestingAdmin() {
             <TableRow>
               <TableCell>Cap ID</TableCell>
               <TableCell>Name</TableCell>
-              <TableCell>Total Allocation</TableCell>
+              <TableCell>Total Allocation (FIL)</TableCell>
               <TableCell>Cliff (days)</TableCell>
               <TableCell>Vesting Term (months)</TableCell>
               <TableCell>Initial Release</TableCell>
@@ -181,10 +202,10 @@ export function VestingAdmin() {
               <TableRow key={cap.capId}>
                 <TableCell>{cap.capId}</TableCell>
                 <TableCell>{ethers.decodeBytes32String(cap.name)}</TableCell>
-                <TableCell>{ethers.formatEther(cap.totalAllocation.toString())}</TableCell>
+                <TableCell>{Number(ethers.formatEther(cap.totalAllocation.toString())).toLocaleString()}</TableCell>
                 <TableCell>{(Number(cap.cliff) / 86400).toFixed(2)}</TableCell>
                 <TableCell>{(Number(cap.vestingTerm) / (30 * 86400)).toFixed(2)}</TableCell>
-                <TableCell>{(Number(cap.initialRelease) / 100).toFixed(2)}%</TableCell>
+                <TableCell>{Number(cap.initialRelease).toFixed(0)}%</TableCell>
                 <TableCell>{cap.wallets.length}</TableCell>
               </TableRow>
             ))}
@@ -237,9 +258,10 @@ export function VestingAdmin() {
               <TextField
                 fullWidth
                 label="Total Allocation"
+                type="number"
                 value={formData.totalAllocation}
                 onChange={(e) => setFormData({ ...formData, totalAllocation: e.target.value })}
-                helperText="In tokens"
+                helperText="Enter amount in FULA (e.g., 1000000 for 1M FULA)"
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -285,7 +307,7 @@ export function VestingAdmin() {
           <Box sx={{ mt: 2, mb: 4 }}>
             <Button
               variant="contained"
-              onClick={handleCreateVestingCap}
+              onClick={handleCreateCap}
               disabled={isCreatingCap}
               startIcon={isCreatingCap ? <CircularProgress size={20} /> : null}
             >
@@ -299,34 +321,7 @@ export function VestingAdmin() {
           ) : !vestingCapTable || vestingCapTable.length === 0 ? (
             <Alert severity="info">No vesting caps found</Alert>
           ) : (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Cap ID</TableCell>
-                    <TableCell>Name</TableCell>
-                    <TableCell>Total Allocation</TableCell>
-                    <TableCell>Cliff (days)</TableCell>
-                    <TableCell>Vesting Term (months)</TableCell>
-                    <TableCell>Initial Release</TableCell>
-                    <TableCell>Wallets</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {vestingCapTable.map((cap) => (
-                    <TableRow key={cap.capId}>
-                      <TableCell>{cap.capId}</TableCell>
-                      <TableCell>{ethers.decodeBytes32String(cap.name)}</TableCell>
-                      <TableCell>{ethers.formatEther(cap.totalAllocation.toString())}</TableCell>
-                      <TableCell>{(Number(cap.cliff) / 86400).toFixed(2)}</TableCell>
-                      <TableCell>{(Number(cap.vestingTerm) / (30 * 86400)).toFixed(2)}</TableCell>
-                      <TableCell>{(Number(cap.initialRelease) / 100).toFixed(2)}%</TableCell>
-                      <TableCell>{cap.wallets.length}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            renderVestingCapTable()
           )}
         </AccordionDetails>
       </Accordion>

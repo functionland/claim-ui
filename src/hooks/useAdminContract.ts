@@ -345,38 +345,53 @@ export function useAdminContract() {
 
   // Vesting contract functions
   const createVestingCap = async (
-    name: string,
+    capName: string,
     totalAllocation: string,
-    cliff: number,
-    vestingTerm: number,
-    vestingPlan: number,
-    initialRelease: number
+    cliff: string,
+    vestingTerm: string,
+    vestingPlan: string,
+    initialRelease: string
   ) => {
-    if (!contractAddress) throw new Error('Contract address not found')
+    if (!contractAddress || !chainId) {
+      throw new Error('Contract not initialized')
+    }
 
     try {
-      // First simulate the transaction
-      const { request } = await publicClient.simulateContract({
+      // Find the next available cap ID
+      let nextCapId = BigInt(1)
+      if (vestingCapTable && vestingCapTable.length > 0) {
+        const maxCapId = Math.max(...vestingCapTable.map(cap => cap.capId))
+        nextCapId = BigInt(maxCapId + 1)
+      }
+
+      // Convert parameters to the correct format
+      const nameBytes32 = ethers.encodeBytes32String(capName)
+      const totalAllocationBigInt = ethers.parseEther(totalAllocation)
+      const cliffDays = BigInt(Math.floor(Number(cliff))) // cliff in days
+      const vestingTermMonths = BigInt(Math.floor(Number(vestingTerm))) // vesting term in months
+      const vestingPlanMonths = BigInt(Math.floor(Number(vestingPlan))) // vesting plan in months
+      const initialReleasePercent = BigInt(Math.floor(Number(initialRelease))) // initial release percentage
+
+      // Call the contract method
+      const hash = await writeContractAsync({
         address: contractAddress,
         abi: contractAbi,
-        functionName: 'createVestingCap',
+        functionName: 'addVestingCap',
         args: [
-          ethers.encodeBytes32String(name),
-          ethers.parseEther(totalAllocation),
-          BigInt(cliff * 86400), // Convert days to seconds
-          BigInt(vestingTerm),
-          BigInt(vestingPlan),
-          BigInt(initialRelease),
+          nextCapId,
+          nameBytes32,
+          totalAllocationBigInt,
+          cliffDays,
+          vestingTermMonths,
+          vestingPlanMonths,
+          initialReleasePercent
         ],
-        account: userAddress,
       })
 
-      // If simulation succeeds, send the transaction
-      const hash = await writeContractAsync(request)
       return hash
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error creating vesting cap:', err)
-      throw new Error(err.message)
+      throw err
     }
   }
 

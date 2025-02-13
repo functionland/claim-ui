@@ -979,6 +979,143 @@ export const TOKEN_ABI = [
 export const DISTRIBUTION_ABI = [
   ...GOVERNANCE_ABI,
   ...CONTRACT_ABI,
+  // Distribution-specific errors
+  {
+    type: "error",
+    name: "TGENotInitiated",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "NothingDue",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "LowContractBalance",
+    inputs: [
+      { name: "available", type: "uint256" },
+      { name: "required", type: "uint256" }
+    ]
+  },
+  {
+    type: "error",
+    name: "TransferFailed",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "InvalidAllocationParameters",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "NothingToClaim",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "CliffNotReached",
+    inputs: [
+      { name: "currentTime", type: "uint256" },
+      { name: "startDate", type: "uint256" },
+      { name: "cliffEnd", type: "uint256" }
+    ]
+  },
+  {
+    type: "error",
+    name: "OperationFailed",
+    inputs: [
+      { name: "status", type: "uint8" }
+    ]
+  },
+  {
+    type: "error",
+    name: "TGEAlreadyInitiated",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "AllocationTooHigh",
+    inputs: [
+      { name: "wallet", type: "address" },
+      { name: "allocated", type: "uint256" },
+      { name: "maximum", type: "uint256" },
+      { name: "capId", type: "uint256" }
+    ]
+  },
+  {
+    type: "error",
+    name: "InsufficientContractBalance",
+    inputs: [
+      { name: "required", type: "uint256" },
+      { name: "available", type: "uint256" }
+    ]
+  },
+  {
+    type: "error",
+    name: "CapExists",
+    inputs: [
+      { name: "capId", type: "uint256" }
+    ]
+  },
+  {
+    type: "error",
+    name: "InvalidAllocation",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "InitialReleaseTooLarge",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "OutOfRangeVestingPlan",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "CapHasWallets",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "ExceedsMaximumSupply",
+    inputs: [
+      { name: "amount", type: "uint256" }
+    ]
+  },
+  {
+    type: "error",
+    name: "StartDateNotSet",
+    inputs: [
+      { name: "capId", type: "uint256" }
+    ]
+  },
+  {
+    type: "error",
+    name: "WalletExistsInCap",
+    inputs: [
+      { name: "wallet", type: "address" },
+      { name: "capId", type: "uint256" }
+    ]
+  },
+  {
+    type: "error",
+    name: "InvalidCapId",
+    inputs: [
+      { name: "capId", type: "uint256" }
+    ]
+  },
+  {
+    type: "error",
+    name: "WalletNotInCap",
+    inputs: [
+      { name: "wallet", type: "address" },
+      { name: "capId", type: "uint256" }
+    ]
+  },
   // Additional Distribution-specific functions
   {
     inputs: [],
@@ -1018,6 +1155,7 @@ export const DISTRIBUTION_ABI = [
   },
   {
     inputs: [
+      { name: "capId", type: "uint256" },
       { name: "name", type: "bytes32" },
       { name: "totalAllocation", type: "uint256" },
       { name: "cliff", type: "uint256" },
@@ -1025,7 +1163,7 @@ export const DISTRIBUTION_ABI = [
       { name: "vestingPlan", type: "uint256" },
       { name: "initialRelease", type: "uint256" }
     ],
-    name: "createVestingCap",
+    name: "addVestingCap",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function"
