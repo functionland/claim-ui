@@ -60,3 +60,18 @@ export const ROLE_NAMES = {
   [ROLES.CONTRACT_OPERATOR_ROLE]: 'Contract Operator',
   [ROLES.ADMIN_ROLE]: 'Admin',
 } as const;
+
+export const PROPOSAL_TYPES = {
+  NA: 0,
+  AddRole: 1,
+  RemoveRole: 2,
+  Upgrade: 3,
+  Recovery: 4,
+  AddWhitelist: 5,
+  RemoveWhitelist: 6,
+  AddDistributionWallets: 7,
+  RemoveDistributionWallet: 8,
+  AddToBlacklist: 9,
+  RemoveFromBlacklist: 10,
+  ChangeTreasuryFee: 11
+} as const;

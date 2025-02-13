@@ -221,7 +221,133 @@ export const GOVERNANCE_ABI = [
     outputs: [],
     stateMutability: "nonpayable",
     type: "function"
-  }
+  },
+  {
+    inputs: [],
+    name: "proposalCount",
+    outputs: [{ type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [{ type: "uint256" }],
+    name: "proposalRegistry",
+    outputs: [{ type: "bytes32" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [{ type: "bytes32" }],
+    name: "proposals",
+    outputs: [
+      { name: "proposalType", type: "uint8" },
+      { name: "target", type: "address" },
+      { name: "id", type: "uint40" },
+      { name: "role", type: "bytes32" },
+      { name: "tokenAddress", type: "address" },
+      { name: "amount", type: "uint96" },
+      { 
+        name: "config",
+        type: "tuple",
+        components: [
+          { name: "expiryTime", type: "uint64" },
+          { name: "executionTime", type: "uint64" },
+          { name: "approvals", type: "uint16" },
+          { name: "status", type: "uint8" }
+        ]
+      }
+    ],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "getProposals",
+    outputs: [
+      {
+        components: [
+          { name: "proposalType", type: "uint8" },
+          { name: "id", type: "uint40" },
+          { name: "target", type: "address" },
+          { name: "role", type: "bytes32" },
+          { name: "amount", type: "uint96" },
+          { name: "tokenAddress", type: "address" }
+        ],
+        name: "proposals",
+        type: "tuple[]"
+      },
+      {
+        components: [
+          { name: "status", type: "uint8" },
+          { name: "approvals", type: "uint16" },
+          { name: "expiryTime", type: "uint64" },
+          { name: "executionTime", type: "uint64" }
+        ],
+        name: "configs",
+        type: "tuple[]"
+      }
+    ],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "proposalType", type: "uint8" },
+      { name: "id", type: "uint40" },
+      { name: "target", type: "address" },
+      { name: "role", type: "bytes32" },
+      { name: "amount", type: "uint96" },
+      { name: "tokenAddress", type: "address" }
+    ],
+    name: "createProposal",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "proposalId", type: "bytes32" }],
+    name: "approveProposal",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "proposalId", type: "bytes32" }],
+    name: "executeProposal",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "proposalId", type: "bytes32" },
+      { indexed: true, name: "proposer", type: "address" },
+      { indexed: false, name: "proposalType", type: "uint8" },
+      { indexed: false, name: "target", type: "address" },
+      { indexed: false, name: "amount", type: "uint96" }
+    ],
+    name: "ProposalCreated",
+    type: "event"
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "proposalId", type: "bytes32" },
+      { indexed: true, name: "approver", type: "address" }
+    ],
+    name: "ProposalApproved",
+    type: "event"
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "proposalId", type: "bytes32" },
+      { indexed: true, name: "executor", type: "address" }
+    ],
+    name: "ProposalExecuted",
+    type: "event"
+  },
 ] as const;
 
 // Common Contract ABI used across multiple contracts
@@ -891,46 +1017,6 @@ export const TOKEN_ABI = [
     "name": "QuorumUpdated",
     "type": "event"
   },
-  // Proposal functions
-  {
-    inputs: [],
-    name: "proposalCount",
-    outputs: [{ type: "uint256" }],
-    stateMutability: "view",
-    type: "function"
-  },
-  {
-    inputs: [{ type: "uint256" }],
-    name: "proposalRegistry",
-    outputs: [{ type: "bytes32" }],
-    stateMutability: "view",
-    type: "function"
-  },
-  {
-    inputs: [{ type: "bytes32" }],
-    name: "proposals",
-    outputs: [
-      { name: "proposalType", type: "uint8" },
-      { name: "target", type: "address" },
-      { name: "id", type: "uint40" },
-      { name: "role", type: "bytes32" },
-      { name: "tokenAddress", type: "address" },
-      { name: "amount", type: "uint96" },
-      { 
-        name: "config",
-        type: "tuple",
-        components: [
-          { name: "expiryTime", type: "uint64" },
-          { name: "executionTime", type: "uint64" },
-          { name: "approvals", type: "uint16" },
-          { name: "status", type: "uint8" }
-        ]
-      }
-    ],
-    stateMutability: "view",
-    type: "function"
-  },
-  // Additional Token-specific functions
   {
     inputs: [],
     name: "maxSupply",
@@ -1189,8 +1275,9 @@ export const PROPOSAL_TYPES = {
   Recovery: 4,
   AddWhitelist: 5,
   RemoveWhitelist: 6,
-  AddToBlacklist: 7,
-  RemoveFromBlacklist: 8,
-  ChangeTreasuryFee: 9,
-  AddDistributionWallets: 10
+  AddDistributionWallets: 7,
+  RemoveDistributionWallet: 8,
+  AddToBlacklist: 9,
+  RemoveFromBlacklist: 10,
+  ChangeTreasuryFee: 11
 } as const;

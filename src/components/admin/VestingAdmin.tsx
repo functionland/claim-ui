@@ -24,7 +24,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { ethers } from 'ethers'
 import { ConnectButton } from '@/components/common/ConnectButton'
 import { useAdminContract } from '@/hooks/useAdminContract'
-import { CONTRACT_TYPES, PROPOSAL_TYPES } from '@/config/contracts'
+import { CONTRACT_TYPES, PROPOSAL_TYPES } from '@/config/constants'
 
 export function VestingAdmin() {
   const { isConnected } = useAccount()
@@ -47,7 +47,7 @@ export function VestingAdmin() {
   const {
     vestingCaps,
     vestingWallets,
-    proposals,
+    vestingProposals,
     createVestingCap,
     addVestingWallet,
     approveProposal,
@@ -219,6 +219,8 @@ export function VestingAdmin() {
 
   const getProposalType = (type: number): string => {
     switch (type) {
+      case PROPOSAL_TYPES.NA:
+        return 'N/A';
       case PROPOSAL_TYPES.AddRole:
         return 'Add Role';
       case PROPOSAL_TYPES.RemoveRole:
@@ -231,14 +233,16 @@ export function VestingAdmin() {
         return 'Add Whitelist';
       case PROPOSAL_TYPES.RemoveWhitelist:
         return 'Remove Whitelist';
+      case PROPOSAL_TYPES.AddDistributionWallets:
+        return 'Add Distribution Wallets';
+      case PROPOSAL_TYPES.RemoveDistributionWallet:
+        return 'Remove Distribution Wallet';
       case PROPOSAL_TYPES.AddToBlacklist:
         return 'Add to Blacklist';
       case PROPOSAL_TYPES.RemoveFromBlacklist:
         return 'Remove from Blacklist';
       case PROPOSAL_TYPES.ChangeTreasuryFee:
         return 'Change Treasury Fee';
-      case PROPOSAL_TYPES.AddDistributionWallets:
-        return 'Add Distribution Wallets';
       default:
         return `Unknown (${type})`;
     }
@@ -439,10 +443,11 @@ export function VestingAdmin() {
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Amount"
+                label="Amount (FULA)"
+                type="number"
                 value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                helperText="Amount of tokens to vest"
+                helperText="Amount of tokens to vest in FULA"
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -516,7 +521,7 @@ export function VestingAdmin() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {proposals?.map((proposal) => {
+                {vestingProposals?.map((proposal) => {
                   const now = Math.floor(Date.now() / 1000);
                   const isExpired = proposal?.config?.expiryTime ? 
                     Number(proposal.config.expiryTime) < now : false;

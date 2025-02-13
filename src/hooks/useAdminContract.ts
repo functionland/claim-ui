@@ -117,6 +117,13 @@ export function useAdminContract() {
     enabled: !!contractAddress && activeContract === CONTRACT_TYPES.TOKEN,
   })
 
+  const { data: vestingProposals } = useReadContract({
+    address: contractAddress,
+    abi: contractAbi,
+    functionName: 'getProposals',
+    enabled: !!contractAddress && activeContract === CONTRACT_TYPES.VESTING,
+  })
+
   const { data: vestingCaps } = useReadContract({
     address: contractAddress,
     abi: contractAbi,
@@ -819,10 +826,11 @@ export function useAdminContract() {
     address: contractAddress,
     abi: contractAbi,
     functionName: 'proposalCount',
-    enabled: !!contractAddress && activeContract === CONTRACT_TYPES.TOKEN,
+    enabled: !!contractAddress && (activeContract === CONTRACT_TYPES.TOKEN || activeContract === CONTRACT_TYPES.VESTING),
   })
 
   const [tokenProposalList, setTokenProposalList] = useState<(UnifiedProposal & { proposalId: string })[]>([])
+  const [vestingProposalList, setVestingProposalList] = useState<(UnifiedProposal & { proposalId: string })[]>([])
 
   const fetchProposals = async () => {
     if (!contractAddress || !publicClient || !proposalCount) {
@@ -906,7 +914,11 @@ export function useAdminContract() {
       }
 
       console.log('Final proposals list:', proposals);
-      setTokenProposalList(proposals);
+      if (activeContract === CONTRACT_TYPES.TOKEN) {
+        setTokenProposalList(proposals);
+      } else if (activeContract === CONTRACT_TYPES.VESTING) {
+        setVestingProposalList(proposals);
+      }
     } catch (error) {
       console.error('Error fetching proposals:', error);
     }
@@ -921,7 +933,11 @@ export function useAdminContract() {
   }, [tokenProposalList]);
 
   useEffect(() => {
-    if (contractAddress && activeContract === CONTRACT_TYPES.TOKEN) {
+    console.log('Vesting proposal list updated:', vestingProposalList);
+  }, [vestingProposalList]);
+
+  useEffect(() => {
+    if (contractAddress && (activeContract === CONTRACT_TYPES.TOKEN || activeContract === CONTRACT_TYPES.VESTING)) {
       console.log('Fetching proposals due to dependencies change:', {
         contractAddress,
         activeContract,
@@ -937,6 +953,7 @@ export function useAdminContract() {
     vestingCaps,
     vestingWallets,
     tokenProposals: tokenProposalList,
+    vestingProposals: vestingProposalList,
     addToWhitelist,
     setTransactionLimit,
     initiateTGE,
