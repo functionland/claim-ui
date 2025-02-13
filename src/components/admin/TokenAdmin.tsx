@@ -395,40 +395,6 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
           </Accordion>
         </Grid>
 
-        {/* Transaction Limit */}
-        <Grid item xs={12}>
-          <Accordion>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography variant="h6">Transaction Limit</Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <Box component="form" noValidate sx={{ mt: 1 }}>
-                <TextField
-                  fullWidth
-                  label="Transaction Limit (ETH)"
-                  type="number"
-                  value={formData.transactionLimit}
-                  onChange={(e) => setFormData(prev => ({ ...prev, transactionLimit: e.target.value }))}
-                  margin="normal"
-                  type="number"
-                  disabled={states.isSettingLimit}
-                  inputProps={{
-                    step: "0.000000000000000001" // Allow for 18 decimal places
-                  }}
-                  helperText="Enter the limit in ETH"
-                />
-                <Button
-                  variant="contained"
-                  onClick={handlers.handleSetTransactionLimit}
-                  disabled={states.isSettingLimit || !formData.transactionLimit}
-                  sx={{ mt: 2 }}
-                >
-                  {states.isSettingLimit ? <CircularProgress size={24} /> : 'Set Transaction Limit'}
-                </Button>
-              </Box>
-            </AccordionDetails>
-          </Accordion>
-        </Grid>
 
         {/* TGE Time */}
         <Grid item xs={12}>
