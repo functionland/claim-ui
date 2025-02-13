@@ -75,15 +75,40 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
   const formatTransactionLimit = (limit: bigint | null) => {
     if (!limit) return '';
     try {
-      return ethers.formatEther(limit);
+      // Convert BigInt to string and handle the 18 decimals manually
+      const limitStr = limit.toString();
+      const length = limitStr.length;
+      
+      if (length <= 18) {
+        // If less than 1 ETH, pad with leading zeros
+        const padded = limitStr.padStart(18, '0');
+        const decimal = padded.slice(0, -18) || '0';
+        const fraction = padded.slice(-18).replace(/0+$/, '');
+        return fraction ? `${decimal}.${fraction}` : decimal;
+      } else {
+        // For numbers larger than 1 ETH
+        const decimal = limitStr.slice(0, length - 18);
+        const fraction = limitStr.slice(length - 18).replace(/0+$/, '');
+        return fraction ? `${decimal}.${fraction}` : decimal;
+      }
     } catch (error) {
       console.error('Error formatting transaction limit:', error);
       return '';
     }
   };
 
+  // Format transaction limit for input (from ETH to wei)
+  const parseTransactionLimit = (value: string): bigint => {
+    try {
+      return ethers.parseEther(value);
+    } catch (error) {
+      console.error('Error parsing transaction limit:', error);
+      return BigInt(0);
+    }
+  };
+
   console.log('ConnectedView rendered with data:', data);
-  console.log('Whitelist info:', data.whitelistInfo);
+  console.log('Role check result:', roleCheckResult);
 
   const roleOptions = Object.entries(ROLES).map(([key, value]) => ({
     value,
@@ -185,8 +210,36 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
                       variant="outlined"
                       onClick={handleCheckRole}
                       disabled={!formData.role || isCheckingRole}
+                      sx={{ mr: 1 }}
                     >
                       {isCheckingRole ? <CircularProgress size={24} /> : 'Check Role Config'}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={async () => {
+                        if (!formData.role) return;
+                        try {
+                          const result = await handlers.checkRoleConfig(formData.role);
+                          if (result) {
+                            const formattedLimit = formatTransactionLimit(result.transactionLimit);
+                            console.log('Setting form data with:', { 
+                              transactionLimit: formattedLimit,
+                              quorum: result.quorum.toString()
+                            });
+                            setFormData(prev => ({
+                              ...prev,
+                              transactionLimit: formattedLimit,
+                              quorum: result.quorum.toString()
+                            }));
+                          }
+                        } catch (error: any) {
+                          console.error('Error loading current values:', error);
+                          setError(error.message || 'Failed to fetch current values');
+                        }
+                      }}
+                      disabled={!formData.role}
+                    >
+                      Load Current Values
                     </Button>
                   </Grid>
                   {roleCheckResult && (
@@ -204,30 +257,6 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
                   )}
                 </Grid>
               </Box>
-
-              <TableContainer sx={{ mt: 3 }}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Current Role Configurations
-                </Typography>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Role</TableCell>
-                      <TableCell>Transaction Limit</TableCell>
-                      <TableCell>Quorum</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {data.roleConfigs?.map((info) => (
-                      <TableRow key={info.role}>
-                        <TableCell>{ROLE_NAMES[info.role as keyof typeof ROLE_NAMES] || info.role}</TableCell>
-                        <TableCell>{formatTransactionLimit(info.config.transactionLimit)} ETH</TableCell>
-                        <TableCell>{info.config.quorum}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
             </AccordionDetails>
           </Accordion>
         </Grid>

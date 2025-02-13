@@ -516,7 +516,20 @@ export function useAdminContract() {
     
     try {
       // Convert ether to wei (add 18 decimals)
-      const limitInWei = ethers.parseEther(limit);
+      let limitInWei: bigint;
+      try {
+        limitInWei = ethers.parseEther(limit);
+      } catch (error) {
+        console.error('Error parsing transaction limit:', error);
+        throw new Error('Invalid transaction limit value');
+      }
+      
+      console.log('Setting transaction limit:', {
+        role,
+        limitInEth: limit,
+        limitInWei: limitInWei.toString()
+      });
+      
       return setRoleTransactionLimit(role, limitInWei);
     } catch (error: any) {
       if (error.code === 'INVALID_ARGUMENT') {
@@ -550,7 +563,6 @@ export function useAdminContract() {
     if (!publicClient) throw new Error('Public client not available');
     
     try {
-      // The role is already in bytes32 format from ROLES constant
       console.log('Checking role config for:', { role });
 
       const config = await publicClient.readContract({
@@ -558,16 +570,43 @@ export function useAdminContract() {
         abi: contractAbi,
         functionName: 'roleConfigs',
         args: [role],
+      }) as readonly [bigint, bigint];
+      
+      console.log('Raw role config result:', config);
+      
+      // Convert scientific notation to regular number string first
+      const transactionLimitStr = config[1].toString();
+      const transactionLimit = BigInt(transactionLimitStr);
+      const quorum = Number(config[0]);
+      
+      console.log('Processed role config:', { 
+        transactionLimitStr,
+        transactionLimit: transactionLimit.toString(), 
+        quorum 
       });
       
-      console.log('Role config result:', config);
-      
       return {
-        transactionLimit: config.transactionLimit,
-        quorum: Number(config.quorum)
+        transactionLimit,
+        quorum
       };
     } catch (error: any) {
       console.error('Error checking role config:', error);
+      if (error.message.includes('Cannot convert') || error.message.includes('overflow')) {
+        // Handle the scientific notation manually
+        try {
+          const [base, exponent] = (config[1].toString() as string).split('e+').map(Number);
+          const fullNumber = base * Math.pow(10, exponent);
+          const transactionLimit = BigInt(Math.floor(fullNumber));
+          console.log('Fallback conversion:', { base, exponent, fullNumber, transactionLimit: transactionLimit.toString() });
+          return {
+            transactionLimit,
+            quorum: Number(config[0])
+          };
+        } catch (conversionError) {
+          console.error('Error in fallback conversion:', conversionError);
+          throw new Error('Failed to process transaction limit value');
+        }
+      }
       throw new Error(`Failed to fetch role configuration: ${error.message}`);
     }
   };
