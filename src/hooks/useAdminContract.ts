@@ -314,6 +314,76 @@ export function useAdminContract() {
     }
   }
 
+  const [tgeStatus, setTgeStatus] = useState<{
+    isInitiated: boolean;
+    timestamp: number | null;
+    totalTokens: bigint | null;
+  }>({
+    isInitiated: false,
+    timestamp: null,
+    totalTokens: null
+  });
+
+  useEffect(() => {
+    const fetchTGEStatus = async () => {
+      if (!contractAddress || !publicClient || activeContract !== CONTRACT_TYPES.VESTING) {
+        return;
+      }
+
+      try {
+        // Get TGEInitiated events
+        const events = await publicClient.getLogs({
+          address: contractAddress,
+          event: parseAbiItem('event TGEInitiated(uint256 totalRequiredTokens, uint256 timestamp)'),
+          fromBlock: 0n,
+          toBlock: 'latest'
+        });
+
+        if (events.length > 0) {
+          // Get the most recent TGE event
+          const latestEvent = events[events.length - 1];
+          setTgeStatus({
+            isInitiated: true,
+            timestamp: Number(latestEvent.args.timestamp),
+            totalTokens: latestEvent.args.totalRequiredTokens
+          });
+        } else {
+          setTgeStatus({
+            isInitiated: false,
+            timestamp: null,
+            totalTokens: null
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching TGE status:', error);
+      }
+    };
+
+    fetchTGEStatus();
+  }, [contractAddress, publicClient, activeContract]);
+
+  const initiateTGE = async () => {
+    if (!contractAddress) throw new Error('Contract address not found');
+    if (!userAddress) throw new Error('Please connect your wallet');
+
+    try {
+      // First simulate the transaction
+      const { request } = await publicClient.simulateContract({
+        address: contractAddress,
+        abi: contractAbi,
+        functionName: 'initiateTGE',
+        account: userAddress,
+      });
+
+      // If simulation succeeds, send the transaction
+      const hash = await writeContractAsync(request);
+      return hash;
+    } catch (err: any) {
+      console.error('Error initiating TGE:', err);
+      throw new Error(err.message);
+    }
+  };
+
   const setTGE = async (tgeTime: number) => {
     if (!contractAddress) throw new Error('Contract address not found')
 
@@ -360,17 +430,27 @@ export function useAdminContract() {
       // Find the next available cap ID
       let nextCapId = BigInt(1)
       if (vestingCapTable && vestingCapTable.length > 0) {
-        const maxCapId = Math.max(...vestingCapTable.map(cap => cap.capId))
+        const maxCapId = Math.max(...vestingCapTable.map(cap => Number(cap.capId)))
         nextCapId = BigInt(maxCapId + 1)
       }
 
       // Convert parameters to the correct format
       const nameBytes32 = ethers.encodeBytes32String(capName)
       const totalAllocationBigInt = ethers.parseEther(totalAllocation)
-      const cliffDays = BigInt(Math.floor(Number(cliff))) // cliff in days
-      const vestingTermMonths = BigInt(Math.floor(Number(vestingTerm))) // vesting term in months
-      const vestingPlanMonths = BigInt(Math.floor(Number(vestingPlan))) // vesting plan in months
-      const initialReleasePercent = BigInt(Math.floor(Number(initialRelease))) // initial release percentage
+      const cliffDays = BigInt(Math.floor(Number(cliff))) // cliff already in days
+      const vestingTermMonths = BigInt(Math.floor(Number(vestingTerm) * 30)) // convert months to days
+      const vestingPlanMonths = BigInt(Math.floor(Number(vestingPlan) * 30)) // convert months to days
+      const initialReleasePercent = BigInt(Math.floor(Number(initialRelease))) // percentage (0-100)
+
+      console.log('Adding vesting cap with params:', {
+        nextCapId: nextCapId.toString(),
+        nameBytes32,
+        totalAllocationBigInt: totalAllocationBigInt.toString(),
+        cliffDays: cliffDays.toString(),
+        vestingTermMonths: vestingTermMonths.toString(),
+        vestingPlanMonths: vestingPlanMonths.toString(),
+        initialReleasePercent: initialReleasePercent.toString()
+      })
 
       // Call the contract method
       const hash = await writeContractAsync({
@@ -859,6 +939,7 @@ export function useAdminContract() {
     tokenProposals: tokenProposalList,
     addToWhitelist,
     setTransactionLimit,
+    initiateTGE,
     setTGE,
     createVestingCap,
     addVestingWallet,
@@ -876,6 +957,7 @@ export function useAdminContract() {
     fetchWhitelistedAddresses,
     fetchProposals,
     vestingCapTable,
-    isLoading
+    isLoading,
+    tgeStatus,
   }
 }

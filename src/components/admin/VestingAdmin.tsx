@@ -24,7 +24,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { ethers } from 'ethers'
 import { ConnectButton } from '@/components/common/ConnectButton'
 import { useAdminContract } from '@/hooks/useAdminContract'
-import { CONTRACT_TYPES } from '@/config/contracts'
+import { CONTRACT_TYPES, PROPOSAL_TYPES } from '@/config/contracts'
 
 export function VestingAdmin() {
   const { isConnected } = useAccount()
@@ -55,6 +55,8 @@ export function VestingAdmin() {
     setTGE,
     vestingCapTable,
     isLoading,
+    tgeStatus,
+    initiateTGE,
   } = useAdminContract()
 
   const [isCreatingCap, setIsCreatingCap] = useState(false)
@@ -138,11 +140,11 @@ export function VestingAdmin() {
     }
   }
 
-  const handleApproveProposal = async () => {
+  const handleApproveProposal = async (proposalId: string) => {
     try {
       setError(null)
       setIsApproving(true)
-      await approveProposal(formData.proposalId)
+      await approveProposal(proposalId)
     } catch (error: any) {
       setError(error.message)
     } finally {
@@ -150,11 +152,11 @@ export function VestingAdmin() {
     }
   }
 
-  const handleExecuteProposal = async () => {
+  const handleExecuteProposal = async (proposalId: string) => {
     try {
       setError(null)
       setIsExecuting(true)
-      await executeProposal(formData.proposalId)
+      await executeProposal(proposalId)
     } catch (error: any) {
       setError(error.message)
     } finally {
@@ -215,6 +217,38 @@ export function VestingAdmin() {
     )
   }
 
+  const getProposalType = (type: number): string => {
+    switch (type) {
+      case PROPOSAL_TYPES.AddRole:
+        return 'Add Role';
+      case PROPOSAL_TYPES.RemoveRole:
+        return 'Remove Role';
+      case PROPOSAL_TYPES.Upgrade:
+        return 'Upgrade';
+      case PROPOSAL_TYPES.Recovery:
+        return 'Recovery';
+      case PROPOSAL_TYPES.AddWhitelist:
+        return 'Add Whitelist';
+      case PROPOSAL_TYPES.RemoveWhitelist:
+        return 'Remove Whitelist';
+      case PROPOSAL_TYPES.AddToBlacklist:
+        return 'Add to Blacklist';
+      case PROPOSAL_TYPES.RemoveFromBlacklist:
+        return 'Remove from Blacklist';
+      case PROPOSAL_TYPES.ChangeTreasuryFee:
+        return 'Change Treasury Fee';
+      case PROPOSAL_TYPES.AddDistributionWallets:
+        return 'Add Distribution Wallets';
+      default:
+        return `Unknown (${type})`;
+    }
+  };
+
+  const formatDateTime = (timestamp: number) => {
+    if (!timestamp) return '-';
+    return new Date(timestamp * 1000).toLocaleString();
+  };
+
   if (!isConnected) {
     return (
       <Box sx={{ textAlign: 'center', py: 4 }}>
@@ -262,6 +296,7 @@ export function VestingAdmin() {
                 value={formData.totalAllocation}
                 onChange={(e) => setFormData({ ...formData, totalAllocation: e.target.value })}
                 helperText="Enter amount in FULA (e.g., 1000000 for 1M FULA)"
+                inputProps={{ min: 0 }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -271,7 +306,8 @@ export function VestingAdmin() {
                 type="number"
                 value={formData.cliff}
                 onChange={(e) => setFormData({ ...formData, cliff: e.target.value })}
-                helperText="In days"
+                helperText="Enter cliff period in days (e.g., 14 for 2 weeks)"
+                inputProps={{ min: 0 }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -281,7 +317,8 @@ export function VestingAdmin() {
                 type="number"
                 value={formData.vestingTerm}
                 onChange={(e) => setFormData({ ...formData, vestingTerm: e.target.value })}
-                helperText="In months"
+                helperText="Enter vesting term in months (e.g., 6 for half year)"
+                inputProps={{ min: 1 }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -291,6 +328,8 @@ export function VestingAdmin() {
                 type="number"
                 value={formData.vestingPlan}
                 onChange={(e) => setFormData({ ...formData, vestingPlan: e.target.value })}
+                helperText="Enter vesting interval in months (1 for monthly, 3 for quarterly)"
+                inputProps={{ min: 1 }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -300,7 +339,8 @@ export function VestingAdmin() {
                 type="number"
                 value={formData.initialRelease}
                 onChange={(e) => setFormData({ ...formData, initialRelease: e.target.value })}
-                helperText="Percentage (0-100)"
+                helperText="Enter initial release percentage (0-100)"
+                inputProps={{ min: 0, max: 100 }}
               />
             </Grid>
           </Grid>
@@ -328,62 +368,45 @@ export function VestingAdmin() {
 
       <Accordion defaultExpanded sx={{ mt: 4 }}>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography variant="h6">Distribution</Typography>
+          <Typography variant="h6">TGE</Typography>
         </AccordionSummary>
         <AccordionDetails>
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              <Box component="form" noValidate sx={{ mt: 1, mb: 3 }}>
-                <TextField
-                  fullWidth
-                  label="TGE Time"
-                  type="datetime-local"
-                  value={formData.tgeTime}
-                  onChange={(e) => setFormData(prev => ({ ...prev, tgeTime: e.target.value }))}
-                  margin="normal"
-                  InputLabelProps={{
-                    shrink: true,
-                  }}
-                  disabled={isSettingTGE}
-                />
-                <Button
-                  variant="contained"
-                  onClick={handleSetTGE}
-                  disabled={isSettingTGE || !formData.tgeTime}
-                  sx={{ mt: 2 }}
-                >
-                  {isSettingTGE ? <CircularProgress size={24} /> : 'Set TGE Time'}
-                </Button>
-              </Box>
+              <Alert severity={tgeStatus.isInitiated ? "success" : "info"}>
+                {tgeStatus.isInitiated ? (
+                  <>
+                    <Typography variant="subtitle1">TGE has been initiated</Typography>
+                    <Typography variant="body2">
+                      Timestamp: {new Date(tgeStatus.timestamp! * 1000).toLocaleString()}
+                    </Typography>
+                    <Typography variant="body2">
+                      Total Required Tokens: {ethers.formatEther(tgeStatus.totalTokens!)} FULA
+                    </Typography>
+                  </>
+                ) : (
+                  <Typography>
+                    TGE has not been initiated yet. Initiating TGE will start the vesting and distribution of pre-allocated tokens.
+                    Make sure all vesting caps are properly configured before initiating TGE.
+                  </Typography>
+                )}
+              </Alert>
             </Grid>
 
-            <Grid item xs={12}>
-              <Typography variant="subtitle1" gutterBottom>Current Vesting Wallets</Typography>
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Address</TableCell>
-                      <TableCell>Cap ID</TableCell>
-                      <TableCell>Amount</TableCell>
-                      <TableCell>Released</TableCell>
-                      <TableCell>Note</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {vestingWallets?.map((wallet, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{wallet.address}</TableCell>
-                        <TableCell>{wallet.capId}</TableCell>
-                        <TableCell>{ethers.formatEther(wallet.amount)}</TableCell>
-                        <TableCell>{ethers.formatEther(wallet.released)}</TableCell>
-                        <TableCell>{wallet.note}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Grid>
+            {!tgeStatus.isInitiated && (
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Button
+                    variant="contained"
+                    onClick={initiateTGE}
+                    disabled={isSettingTGE}
+                    startIcon={isSettingTGE ? <CircularProgress size={20} /> : null}
+                  >
+                    {isSettingTGE ? 'Initiating TGE...' : 'Initiate TGE'}
+                  </Button>
+                </Box>
+              </Grid>
+            )}
           </Grid>
         </AccordionDetails>
       </Accordion>
@@ -471,40 +494,12 @@ export function VestingAdmin() {
         </AccordionDetails>
       </Accordion>
 
-      <Accordion defaultExpanded sx={{ mt: 4 }}>
+      {/* Proposals */}
+      <Accordion>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Typography variant="h6">Pending Proposals</Typography>
         </AccordionSummary>
         <AccordionDetails>
-          <Grid container spacing={2} sx={{ mb: 2 }}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Proposal ID"
-                value={formData.proposalId}
-                onChange={(e) => setFormData({ ...formData, proposalId: e.target.value })}
-              />
-            </Grid>
-          </Grid>
-          <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
-            <Button
-              variant="contained"
-              onClick={handleApproveProposal}
-              disabled={isApproving}
-              startIcon={isApproving ? <CircularProgress size={20} /> : null}
-            >
-              {isApproving ? 'Approving...' : 'Approve Proposal'}
-            </Button>
-            <Button
-              variant="contained"
-              onClick={handleExecuteProposal}
-              disabled={isExecuting}
-              startIcon={isExecuting ? <CircularProgress size={20} /> : null}
-            >
-              {isExecuting ? 'Executing...' : 'Execute Proposal'}
-            </Button>
-          </Box>
-
           <TableContainer>
             <Table>
               <TableHead>
@@ -515,19 +510,69 @@ export function VestingAdmin() {
                   <TableCell>Amount</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>Approvals</TableCell>
+                  <TableCell>Expiry</TableCell>
+                  <TableCell>Execution Time</TableCell>
+                  <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {proposals?.filter(proposal => proposal.status === 'Pending').map((proposal) => (
-                  <TableRow key={proposal.id}>
-                    <TableCell>{proposal.id}</TableCell>
-                    <TableCell>{proposal.type}</TableCell>
-                    <TableCell>{proposal.target}</TableCell>
-                    <TableCell>{proposal.amount}</TableCell>
-                    <TableCell>{proposal.status}</TableCell>
-                    <TableCell>{proposal.approvals}</TableCell>
-                  </TableRow>
-                ))}
+                {proposals?.map((proposal) => {
+                  const now = Math.floor(Date.now() / 1000);
+                  const isExpired = proposal?.config?.expiryTime ? 
+                    Number(proposal.config.expiryTime) < now : false;
+                  const canExecute = proposal?.config?.executionTime && proposal?.config?.status !== undefined ? 
+                    Number(proposal.config.executionTime) <= now && proposal.config.status !== 1 : false;
+                  
+                  if (!proposal || !proposal.config) {
+                    console.error('Invalid proposal data:', proposal);
+                    return null;
+                  }
+
+                  return (
+                    <TableRow key={proposal.proposalId}>
+                      <TableCell>{proposal.proposalId || 'N/A'}</TableCell>
+                      <TableCell>{getProposalType(proposal.proposalType || 0)}</TableCell>
+                      <TableCell sx={{ fontFamily: 'monospace' }}>{proposal.target || 'N/A'}</TableCell>
+                      <TableCell>{proposal.amount ? ethers.formatEther(proposal.amount) : '0'}</TableCell>
+                      <TableCell>
+                        {proposal.config.status === 1 ? 'Executed' : 
+                         isExpired ? 'Expired' : 'Pending'}
+                      </TableCell>
+                      <TableCell>{proposal.config.approvals?.toString() || '0'}</TableCell>
+                      <TableCell>
+                        {proposal.config.expiryTime ? 
+                          formatDateTime(Number(proposal.config.expiryTime)) : 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        {proposal.config.executionTime ? 
+                          formatDateTime(Number(proposal.config.executionTime)) : 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        {proposal.config.status !== 1 && !isExpired && (
+                          <>
+                            <Button
+                              variant="outlined"
+                              onClick={() => handleApproveProposal(proposal.proposalId)}
+                              disabled={isApproving}
+                              sx={{ mr: 1 }}
+                            >
+                              {isApproving ? <CircularProgress size={24} /> : 'Approve'}
+                            </Button>
+                            {canExecute && (
+                              <Button
+                                variant="contained"
+                                onClick={() => handleExecuteProposal(proposal.proposalId)}
+                                disabled={isExecuting}
+                              >
+                                {isExecuting ? <CircularProgress size={24} /> : 'Execute'}
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </TableContainer>
