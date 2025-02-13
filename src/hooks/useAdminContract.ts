@@ -20,6 +20,95 @@ export function useAdminContract() {
 
   const contractAbi = CONTRACT_CONFIG.abi[activeContract]
 
+  console.log("Admin Contract - Active Contract:", activeContract)
+  console.log("Admin Contract - Contract Address:", contractAddress)
+
+  const [vestingCapTable, setVestingCapTable] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    const fetchVestingCapTable = async () => {
+      if (!contractAddress || !chainId || !publicClient || activeContract !== CONTRACT_TYPES.VESTING) {
+        return
+      }
+
+      setIsLoading(true)
+      try {
+        console.log("Fetching vesting cap table...")
+        // For vesting, we need to get the cap IDs one by one
+        let index = 0
+        const foundCapIds: bigint[] = []
+        
+        while (true) {
+          try {
+            const capId = await publicClient.readContract({
+              address: contractAddress,
+              abi: contractAbi,
+              functionName: 'capIds',
+              args: [BigInt(index)],
+            }) as bigint
+            
+            console.log("Found cap ID:", capId.toString())
+            foundCapIds.push(capId)
+            index++
+          } catch (error) {
+            // When we hit an error, we've reached the end of the array
+            break
+          }
+        }
+
+        console.log("Found cap IDs:", foundCapIds.map(id => id.toString()))
+        const capDetails = await Promise.all(foundCapIds.map(async (capId) => {
+          const capTuple = await publicClient.readContract({
+            address: contractAddress,
+            abi: contractAbi,
+            functionName: 'vestingCaps',
+            args: [capId],
+          }) as readonly [bigint, `0x${string}`, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
+
+          const walletsInCap = await publicClient.readContract({
+            address: contractAddress,
+            abi: contractAbi,
+            functionName: 'getWalletsInCap',
+            args: [capId],
+          }) as Address[]
+
+          return {
+            capId: Number(capId),
+            totalAllocation: capTuple[0],
+            name: capTuple[1],
+            cliff: Number(capTuple[2]),
+            vestingTerm: Number(capTuple[3]),
+            vestingPlan: Number(capTuple[4]),
+            initialRelease: Number(capTuple[5]),
+            startDate: Number(capTuple[6]),
+            allocatedToWallets: capTuple[7],
+            wallets: walletsInCap
+          }
+        }))
+
+        console.log("Fetched cap details:", capDetails)
+        setVestingCapTable(capDetails)
+      } catch (err) {
+        console.error('Error fetching vesting cap table:', err)
+        setError(err instanceof Error ? err.message : 'Failed to fetch vesting cap table')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchVestingCapTable()
+  }, [activeContract, contractAddress, chainId, publicClient])
+
+  useEffect(() => {
+    console.log("Admin contract type changed:", activeContract)
+    // Force a refetch when contract type changes
+    if (contractAddress && chainId) {
+      // The useReadContract hooks will automatically refetch when their enabled state changes
+      console.log("Ready to fetch admin data for contract:", activeContract)
+    }
+  }, [activeContract, contractAddress, chainId])
+
   // Read contract data
   const { data: tokenProposals } = useReadContract({
     address: contractAddress,
@@ -770,6 +859,8 @@ export function useAdminContract() {
     refetchRoleConfigs: fetchRoleConfigs,
     checkWhitelistConfig,
     fetchWhitelistedAddresses,
-    fetchProposals
+    fetchProposals,
+    vestingCapTable,
+    isLoading
   }
 }

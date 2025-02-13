@@ -53,6 +53,8 @@ export function VestingAdmin() {
     approveProposal,
     executeProposal,
     setTGE,
+    vestingCapTable,
+    isLoading,
   } = useAdminContract()
 
   const [isCreatingCap, setIsCreatingCap] = useState(false)
@@ -151,6 +153,47 @@ export function VestingAdmin() {
     }
   }
 
+  const renderVestingCapTable = () => {
+    if (isLoading) {
+      return <CircularProgress />
+    }
+
+    if (!vestingCapTable || vestingCapTable.length === 0) {
+      return <Alert severity="info">No vesting caps found</Alert>
+    }
+
+    return (
+      <TableContainer>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Cap ID</TableCell>
+              <TableCell>Name</TableCell>
+              <TableCell>Total Allocation</TableCell>
+              <TableCell>Cliff (days)</TableCell>
+              <TableCell>Vesting Term (months)</TableCell>
+              <TableCell>Initial Release</TableCell>
+              <TableCell>Wallets</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {vestingCapTable.map((cap) => (
+              <TableRow key={cap.capId}>
+                <TableCell>{cap.capId}</TableCell>
+                <TableCell>{ethers.decodeBytes32String(cap.name)}</TableCell>
+                <TableCell>{ethers.formatEther(cap.totalAllocation.toString())}</TableCell>
+                <TableCell>{(Number(cap.cliff) / 86400).toFixed(2)}</TableCell>
+                <TableCell>{(Number(cap.vestingTerm) / (30 * 86400)).toFixed(2)}</TableCell>
+                <TableCell>{(Number(cap.initialRelease) / 100).toFixed(2)}%</TableCell>
+                <TableCell>{cap.wallets.length}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    )
+  }
+
   if (!isConnected) {
     return (
       <Box sx={{ textAlign: 'center', py: 4 }}>
@@ -176,7 +219,7 @@ export function VestingAdmin() {
         </Alert>
       )}
 
-      <Accordion defaultExpanded>
+      <Accordion defaultExpanded sx={{ mt: 4 }}>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Typography variant="h6">Vesting Caps</Typography>
         </AccordionSummary>
@@ -251,38 +294,44 @@ export function VestingAdmin() {
           </Box>
 
           <Typography variant="subtitle1" gutterBottom>Current Vesting Caps</Typography>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>ID</TableCell>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Total Allocation</TableCell>
-                  <TableCell>Cliff (days)</TableCell>
-                  <TableCell>Vesting Term (months)</TableCell>
-                  <TableCell>Vesting Plan</TableCell>
-                  <TableCell>Initial Release (%)</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {vestingCaps?.map((cap) => (
-                  <TableRow key={cap.id}>
-                    <TableCell>{cap.id}</TableCell>
-                    <TableCell>{cap.name}</TableCell>
-                    <TableCell>{ethers.formatEther(cap.totalAllocation)}</TableCell>
-                    <TableCell>{cap.cliff / 86400}</TableCell>
-                    <TableCell>{cap.vestingTerm}</TableCell>
-                    <TableCell>{cap.vestingPlan}</TableCell>
-                    <TableCell>{cap.initialRelease}</TableCell>
+          {isLoading ? (
+            <CircularProgress />
+          ) : !vestingCapTable || vestingCapTable.length === 0 ? (
+            <Alert severity="info">No vesting caps found</Alert>
+          ) : (
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Cap ID</TableCell>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Total Allocation</TableCell>
+                    <TableCell>Cliff (days)</TableCell>
+                    <TableCell>Vesting Term (months)</TableCell>
+                    <TableCell>Initial Release</TableCell>
+                    <TableCell>Wallets</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {vestingCapTable.map((cap) => (
+                    <TableRow key={cap.capId}>
+                      <TableCell>{cap.capId}</TableCell>
+                      <TableCell>{ethers.decodeBytes32String(cap.name)}</TableCell>
+                      <TableCell>{ethers.formatEther(cap.totalAllocation.toString())}</TableCell>
+                      <TableCell>{(Number(cap.cliff) / 86400).toFixed(2)}</TableCell>
+                      <TableCell>{(Number(cap.vestingTerm) / (30 * 86400)).toFixed(2)}</TableCell>
+                      <TableCell>{(Number(cap.initialRelease) / 100).toFixed(2)}%</TableCell>
+                      <TableCell>{cap.wallets.length}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
         </AccordionDetails>
       </Accordion>
 
-      <Accordion defaultExpanded>
+      <Accordion defaultExpanded sx={{ mt: 4 }}>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Typography variant="h6">Distribution</Typography>
         </AccordionSummary>
@@ -344,7 +393,7 @@ export function VestingAdmin() {
         </AccordionDetails>
       </Accordion>
 
-      <Accordion defaultExpanded>
+      <Accordion defaultExpanded sx={{ mt: 4 }}>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Typography variant="h6">Vesting Wallets</Typography>
         </AccordionSummary>
@@ -427,7 +476,7 @@ export function VestingAdmin() {
         </AccordionDetails>
       </Accordion>
 
-      <Accordion defaultExpanded>
+      <Accordion defaultExpanded sx={{ mt: 4 }}>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Typography variant="h6">Pending Proposals</Typography>
         </AccordionSummary>

@@ -14,12 +14,18 @@ import { AirdropAdmin } from '@/components/admin/AirdropAdmin'
 import { TestnetMiningAdmin } from '@/components/admin/TestnetMiningAdmin'
 import { TokenAdmin } from '@/components/admin/TokenAdmin'
 import { CONTRACT_TYPES } from '@/config/constants'
+import { useContractContext } from '@/contexts/ContractContext'
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('token')
+  const { setActiveContract } = useContractContext()
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: string) => {
     setActiveTab(newValue)
+    // Update the global contract context when tab changes
+    if (newValue !== 'token') {
+      setActiveContract(newValue as any)
+    }
   }
 
   return (
