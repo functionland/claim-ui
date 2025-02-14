@@ -957,7 +957,7 @@ export function useAdminContract() {
     }
 
     try {
-      setIsTransferring(true)
+      console.log('Attempting transfer:', { to, amount, contractAddress })
       setError(null)
 
       const { request } = await publicClient.simulateContract({
@@ -967,7 +967,9 @@ export function useAdminContract() {
         args: [to, ethers.parseEther(amount)],
       })
 
+      console.log('Transfer request:', request)
       await writeContractAsync(request)
+      console.log('Transfer completed')
     } catch (err: any) {
       console.error('Error transferring tokens:', err)
       
@@ -992,8 +994,6 @@ export function useAdminContract() {
       }
 
       throw err
-    } finally {
-      setIsTransferring(false)
     }
   }
 

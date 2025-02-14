@@ -795,6 +795,7 @@ export function TokenAdmin() {
     isBridgeOp,
     nonceEvents,
     bridgeOpEvents,
+    transferFromContract,
   } = useAdminContract()
 
   const [isAddingToWhitelist, setIsAddingToWhitelist] = useState(false)
@@ -987,8 +988,7 @@ export function TokenAdmin() {
         throw new Error('Please fill in all fields')
       }
 
-      // Implement transfer logic here
-      // await transferFromContract(transferTo, transferAmount)
+      await transferFromContract(transferTo, transferAmount)
 
       // Reset form
       setFormData(prev => ({
