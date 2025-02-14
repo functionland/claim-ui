@@ -414,11 +414,120 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
           </Accordion>
         </Grid>
 
-        {/* Bridge Operation */}
+        {/* Bridge Operations */}
         <Grid item xs={12}>
           <Accordion defaultExpanded>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography variant="h6">Bridge Operation</Typography>
+              <Typography variant="h6">Bridge Operations</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Box component="form" noValidate sx={{ mt: 1 }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={3}>
+                    <TextField
+                      fullWidth
+                      label="Amount"
+                      type="number"
+                      value={formData.bridgeAmount || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, bridgeAmount: e.target.value }))}
+                      margin="normal"
+                      helperText="Amount of tokens to mint/burn"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <TextField
+                      fullWidth
+                      label="Chain ID"
+                      type="number"
+                      value={formData.chainId || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, chainId: e.target.value }))}
+                      margin="normal"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <TextField
+                      fullWidth
+                      label="Nonce"
+                      type="number"
+                      value={formData.nonce || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, nonce: e.target.value }))}
+                      margin="normal"
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Button
+                      variant="contained"
+                      onClick={() => handlers.handleBridgeOp(1)}
+                      disabled={!formData.bridgeAmount || !formData.chainId || !formData.nonce || states.isBridgeOp}
+                      sx={{ mr: 1 }}
+                      color="success"
+                    >
+                      {states.isBridgeOp ? <CircularProgress size={24} /> : 'Mint Tokens'}
+                    </Button>
+                    <Button
+                      variant="contained"
+                      onClick={() => handlers.handleBridgeOp(2)}
+                      disabled={!formData.bridgeAmount || !formData.chainId || !formData.nonce || states.isBridgeOp}
+                      color="error"
+                    >
+                      {states.isBridgeOp ? <CircularProgress size={24} /> : 'Burn Tokens'}
+                    </Button>
+                  </Grid>
+                </Grid>
+
+                {/* Bridge Operations Table */}
+                <Box sx={{ mt: 4 }}>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Bridge Operation History
+                  </Typography>
+                  <TableContainer component={Paper}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Operation</TableCell>
+                          <TableCell>Amount</TableCell>
+                          <TableCell>Chain ID</TableCell>
+                          <TableCell>Operator</TableCell>
+                          <TableCell>Time</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {data.bridgeOpEvents.map((event, index) => (
+                          <TableRow key={`${event.chainId}-${event.timestamp}-${index}`}>
+                            <TableCell>
+                              {event.opType === 1 ? (
+                                <Typography color="success.main">Mint</Typography>
+                              ) : (
+                                <Typography color="error.main">Burn</Typography>
+                              )}
+                            </TableCell>
+                            <TableCell>{ethers.formatEther(event.amount)} FULA</TableCell>
+                            <TableCell>{event.chainId.toString()}</TableCell>
+                            <TableCell sx={{ fontFamily: 'monospace' }}>{event.operator}</TableCell>
+                            <TableCell>{new Date(Number(event.timestamp) * 1000).toLocaleString()}</TableCell>
+                          </TableRow>
+                        ))}
+                        {data.bridgeOpEvents.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={5} align="center">
+                              No bridge operations found
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+              </Box>
+            </AccordionDetails>
+          </Accordion>
+        </Grid>
+
+        {/* Nonce Operation */}
+        <Grid item xs={12}>
+          <Accordion defaultExpanded>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="h6">Nonce Operation</Typography>
             </AccordionSummary>
             <AccordionDetails>
               <Box component="form" noValidate sx={{ mt: 1 }}>
@@ -450,7 +559,7 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
                       disabled={!formData.chainId || !formData.nonce || states.isSettingNonce}
                       sx={{ mr: 1 }}
                     >
-                      {states.isSettingNonce ? <CircularProgress size={24} /> : 'Set Bridge Operation Nonce'}
+                      {states.isSettingNonce ? <CircularProgress size={24} /> : 'Set Nonce'}
                     </Button>
                   </Grid>
                 </Grid>
@@ -458,7 +567,7 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
                 {/* Nonce Events Table */}
                 <Box sx={{ mt: 4 }}>
                   <Typography variant="subtitle1" gutterBottom>
-                    Bridge Operation History
+                    Nonce Operation History
                   </Typography>
                   <TableContainer component={Paper}>
                     <Table size="small">
@@ -480,7 +589,7 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
                         {data.nonceEvents.length === 0 && (
                           <TableRow>
                             <TableCell colSpan={3} align="center">
-                              No bridge operations found
+                              No nonce operations found
                             </TableCell>
                           </TableRow>
                         )}
@@ -609,6 +718,7 @@ export function TokenAdmin() {
     whitelistAddress: '',
     chainId: '',
     nonce: '',
+    bridgeAmount: '',
   })
 
   // Set the active contract to TOKEN when the component mounts
@@ -632,7 +742,10 @@ export function TokenAdmin() {
     checkRoleConfig,
     checkWhitelistConfig,
     setBridgeOpNonce,
+    performBridgeOp,
+    isBridgeOp,
     nonceEvents,
+    bridgeOpEvents,
   } = useAdminContract()
 
   const [isAddingToWhitelist, setIsAddingToWhitelist] = useState(false)
@@ -791,6 +904,29 @@ export function TokenAdmin() {
     }
   }
 
+  const handleBridgeOp = async (opType: number) => {
+    try {
+      setError(null)
+      const { bridgeAmount, chainId, nonce } = formData
+
+      if (!bridgeAmount || !chainId || !nonce) {
+        throw new Error('Please fill in all fields')
+      }
+
+      await performBridgeOp(bridgeAmount, chainId, nonce, opType)
+
+      // Reset form
+      setFormData(prev => ({
+        ...prev,
+        bridgeAmount: '',
+        chainId: '',
+        nonce: '',
+      }))
+    } catch (error: any) {
+      setError(error.message)
+    }
+  }
+
   const handlers = {
     handleAddToWhitelist,
     handleSetTransactionLimit,
@@ -802,6 +938,7 @@ export function TokenAdmin() {
     checkWhitelistConfig,
     handleRemoveFromWhitelist,
     handleSetBridgeOpNonce,
+    handleBridgeOp,
   }
 
   const states = {
@@ -813,15 +950,15 @@ export function TokenAdmin() {
     isRemovingFromWhitelist,
     isWhitelisting,
     isSettingNonce,
+    isBridgeOp,
   }
 
   const data = {
-    whitelistInfo,
-    tokenProposals,
     whitelistedAddresses,
     roleConfigs,
     proposals: tokenProposals,
     nonceEvents,
+    bridgeOpEvents,
   }
 
   if (!isConnected) {

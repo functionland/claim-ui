@@ -948,32 +948,60 @@ export function useAdminContract() {
   }, [contractAddress, activeContract, proposalCount]);
 
   const [isSettingNonce, setIsSettingNonce] = useState(false)
+  const [isBridgeOp, setIsBridgeOp] = useState(false)
   const [nonceEvents, setNonceEvents] = useState<{ chainId: bigint, caller: string, blockNumber: bigint }[]>([])
+  const [bridgeOpEvents, setBridgeOpEvents] = useState<{
+    operator: string,
+    opType: number,
+    amount: bigint,
+    chainId: bigint,
+    timestamp: bigint,
+    blockNumber: bigint
+  }[]>([])
 
   useEffect(() => {
-    const fetchNonceEvents = async () => {
+    const fetchEvents = async () => {
       if (!contractAddress || !publicClient) return;
 
       try {
-        const events = await publicClient.getLogs({
+        // Fetch nonce events
+        const nonceEvts = await publicClient.getLogs({
           address: contractAddress,
           event: parseAbiItem('event SupportedChainChanged(uint256 indexed chainId, address caller)'),
           fromBlock: 'earliest'
         })
 
-        const formattedEvents = events.map(event => ({
+        const formattedNonceEvents = nonceEvts.map(event => ({
           chainId: event.args.chainId!,
           caller: event.args.caller!,
           blockNumber: event.blockNumber
         }))
 
-        setNonceEvents(formattedEvents)
+        setNonceEvents(formattedNonceEvents)
+
+        // Fetch bridge operation events
+        const bridgeOpEvts = await publicClient.getLogs({
+          address: contractAddress,
+          event: parseAbiItem('event BridgeOperationDetails(address indexed operator, uint8 opType, uint256 amount, uint256 chainId, uint256 timestamp)'),
+          fromBlock: 'earliest'
+        })
+
+        const formattedBridgeOpEvents = bridgeOpEvts.map(event => ({
+          operator: event.args.operator!,
+          opType: Number(event.args.opType!),
+          amount: event.args.amount!,
+          chainId: event.args.chainId!,
+          timestamp: event.args.timestamp!,
+          blockNumber: event.blockNumber
+        }))
+
+        setBridgeOpEvents(formattedBridgeOpEvents)
       } catch (err) {
-        console.error('Error fetching nonce events:', err)
+        console.error('Error fetching events:', err)
       }
     }
 
-    fetchNonceEvents()
+    fetchEvents()
   }, [contractAddress, publicClient])
 
   const setBridgeOpNonce = async (chainId: string, nonce: string) => {
@@ -994,10 +1022,78 @@ export function useAdminContract() {
 
       await writeContractAsync(request)
     } catch (err) {
-      console.error('Error setting bridge operation nonce:', err)
+      console.error('Error setting nonce:', err)
       throw err
     } finally {
       setIsSettingNonce(false)
+    }
+  }
+
+  const performBridgeOp = async (amount: string, chainId: string, nonce: string, opType: number) => {
+    if (!contractAddress || !amount || !chainId || !nonce) {
+      throw new Error('Missing required parameters')
+    }
+
+    try {
+      setIsBridgeOp(true)
+      setError(null)
+
+      const { request } = await publicClient.simulateContract({
+        address: contractAddress,
+        abi: contractAbi,
+        functionName: 'bridgeOp',
+        args: [BigInt(amount), BigInt(chainId), BigInt(nonce), opType],
+      })
+
+      await writeContractAsync(request)
+    } catch (err: any) {
+      console.error('Error performing bridge operation:', err)
+      
+      // Handle specific contract errors
+      if (err.message.includes('AccessControlUnauthorizedAccount')) {
+        const match = err.message.match(/AccessControlUnauthorizedAccount\((.*?),(.*?)\)/)
+        if (match) {
+          const [account, role] = match.slice(1)
+          throw new Error(`Account ${account} does not have the required role ${role}`)
+        }
+        throw new Error('Account does not have the required role')
+      }
+
+      if (err.message.includes('UsedNonce')) {
+        const match = err.message.match(/UsedNonce\((.*?)\)/)
+        const nonce = match ? match[1] : 'unknown'
+        throw new Error(`Nonce ${nonce} has not been set or has already been used`)
+      }
+      
+      if (err.message.includes('AmountMustBePositive')) {
+        throw new Error('Amount must be greater than 0')
+      }
+      
+      if (err.message.includes('ExceedsMaximumSupply')) {
+        const match = err.message.match(/ExceedsMaximumSupply\((.*?),(.*?)\)/)
+        if (match) {
+          const [amount, balance] = match.slice(1)
+          throw new Error(`Operation would exceed maximum supply. Amount: ${ethers.formatEther(amount)} FULA, Available: ${ethers.formatEther(balance)} FULA`)
+        }
+      }
+      
+      if (err.message.includes('LowAllowance')) {
+        const match = err.message.match(/LowAllowance\((.*?),(.*?)\)/)
+        if (match) {
+          const [limit, amount] = match.slice(1)
+          throw new Error(`Amount exceeds transaction limit. Limit: ${ethers.formatEther(limit)} FULA, Requested: ${ethers.formatEther(amount)} FULA`)
+        }
+      }
+      
+      if (err.message.includes('Unsupported')) {
+        const match = err.message.match(/Unsupported\((.*?)\)/)
+        const chain = match ? match[1] : 'unknown'
+        throw new Error(`Unsupported chain ID: ${chain}`)
+      }
+
+      throw err
+    } finally {
+      setIsBridgeOp(false)
     }
   }
 
@@ -1026,5 +1122,8 @@ export function useAdminContract() {
     setBridgeOpNonce,
     isSettingNonce,
     nonceEvents,
+    performBridgeOp,
+    isBridgeOp,
+    bridgeOpEvents,
   }
 }

@@ -125,6 +125,20 @@ export const GOVERNANCE_ABI = [
     name: "LowBalance",
     type: "error"
   },
+  {
+    type: "error",
+    name: "AccessControlUnauthorizedAccount",
+    inputs: [
+      {
+        name: "account",
+        type: "address"
+      },
+      {
+        name: "neededRole",
+        type: "bytes32"
+      }
+    ]
+  },
   // Events
   {
     type: "event",
@@ -707,6 +721,60 @@ export const TOKEN_ABI = [
       }
     ]
   },
+  // Bridge operation errors
+  {
+    type: "error",
+    name: "UsedNonce",
+    inputs: [
+      {
+        name: "nonce",
+        type: "uint256"
+      }
+    ]
+  },
+  {
+    type: "error",
+    name: "AmountMustBePositive",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "ExceedsMaximumSupply",
+    inputs: [
+      {
+        name: "amount",
+        type: "uint256"
+      },
+      {
+        name: "balance",
+        type: "uint256"
+      }
+    ]
+  },
+  {
+    type: "error",
+    name: "LowAllowance",
+    inputs: [
+      {
+        name: "limit",
+        type: "uint256"
+      },
+      {
+        name: "amount",
+        type: "uint256"
+      }
+    ]
+  },
+  {
+    type: "error",
+    name: "Unsupported",
+    inputs: [
+      {
+        name: "chain",
+        type: "uint256"
+      }
+    ]
+  },
   // Token-specific events
   {
     type: "event",
@@ -719,7 +787,7 @@ export const TOKEN_ABI = [
       },
       {
         indexed: false,
-        name: "operation",
+        name: "opType",
         type: "uint8"
       },
       {
