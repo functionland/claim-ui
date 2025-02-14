@@ -28,7 +28,7 @@ export function useAdminContract() {
 
   useEffect(() => {
     const fetchVestingCapTable = async () => {
-      if (!contractAddress || !chainId || !publicClient || activeContract !== CONTRACT_TYPES.VESTING) {
+      if (!contractAddress || !chainId || !publicClient || (activeContract !== CONTRACT_TYPES.VESTING && activeContract !== CONTRACT_TYPES.AIRDROP)) {
         return
       }
 
@@ -124,6 +124,13 @@ export function useAdminContract() {
     enabled: !!contractAddress && activeContract === CONTRACT_TYPES.VESTING,
   })
 
+  const { data: airdropProposals } = useReadContract({
+    address: contractAddress,
+    abi: contractAbi,
+    functionName: 'getProposals',
+    enabled: !!contractAddress && activeContract === CONTRACT_TYPES.AIRDROP,
+  })
+
   const { data: vestingCaps } = useReadContract({
     address: contractAddress,
     abi: contractAbi,
@@ -136,6 +143,20 @@ export function useAdminContract() {
     abi: contractAbi,
     functionName: 'getVestingWallets',
     enabled: !!contractAddress && activeContract === CONTRACT_TYPES.VESTING,
+  })
+
+  const { data: airdropCaps } = useReadContract({
+    address: contractAddress,
+    abi: contractAbi,
+    functionName: 'getVestingCaps',
+    enabled: !!contractAddress && activeContract === CONTRACT_TYPES.AIRDROP,
+  })
+
+  const { data: airdropWallets } = useReadContract({
+    address: contractAddress,
+    abi: contractAbi,
+    functionName: 'getVestingWallets',
+    enabled: !!contractAddress && activeContract === CONTRACT_TYPES.AIRDROP,
   })
 
   type TimeConfig = {
@@ -333,7 +354,7 @@ export function useAdminContract() {
 
   useEffect(() => {
     const fetchTGEStatus = async () => {
-      if (!contractAddress || !publicClient || activeContract !== CONTRACT_TYPES.VESTING) {
+      if (!contractAddress || !publicClient || (activeContract !== CONTRACT_TYPES.VESTING && activeContract !== CONTRACT_TYPES.AIRDROP)) {
         return;
       }
 
@@ -826,11 +847,12 @@ export function useAdminContract() {
     address: contractAddress,
     abi: contractAbi,
     functionName: 'proposalCount',
-    enabled: !!contractAddress && (activeContract === CONTRACT_TYPES.TOKEN || activeContract === CONTRACT_TYPES.VESTING),
+    enabled: !!contractAddress && (activeContract === CONTRACT_TYPES.TOKEN || activeContract === CONTRACT_TYPES.VESTING || activeContract === CONTRACT_TYPES.AIRDROP),
   })
 
   const [tokenProposalList, setTokenProposalList] = useState<(UnifiedProposal & { proposalId: string })[]>([])
   const [vestingProposalList, setVestingProposalList] = useState<(UnifiedProposal & { proposalId: string })[]>([])
+  const [airdropProposalList, setAirdropProposalList] = useState<(UnifiedProposal & { proposalId: string })[]>([])
 
   const fetchProposals = async () => {
     if (!contractAddress || !publicClient || !proposalCount) {
@@ -918,6 +940,8 @@ export function useAdminContract() {
         setTokenProposalList(proposals);
       } else if (activeContract === CONTRACT_TYPES.VESTING) {
         setVestingProposalList(proposals);
+      } else if (activeContract === CONTRACT_TYPES.AIRDROP) {
+        setAirdropProposalList(proposals);
       }
     } catch (error) {
       console.error('Error fetching proposals:', error);
@@ -937,7 +961,7 @@ export function useAdminContract() {
   }, [vestingProposalList]);
 
   useEffect(() => {
-    if (contractAddress && (activeContract === CONTRACT_TYPES.TOKEN || activeContract === CONTRACT_TYPES.VESTING)) {
+    if (contractAddress && (activeContract === CONTRACT_TYPES.TOKEN || activeContract === CONTRACT_TYPES.VESTING || activeContract === CONTRACT_TYPES.AIRDROP)) {
       console.log('Fetching proposals due to dependencies change:', {
         contractAddress,
         activeContract,
