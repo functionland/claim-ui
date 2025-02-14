@@ -7,6 +7,13 @@ import { CONTRACT_CONFIG, CONTRACT_TYPES } from '@/config/contracts'
 import { useContractContext } from '@/contexts/ContractContext'
 import { ethers } from 'ethers'
 
+type VestingWalletInfo = {
+  capId: bigint;
+  name: `0x${string}`; // bytes32
+  amount: bigint;
+  claimed: bigint;
+}
+
 export function useAdminContract() {
   const { activeContract } = useContractContext()
   const { address: userAddress, chainId } = useAccount()
@@ -73,6 +80,38 @@ export function useAdminContract() {
             args: [capId],
           }) as Address[]
 
+          console.log(`Cap ${capId}: Found ${walletsInCap.length} wallets:`, walletsInCap);
+
+          // Fetch wallet details for each wallet in the cap
+          const walletDetails = [];
+          console.log('About to start fetching wallet details');
+          
+          for (let i=0; i<walletsInCap.length; i++) {
+            let walletAddress: Address = walletsInCap[i];
+            console.log(`Loop iteration ${i}: Processing wallet ${walletAddress}`);
+            
+            try {
+              console.log(`Attempting to read contract for wallet ${walletAddress}`);
+              const walletInfo = await publicClient.readContract({
+                address: contractAddress,
+                abi: contractAbi,
+                functionName: 'vestingWallets',
+                args: [walletAddress, capId],
+              }) as VestingWalletInfo;
+              
+              console.log(`Successfully got wallet info for ${walletAddress}:`, walletInfo);
+              
+              walletDetails.push({
+                address: walletAddress,
+                ...walletInfo
+              });
+            } catch (error) {
+              console.error(`Error fetching wallet info for ${walletAddress}:`, error);
+            }
+          };
+
+          console.log(`Cap ${capId}: Completed wallet details:`, walletDetails);
+
           return {
             capId: Number(capId),
             totalAllocation: capTuple[0],
@@ -83,11 +122,12 @@ export function useAdminContract() {
             initialRelease: Number(capTuple[5]),
             startDate: Number(capTuple[6]),
             allocatedToWallets: capTuple[7],
-            wallets: walletsInCap
+            wallets: walletsInCap,
+            walletDetails
           }
         }))
 
-        console.log("Fetched cap details:", capDetails)
+        console.log("Fetched cap details1:", capDetails)
         setVestingCapTable(capDetails)
       } catch (err) {
         console.error('Error fetching vesting cap table:', err)

@@ -472,30 +472,46 @@ export function VestingAdmin() {
           </Box>
 
           <Typography variant="subtitle1" gutterBottom>Current Vesting Wallets</Typography>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Address</TableCell>
-                  <TableCell>Cap ID</TableCell>
-                  <TableCell>Amount</TableCell>
-                  <TableCell>Released</TableCell>
-                  <TableCell>Note</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {vestingWallets?.map((wallet, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{wallet.address}</TableCell>
-                    <TableCell>{wallet.capId}</TableCell>
-                    <TableCell>{ethers.formatEther(wallet.amount)}</TableCell>
-                    <TableCell>{ethers.formatEther(wallet.released)}</TableCell>
-                    <TableCell>{wallet.note}</TableCell>
+          {isLoading ? (
+            <CircularProgress />
+          ) : !vestingCapTable || vestingCapTable.length === 0 ? (
+            <Alert severity="info">No vesting wallets found</Alert>
+          ) : (
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Address</TableCell>
+                    <TableCell>Cap ID</TableCell>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Amount (FULA)</TableCell>
+                    <TableCell>Claimed (FULA)</TableCell>
+                    <TableCell>Remaining (FULA)</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableHead>
+                <TableBody>
+                  {vestingCapTable.flatMap(cap => 
+                    cap.walletDetails?.map((wallet: any) => (
+                      <TableRow key={`${wallet.address}-${cap.capId}`}>
+                        <TableCell>{wallet.address}</TableCell>
+                        <TableCell>{cap.capId}</TableCell>
+                        <TableCell>
+                          {wallet.name ? ethers.decodeBytes32String(wallet.name) : '-'}
+                        </TableCell>
+                        <TableCell>{ethers.formatEther(wallet.amount || '0')}</TableCell>
+                        <TableCell>{ethers.formatEther(wallet.claimed || '0')}</TableCell>
+                        <TableCell>
+                          {ethers.formatEther(
+                            BigInt(wallet.amount || '0') - BigInt(wallet.claimed || '0')
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    )) || []
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
         </AccordionDetails>
       </Accordion>
 

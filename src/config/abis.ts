@@ -1291,23 +1291,6 @@ export const DISTRIBUTION_ABI = [
     type: "function"
   },
   {
-    inputs: [],
-    name: "getVestingWallets",
-    outputs: [{
-      name: "",
-      type: "tuple[]",
-      components: [
-        { name: "address", type: "address" },
-        { name: "capId", type: "uint256" },
-        { name: "amount", type: "uint256" },
-        { name: "released", type: "uint256" },
-        { name: "note", type: "bytes32" }
-      ]
-    }],
-    stateMutability: "view",
-    type: "function"
-  },
-  {
     inputs: [
       { name: "capId", type: "uint256" },
       { name: "name", type: "bytes32" },
