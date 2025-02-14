@@ -35,7 +35,7 @@ export function useAdminContract() {
 
   useEffect(() => {
     const fetchVestingCapTable = async () => {
-      if (!contractAddress || !chainId || !publicClient || (activeContract !== CONTRACT_TYPES.VESTING && activeContract !== CONTRACT_TYPES.AIRDROP)) {
+      if (!contractAddress || !chainId || !publicClient || (activeContract !== CONTRACT_TYPES.VESTING && activeContract !== CONTRACT_TYPES.AIRDROP && activeContract !== CONTRACT_TYPES.TESTNET_MINING)) {
         return
       }
 
@@ -171,6 +171,13 @@ export function useAdminContract() {
     enabled: !!contractAddress && activeContract === CONTRACT_TYPES.AIRDROP,
   })
 
+  const { data: testnetMiningProposals } = useReadContract({
+    address: contractAddress,
+    abi: contractAbi,
+    functionName: 'getProposals',
+    enabled: !!contractAddress && activeContract === CONTRACT_TYPES.TESTNET_MINING,
+  })
+
   const { data: vestingCaps } = useReadContract({
     address: contractAddress,
     abi: contractAbi,
@@ -197,6 +204,20 @@ export function useAdminContract() {
     abi: contractAbi,
     functionName: 'getVestingWallets',
     enabled: !!contractAddress && activeContract === CONTRACT_TYPES.AIRDROP,
+  })
+
+  const { data: testnetMiningCaps } = useReadContract({
+    address: contractAddress,
+    abi: contractAbi,
+    functionName: 'getVestingCaps',
+    enabled: !!contractAddress && activeContract === CONTRACT_TYPES.TESTNET_MINING,
+  })
+
+  const { data: testnetMiningWallets } = useReadContract({
+    address: contractAddress,
+    abi: contractAbi,
+    functionName: 'getVestingWallets',
+    enabled: !!contractAddress && activeContract === CONTRACT_TYPES.TESTNET_MINING,
   })
 
   type TimeConfig = {
@@ -394,7 +415,7 @@ export function useAdminContract() {
 
   useEffect(() => {
     const fetchTGEStatus = async () => {
-      if (!contractAddress || !publicClient || (activeContract !== CONTRACT_TYPES.VESTING && activeContract !== CONTRACT_TYPES.AIRDROP)) {
+      if (!contractAddress || !publicClient || (activeContract !== CONTRACT_TYPES.VESTING && activeContract !== CONTRACT_TYPES.AIRDROP && activeContract !== CONTRACT_TYPES.TESTNET_MINING)) {
         return;
       }
 
@@ -887,12 +908,13 @@ export function useAdminContract() {
     address: contractAddress,
     abi: contractAbi,
     functionName: 'proposalCount',
-    enabled: !!contractAddress && (activeContract === CONTRACT_TYPES.TOKEN || activeContract === CONTRACT_TYPES.VESTING || activeContract === CONTRACT_TYPES.AIRDROP),
+    enabled: !!contractAddress && (activeContract === CONTRACT_TYPES.TOKEN || activeContract === CONTRACT_TYPES.VESTING || activeContract === CONTRACT_TYPES.AIRDROP || activeContract === CONTRACT_TYPES.TESTNET_MINING),
   })
 
   const [tokenProposalList, setTokenProposalList] = useState<(UnifiedProposal & { proposalId: string })[]>([])
   const [vestingProposalList, setVestingProposalList] = useState<(UnifiedProposal & { proposalId: string })[]>([])
   const [airdropProposalList, setAirdropProposalList] = useState<(UnifiedProposal & { proposalId: string })[]>([])
+  const [testnetMiningProposalList, setTestnetMiningProposalList] = useState<(UnifiedProposal & { proposalId: string })[]>([])
 
   const fetchProposals = async () => {
     if (!contractAddress || !publicClient || !proposalCount) {
@@ -982,6 +1004,8 @@ export function useAdminContract() {
         setVestingProposalList(proposals);
       } else if (activeContract === CONTRACT_TYPES.AIRDROP) {
         setAirdropProposalList(proposals);
+      } else if (activeContract === CONTRACT_TYPES.TESTNET_MINING) {
+        setTestnetMiningProposalList(proposals);
       }
     } catch (error) {
       console.error('Error fetching proposals:', error);
@@ -1001,7 +1025,7 @@ export function useAdminContract() {
   }, [vestingProposalList]);
 
   useEffect(() => {
-    if (contractAddress && (activeContract === CONTRACT_TYPES.TOKEN || activeContract === CONTRACT_TYPES.VESTING || activeContract === CONTRACT_TYPES.AIRDROP)) {
+    if (contractAddress && (activeContract === CONTRACT_TYPES.TOKEN || activeContract === CONTRACT_TYPES.VESTING || activeContract === CONTRACT_TYPES.AIRDROP || activeContract === CONTRACT_TYPES.TESTNET_MINING)) {
       console.log('Fetching proposals due to dependencies change:', {
         contractAddress,
         activeContract,
@@ -1215,6 +1239,7 @@ export function useAdminContract() {
     tokenProposals: tokenProposalList,
     vestingProposals: vestingProposalList,
     airdropProposals: airdropProposalList,
+    testnetMiningProposals: testnetMiningProposalList,
     addToWhitelist,
     setTransactionLimit,
     initiateTGE,
