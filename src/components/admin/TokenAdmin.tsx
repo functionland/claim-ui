@@ -672,7 +672,9 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {data.tokenProposals?.map((proposal) => {
+                    {console.log('Rendering proposals:', data.proposals)}
+                    {data.proposals?.map((proposal) => {
+                      console.log('Processing proposal:', proposal);
                       const now = Math.floor(Date.now() / 1000);
                       // Add null checks and type safety
                       const isExpired = proposal?.config?.expiryTime ? 
