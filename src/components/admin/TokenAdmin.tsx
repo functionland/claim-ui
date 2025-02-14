@@ -523,6 +523,53 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
           </Accordion>
         </Grid>
 
+        {/* Transfer Operation */}
+        <Grid item xs={12}>
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="h6">Transfer Operation</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Box component="form" noValidate sx={{ mt: 1 }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      label="Recipient Address"
+                      value={formData.transferTo || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, transferTo: e.target.value }))}
+                      margin="normal"
+                      helperText="Address must be whitelisted"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      label="Amount"
+                      type="number"
+                      value={formData.transferAmount || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, transferAmount: e.target.value }))}
+                      margin="normal"
+                      helperText="Amount in FULA tokens"
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Button
+                      variant="contained"
+                      onClick={handlers.handleTransfer}
+                      disabled={!formData.transferTo || !formData.transferAmount || states.isTransferring}
+                      sx={{ mr: 1 }}
+                      color="primary"
+                    >
+                      {states.isTransferring ? <CircularProgress size={24} /> : 'Transfer Tokens'}
+                    </Button>
+                  </Grid>
+                </Grid>
+              </Box>
+            </AccordionDetails>
+          </Accordion>
+        </Grid>
+
         {/* Nonce Operation */}
         <Grid item xs={12}>
           <Accordion defaultExpanded>
@@ -719,6 +766,8 @@ export function TokenAdmin() {
     chainId: '',
     nonce: '',
     bridgeAmount: '',
+    transferTo: '',
+    transferAmount: '',
   })
 
   // Set the active contract to TOKEN when the component mounts
@@ -756,6 +805,7 @@ export function TokenAdmin() {
   const [isRemovingFromWhitelist, setIsRemovingFromWhitelist] = useState(false)
   const [isWhitelisting, setIsWhitelisting] = useState(false)
   const [isSettingNonce, setIsSettingNonce] = useState(false)
+  const [isTransferring, setIsTransferring] = useState(false)
   const [whitelistedAddresses, setWhitelistedAddresses] = useState<string[]>([]);
 
   // Add this effect to fetch whitelisted addresses when component mounts
@@ -927,6 +977,32 @@ export function TokenAdmin() {
     }
   }
 
+  const handleTransfer = async () => {
+    try {
+      setError(null)
+      setIsTransferring(true)
+      const { transferTo, transferAmount } = formData
+
+      if (!transferTo || !transferAmount) {
+        throw new Error('Please fill in all fields')
+      }
+
+      // Implement transfer logic here
+      // await transferFromContract(transferTo, transferAmount)
+
+      // Reset form
+      setFormData(prev => ({
+        ...prev,
+        transferTo: '',
+        transferAmount: '',
+      }))
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setIsTransferring(false)
+    }
+  }
+
   const handlers = {
     handleAddToWhitelist,
     handleSetTransactionLimit,
@@ -939,6 +1015,7 @@ export function TokenAdmin() {
     handleRemoveFromWhitelist,
     handleSetBridgeOpNonce,
     handleBridgeOp,
+    handleTransfer,
   }
 
   const states = {
@@ -951,6 +1028,7 @@ export function TokenAdmin() {
     isWhitelisting,
     isSettingNonce,
     isBridgeOp,
+    isTransferring,
   }
 
   const data = {

@@ -949,6 +949,54 @@ export function useAdminContract() {
 
   const [isSettingNonce, setIsSettingNonce] = useState(false)
   const [isBridgeOp, setIsBridgeOp] = useState(false)
+  const [isTransferring, setIsTransferring] = useState(false)
+
+  const transferFromContract = async (to: string, amount: string) => {
+    if (!contractAddress || !to || !amount) {
+      throw new Error('Missing required parameters')
+    }
+
+    try {
+      setIsTransferring(true)
+      setError(null)
+
+      const { request } = await publicClient.simulateContract({
+        address: contractAddress,
+        abi: contractAbi,
+        functionName: 'transferFromContract',
+        args: [to, ethers.parseEther(amount)],
+      })
+
+      await writeContractAsync(request)
+    } catch (err: any) {
+      console.error('Error transferring tokens:', err)
+      
+      if (err.message.includes('AmountMustBePositive')) {
+        throw new Error('Amount must be greater than 0')
+      }
+
+      if (err.message.includes('ExceedsSupply')) {
+        const match = err.message.match(/ExceedsSupply\((.*?),(.*?)\)/)
+        if (match) {
+          const [requested, supply] = match.slice(1)
+          throw new Error(`Amount exceeds contract balance. Requested: ${ethers.formatEther(requested)} FULA, Available: ${ethers.formatEther(supply)} FULA`)
+        }
+      }
+
+      if (err.message.includes('LowAllowance')) {
+        const match = err.message.match(/LowAllowance\((.*?),(.*?)\)/)
+        if (match) {
+          const [limit, amount] = match.slice(1)
+          throw new Error(`Amount exceeds transaction limit. Limit: ${ethers.formatEther(limit)} FULA, Requested: ${ethers.formatEther(amount)} FULA`)
+        }
+      }
+
+      throw err
+    } finally {
+      setIsTransferring(false)
+    }
+  }
+
   const [nonceEvents, setNonceEvents] = useState<{ chainId: bigint, caller: string, blockNumber: bigint }[]>([])
   const [bridgeOpEvents, setBridgeOpEvents] = useState<{
     operator: string,
@@ -1125,5 +1173,7 @@ export function useAdminContract() {
     performBridgeOp,
     isBridgeOp,
     bridgeOpEvents,
+    transferFromContract,
+    isTransferring,
   }
 }
