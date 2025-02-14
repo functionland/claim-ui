@@ -47,7 +47,7 @@ export function AirdropAdmin() {
   const {
     vestingCaps,
     vestingWallets,
-    vestingProposals,
+    airdropProposals,
     createVestingCap,
     addVestingWallet,
     approveProposal,
@@ -537,7 +537,7 @@ export function AirdropAdmin() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {vestingProposals?.map((proposal) => {
+                {airdropProposals?.map((proposal) => {
                   const now = Math.floor(Date.now() / 1000);
                   const isExpired = proposal?.config?.expiryTime ? 
                     Number(proposal.config.expiryTime) < now : false;

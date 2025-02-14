@@ -1214,6 +1214,7 @@ export function useAdminContract() {
     whitelistedAddresses,
     tokenProposals: tokenProposalList,
     vestingProposals: vestingProposalList,
+    airdropProposals: airdropProposalList,
     addToWhitelist,
     setTransactionLimit,
     initiateTGE,
