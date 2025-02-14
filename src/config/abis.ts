@@ -1309,12 +1309,45 @@ export const DISTRIBUTION_ABI = [
 
 // Testnet Mining Contract ABI (without common CONTRACT_ABI)
 export const TESTNET_MINING_ABI = [
+  ...DISTRIBUTION_ABI,
   {
     inputs: [{ name: "wallet", type: "address" }],
-    name: "addWallet",
-    outputs: [],
-    stateMutability: "nonpayable",
+    name: "getSubstrateRewards",
+    outputs: [
+      { name: "lastUpdate", type: "uint256" },
+      { name: "amount", type: "uint256" }
+    ],
+    stateMutability: "view",
     type: "function"
+  },
+  {
+    inputs: [{ name: "", type: "address" }],
+    name: "substrateRewardInfo",
+    outputs: [
+      { name: "amount", type: "uint256" },
+      { name: "lastUpdate", type: "uint256" }
+    ],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "beneficiary", type: "address" },
+      { indexed: false, name: "amount", type: "uint256" }
+    ],
+    name: "TokensClaimed",
+    type: "event"
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "beneficiary", type: "address" },
+      { indexed: true, name: "capId", type: "uint256" },
+      { indexed: false, name: "amount", type: "uint256" }
+    ],
+    name: "ClaimProcessed",
+    type: "event"
   }
 ] as const;
 
