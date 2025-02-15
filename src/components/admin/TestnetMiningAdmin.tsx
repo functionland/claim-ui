@@ -541,8 +541,12 @@ export function TestnetMiningAdmin() {
                   const now = Math.floor(Date.now() / 1000);
                   const isExpired = proposal?.config?.expiryTime ? 
                     Number(proposal.config.expiryTime) < now : false;
-                  const canExecute = proposal?.config?.executionTime && proposal?.config?.status !== undefined ? 
-                    Number(proposal.config.executionTime) <= now && proposal.config.status !== 1 : false;
+                  const canExecute = proposal?.config?.executionTime && 
+                    proposal?.config?.status !== undefined && 
+                    proposal?.config?.approvals !== undefined ? 
+                    Number(proposal.config.executionTime) <= now && 
+                    proposal.config.status === 0 && 
+                    Number(proposal.config.approvals) >= 2 : false;
                   
                   if (!proposal || !proposal.config) {
                     console.error('Invalid proposal data:', proposal);
