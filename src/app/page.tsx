@@ -3,6 +3,7 @@
 import { Tabs, Tab } from '@mui/material'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useContractContext } from '@/contexts/ContractContext'
+import { useThemeContext } from '@/contexts/ThemeContext'
 import { useAccount } from 'wagmi'
 import { VestingDashboard } from '@/components/vesting/VestingDashboard'
 import { ConnectButton } from '@/components/common/ConnectButton'
@@ -23,6 +24,8 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  IconButton,
+  CircularProgress
 } from '@mui/material'
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
@@ -30,6 +33,8 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime'
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
 import TokenIcon from '@mui/icons-material/Token'
 import Shield from '@mui/icons-material/Shield'
+import LightModeIcon from '@mui/icons-material/LightMode'
+import DarkModeIcon from '@mui/icons-material/DarkMode'
 import { CONTRACT_TYPES } from '@/config/contracts'
 
 interface ManualImportInfo {
@@ -42,8 +47,10 @@ interface ManualImportInfo {
 export default function Home() {
   const { isConnected } = useAccount()
   const theme = useTheme()
+  const { isDarkMode, toggleTheme } = useThemeContext()
   const [showManualImportModal, setShowManualImportModal] = useState(false)
   const [manualImportInfo, setManualImportInfo] = useState<ManualImportInfo | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const searchParams = useSearchParams()
   const router = useRouter()
   const { activeContract, setActiveContract } = useContractContext()
@@ -133,7 +140,30 @@ export default function Home() {
       router.replace(`?type=${activeContract}`, { scroll: false })
     }
   }, [searchParams])
-  
+
+  useEffect(() => {
+    // Short timeout to ensure smooth transition
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [])
+
+  if (isLoading) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh',
+          bgcolor: theme.palette.background.default
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    )
+  }
 
   const instructions = getInstructions(activeContract)
   const handleTabChange = (_, newValue: string) => {
@@ -146,21 +176,26 @@ export default function Home() {
   return (
     <ErrorBoundary>
       <Box sx={{ 
-        bgcolor: 'grey.100', 
+        bgcolor: theme.palette.background.default,
         minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column'
       }}>
-        {/* Main Content */}
         <Box sx={{ 
           flex: 1,
           py: 4,
-          backgroundImage: 'linear-gradient(to bottom, #f3f4f6, #ffffff)'
+          backgroundImage: `linear-gradient(to bottom, ${
+            isDarkMode 
+              ? 'rgba(18, 18, 18, 0.8), rgba(45, 45, 45, 0.9)'
+              : 'rgba(243, 244, 246, 0.8), rgba(255, 255, 255, 0.9)'
+          })`
         }}>
           <Container maxWidth="lg">
             <Paper sx={{ 
               p: 4,
-              boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
+              bgcolor: theme.palette.background.paper,
+              color: theme.palette.text.primary,
+              boxShadow: theme.shadows[1]
             }}>
               <Box sx={{ 
                 display: 'flex', 
@@ -173,25 +208,42 @@ export default function Home() {
                   component="h1" 
                   sx={{ 
                     fontWeight: 'bold',
-                    background: 'linear-gradient(to right, #1976d2, #64b5f6)',
+                    background: isDarkMode
+                      ? 'linear-gradient(to right, #90caf9, #42a5f5)'
+                      : 'linear-gradient(to right, #1976d2, #64b5f6)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent'
                   }}
                 >
                   {getTitle()}
                 </Typography>
-                <Box sx={{ position: 'relative', width: 40, height: 40 }}>
-                  <Image
-                    src="/images/logo.png"
-                    alt="Logo"
-                    fill
-                    style={{ objectFit: 'contain' }}
-                  />
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  <IconButton 
+                    onClick={toggleTheme}
+                    sx={{ 
+                      bgcolor: theme.palette.primary.main + '20',
+                      '&:hover': {
+                        bgcolor: theme.palette.primary.main + '30',
+                      }
+                    }}
+                  >
+                    {isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
+                  </IconButton>
+                  <Box sx={{ position: 'relative', width: 40, height: 40 }}>
+                    <Image
+                      src="/images/logo.png"
+                      alt="Logo"
+                      fill
+                      style={{ objectFit: 'contain' }}
+                    />
+                  </Box>
                 </Box>
               </Box>
               
-              <Divider sx={{ mb: 4 }} />
-              {/* ... end of header content ... */}
+              <Divider sx={{ 
+                mb: 4,
+                borderColor: isDarkMode ? theme.palette.grey[700] : theme.palette.divider
+              }} />
 
               {/* Contract Selection tabs */}
               <Box sx={{ mb: 4 }}>
@@ -199,6 +251,14 @@ export default function Home() {
                   value={activeContract}
                   onChange={handleTabChange}
                   centered
+                  sx={{
+                    '& .MuiTab-root': {
+                      color: theme.palette.text.secondary,
+                      '&.Mui-selected': {
+                        color: theme.palette.primary.main
+                      }
+                    }
+                  }}
                 >
                   <Tab 
                     value={CONTRACT_TYPES.VESTING} 
@@ -222,14 +282,14 @@ export default function Home() {
                     textAlign: 'center', 
                     py: 8,
                     px: 4,
-                    bgcolor: 'grey.50',
+                    bgcolor: theme.palette.background.default,
                     borderRadius: 2
                   }}>
                     <Stack spacing={3} alignItems="center">
                       <Typography 
                         variant="h6" 
                         sx={{ 
-                          color: 'text.secondary',
+                          color: theme.palette.text.secondary,
                           maxWidth: 'sm',
                           mb: 2
                         }}
@@ -245,7 +305,7 @@ export default function Home() {
                       textAlign: 'center', 
                       py: 2,
                       px: 2,
-                      bgcolor: 'grey.50',
+                      bgcolor: theme.palette.background.default,
                       borderRadius: 2,
                       transition: 'opacity 0.3s ease-in-out'
                     }}>
@@ -263,8 +323,8 @@ export default function Home() {
 
         {/* Instructions Footer */}
         <Box sx={{ 
-          bgcolor: theme.palette.primary.main,
-          color: 'white',
+          bgcolor: isDarkMode ? theme.palette.grey[900] : theme.palette.primary.main,
+          color: theme.palette.common.white,
           py: 6,
           mt: 4
         }}>
@@ -292,14 +352,18 @@ export default function Home() {
                   key={index} 
                   sx={{ 
                     p: 4, 
-                    bgcolor: 'rgba(255, 255, 255, 0.1)',
-                    backdropFilter: 'blur(10px)',
-                    color: 'white',
+                    bgcolor: isDarkMode 
+                      ? theme.palette.grey[900]
+                      : 'rgba(255, 255, 255, 0.1)',
+                    backdropFilter: isDarkMode ? 'none' : 'blur(10px)',
+                    color: theme.palette.common.white,
                     cursor: instruction.action ? 'pointer' : 'default',
                     transition: 'transform 0.2s ease-in-out, background-color 0.2s ease-in-out',
                     '&:hover': instruction.action ? {
                       transform: 'translateY(-2px)',
-                      bgcolor: 'rgba(255, 255, 255, 0.15)',
+                      bgcolor: isDarkMode 
+                        ? theme.palette.grey[800]
+                        : 'rgba(255, 255, 255, 0.15)',
                     } : {}
                   }}
                   onClick={async () => {

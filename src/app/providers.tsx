@@ -3,54 +3,63 @@
 import { useState } from 'react' 
 import { WagmiProvider } from 'wagmi'
 import { RainbowKitProvider } from '@rainbow-me/rainbowkit'
-import { ThemeProvider, createTheme } from '@mui/material/styles'
+import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
 import { config, chains } from '@/lib/wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import type { ReactNode, FC } from 'react'
 import { ContractProvider } from '@/contexts/ContractContext'
+import { ThemeProvider, useThemeContext } from '@/contexts/ThemeContext'
 
-const materialTheme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-  },
-  typography: {
-    fontFamily: 'inherit',
-  },
-})
-
-interface ProvidersProps {
-  readonly children: ReactNode;
-}
-
-export const Providers: FC<ProvidersProps> = ({ children }) => {
-  const [queryClient] = useState(() => new QueryClient({
-    defaultOptions: {
-      queries: {
-        refetchOnWindowFocus: false,
-        retry: 1,
+function ThemedApp({ children }: { children: React.ReactNode }) {
+  const { isDarkMode } = useThemeContext();
+  
+  const materialTheme = createTheme({
+    palette: {
+      mode: isDarkMode ? 'dark' : 'light',
+      primary: {
+        main: '#1976d2',
+      },
+      background: {
+        default: isDarkMode ? '#121212' : '#fff',
+        paper: isDarkMode ? '#1e1e1e' : '#fff',
       },
     },
-  }))
+    components: {
+      MuiCssBaseline: {
+        styleOverrides: {
+          body: {
+            backgroundColor: isDarkMode ? '#121212' : '#fff',
+            color: isDarkMode ? '#fff' : '#000',
+          },
+        },
+      },
+    },
+  });
 
   return (
-    <ContractProvider>
-      <WagmiProvider config={config}>
-        <QueryClientProvider client={queryClient}>
-          <RainbowKitProvider chains={chains}>
-            <ThemeProvider theme={materialTheme}>
-              <CssBaseline />
-              {children}
-            </ThemeProvider>
-          </RainbowKitProvider>
-        </QueryClientProvider>
-      </WagmiProvider>
-    </ContractProvider>
+    <MuiThemeProvider theme={materialTheme}>
+      <CssBaseline />
+      {children}
+    </MuiThemeProvider>
+  );
+}
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  const [queryClient] = useState(() => new QueryClient())
+
+  return (
+    <WagmiProvider config={config}>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitProvider chains={chains}>
+          <ThemeProvider>
+            <ThemedApp>
+              <ContractProvider>
+                {children}
+              </ContractProvider>
+            </ThemedApp>
+          </ThemeProvider>
+        </RainbowKitProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
   )
 }
