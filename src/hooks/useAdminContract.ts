@@ -268,7 +268,7 @@ export function useAdminContract() {
       const events = await publicClient.getLogs({
         address: contractAddress,
         event: parseAbiItem('event WalletWhitelistedOp(address indexed target, address indexed operator, uint64 whitelistLockTime, uint8 operation)'),
-        fromBlock: 0n,
+        fromBlock: BigInt(0),
         toBlock: 'latest'
       });
 
@@ -280,11 +280,12 @@ export function useAdminContract() {
       for (const event of events) {
         const { target, operation } = event.args;
         const address = target.toLowerCase();
+        const opBigInt = operation ? BigInt(operation) : undefined;
 
-        if (operation === 1n) {
+        if (opBigInt === BigInt(1)) {
           // Wallet added
           whitelistedWallets.set(address, true);
-        } else if (operation === 2n) {
+        } else if (opBigInt === BigInt(2)) {
           // Wallet removed
           whitelistedWallets.delete(address);
         }
@@ -708,6 +709,7 @@ export function useAdminContract() {
   const setRoleTransactionLimit = async (role: string, limit: bigint) => {
     if (!contractAddress) throw new Error('Contract address not found');
     if (!userAddress) throw new Error('Please connect your wallet');
+    if (!publicClient) throw new Error('Public client not found');
 
     try {
       const { request } = await publicClient.simulateContract({
@@ -733,6 +735,7 @@ export function useAdminContract() {
   const setRoleQuorum = async (role: string, quorum: number) => {
     if (!contractAddress) throw new Error('Contract address not found');
     if (!userAddress) throw new Error('Please connect your wallet');
+    if (!publicClient) throw new Error('Public client not found');
     if (quorum <= 1) throw new Error('Quorum must be greater than 1');
 
     try {
@@ -793,6 +796,7 @@ export function useAdminContract() {
       if (isNaN(quorumValue) || quorumValue < 1 || quorumValue > 65535) {
         throw new Error('Quorum must be a number between 1 and 65535');
       }
+      console.log(`setting role quorum for ${role}: ${quorumValue}`)
       return setRoleQuorum(role, quorumValue);
     } catch (error: any) {
       if (error.message) {
@@ -1265,5 +1269,9 @@ export function useAdminContract() {
     bridgeOpEvents,
     transferFromContract,
     isTransferring,
+    handleSetRoleTransactionLimit,
+    handleSetRoleQuorum,
+    checkRoleConfig,
+    roleConfigs,
   }
 }

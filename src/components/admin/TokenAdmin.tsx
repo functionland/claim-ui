@@ -782,8 +782,6 @@ export function TokenAdmin() {
     tokenProposals,
     addToWhitelist,
     setTransactionLimit,
-    setTGETime,
-    createProposal,
     approveProposal,
     executeProposal,
     refetchWhitelistedAddresses,
@@ -874,25 +872,6 @@ export function TokenAdmin() {
       setError(error.message)
     } finally {
       setIsSettingLimit(false)
-    }
-  }
-
-  const handleSetTGE = async () => {
-    try {
-      setError(null)
-      setIsSettingTGE(true)
-      // Convert date string to Unix timestamp
-      const tgeDate = new Date(formData.tgeTime)
-      await setTGETime(Math.floor(tgeDate.getTime() / 1000))
-      // Clear form
-      setFormData(prev => ({
-        ...prev,
-        tgeTime: '',
-      }))
-    } catch (error: any) {
-      setError(error.message)
-    } finally {
-      setIsSettingTGE(false)
     }
   }
 
@@ -1008,7 +987,6 @@ export function TokenAdmin() {
   const handlers = {
     handleAddToWhitelist,
     handleSetTransactionLimit,
-    handleSetTGE,
     handleApproveProposal,
     handleExecuteProposal,
     handleSetQuorum,
