@@ -138,7 +138,6 @@ EOF
 
     # Create symlink and remove default site
     sudo ln -sf /etc/nginx/sites-available/$DOMAIN /etc/nginx/sites-enabled/
-    sudo rm -f /etc/nginx/sites-enabled/default
     
     # Test and reload Nginx
     sudo nginx -t
