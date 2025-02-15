@@ -739,13 +739,16 @@ export function useAdminContract() {
     if (quorum <= 1) throw new Error('Quorum must be greater than 1');
 
     try {
+      console.log(`setRoleQuorum simulating ${role} ${quorum}`)
+      const quorumBigInt = BigInt(quorum)
       const { request } = await publicClient.simulateContract({
         address: contractAddress,
         abi: contractAbi,
         functionName: 'setRoleQuorum',
-        args: [role as `0x${string}`, quorum],
+        args: [role as `0x${string}`, quorumBigInt],
         account: userAddress,
       });
+      console.log("setRoleQuorum request:", request)
 
       const hash = await writeContractAsync(request);
       await publicClient.waitForTransactionReceipt({ hash });
