@@ -679,15 +679,22 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
                       // Add null checks and type safety
                       const isExpired = proposal?.config?.expiryTime ? 
                         Number(proposal.config.expiryTime) < now : false;
-                      const canExecute = proposal?.config?.executionTime && proposal?.config?.status !== undefined ? 
-                        Number(proposal.config.executionTime) <= now && proposal.config.status !== 1 : false;
+                      const canExecute = proposal?.config?.executionTime && 
+                        proposal?.config?.status !== undefined && 
+                        proposal?.config?.approvals !== undefined ? 
+                        Number(proposal.config.executionTime) <= now && 
+                        proposal.config.status === 0 && 
+                        Number(proposal.config.approvals) >= 2 : false;
                       
                       // Log the proposal data to help debug
                       console.log('Processing proposal:', {
                         proposal,
                         now,
                         isExpired,
-                        canExecute
+                        canExecute,
+                        approvals: proposal?.config?.approvals,
+                        executionTime: proposal?.config?.executionTime,
+                        status: proposal?.config?.status
                       });
                       
                       if (!proposal || !proposal.config) {
