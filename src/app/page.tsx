@@ -36,6 +36,7 @@ import Shield from '@mui/icons-material/Shield'
 import LightModeIcon from '@mui/icons-material/LightMode'
 import DarkModeIcon from '@mui/icons-material/DarkMode'
 import { CONTRACT_TYPES, TOKEN_ADDRESSES } from '@/config/contracts'
+import { getNetworkName } from '@/config/chains'
 
 interface ManualImportInfo {
   contractAddress?: string;
@@ -81,8 +82,7 @@ export default function Home() {
         action: (wallet: string | undefined) => {
           const tokenAddress = TOKEN_ADDRESSES[chainId] || TOKEN_ADDRESSES[31337] // fallback to local address
 
-          const networkName = chainId === 5 ? 'Goerli' :
-            chainId === 1 ? 'Ethereum Mainnet' : 'Local Network'
+          const networkName = getNetworkName(chainId)
 
           const manualInfo = {
             contractAddress: tokenAddress,
