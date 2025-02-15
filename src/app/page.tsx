@@ -80,7 +80,7 @@ export default function Home() {
         icon: <AccessTimeIcon />,
         text: 'Import $FULA token in your wallet by clicking here',
         action: (wallet: string | undefined) => {
-          const tokenAddress = TOKEN_ADDRESSES[chainId] || TOKEN_ADDRESSES[31337] // fallback to local address
+          const tokenAddress = TOKEN_ADDRESSES[chainId] || "Unsupported"
 
           const networkName = getNetworkName(chainId)
 
@@ -268,11 +268,11 @@ export default function Home() {
                 >
                   <Tab 
                     value={CONTRACT_TYPES.VESTING} 
-                    label="Token Vesting" 
+                    label="Token Distribution" 
                   />
                   <Tab 
                     value={CONTRACT_TYPES.AIRDROP} 
-                    label="Airdrop Vesting" 
+                    label="Airdrop" 
                   />
                   <Tab 
                     value={CONTRACT_TYPES.TESTNET_MINING} 

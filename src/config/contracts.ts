@@ -1,34 +1,45 @@
 import { type Address } from 'viem'
-import { SupportedChain } from './constants'
 import { TOKEN_ABI, DISTRIBUTION_ABI, TESTNET_MINING_ABI, PROPOSAL_TYPES } from './abis';
 import { ROLES } from './constants';
+import { CHAIN_IDS } from './chains';
 
 // Contract Addresses for vesting
 export const VESTING_CONTRACT_ADDRESSES: Record<number, Address> = {
-  1: process.env.NEXT_PUBLIC_MAINNET_VESTING_CONTRACT_ADDRESS as Address, // mainnet
-  5: process.env.NEXT_PUBLIC_GOERLI_VESTING_CONTRACT_ADDRESS as Address,  // goerli
-  31337: process.env.NEXT_PUBLIC_LOCAL_VESTING_CONTRACT_ADDRESS as Address, // local
+  [CHAIN_IDS.MAINNET]: process.env.NEXT_PUBLIC_MAINNET_VESTING_CONTRACT_ADDRESS as Address,
+  [CHAIN_IDS.GOERLI]: process.env.NEXT_PUBLIC_GOERLI_VESTING_CONTRACT_ADDRESS as Address,
+  [CHAIN_IDS.HARDHAT]: process.env.NEXT_PUBLIC_LOCAL_VESTING_CONTRACT_ADDRESS as Address,
 }
 
 // Contract Addresses for airdrop
 export const AIRDROP_CONTRACT_ADDRESSES: Record<number, Address> = {
-  1: process.env.NEXT_PUBLIC_MAINNET_AIRDROP_CONTRACT_ADDRESS as Address, // mainnet
-  5: process.env.NEXT_PUBLIC_GOERLI_AIRDROP_CONTRACT_ADDRESS as Address,  // goerli
-  31337: process.env.NEXT_PUBLIC_LOCAL_AIRDROP_CONTRACT_ADDRESS as Address, // local
+  [CHAIN_IDS.MAINNET]: process.env.NEXT_PUBLIC_MAINNET_AIRDROP_CONTRACT_ADDRESS as Address,
+  [CHAIN_IDS.GOERLI]: process.env.NEXT_PUBLIC_GOERLI_AIRDROP_CONTRACT_ADDRESS as Address,
+  [CHAIN_IDS.HARDHAT]: process.env.NEXT_PUBLIC_LOCAL_AIRDROP_CONTRACT_ADDRESS as Address,
+  [CHAIN_IDS.BASE]: process.env.NEXT_PUBLIC_BASE_AIRDROP_CONTRACT_ADDRESS as Address,
+  [CHAIN_IDS.IOTEX_TESTNET]: process.env.NEXT_PUBLIC_IOTEX_AIRDROP_CONTRACT_ADDRESS as Address,
+  [CHAIN_IDS.SKALE_TESTNET]: process.env.NEXT_PUBLIC_SKALE_AIRDROP_CONTRACT_ADDRESS as Address,
 }
 
 // Contract Addresses for testnet mining
 export const TESTNET_MINING_CONTRACT_ADDRESSES: Record<number, Address> = {
-  1: process.env.NEXT_PUBLIC_MAINNET_TESTNET_MINING_CONTRACT_ADDRESS as Address, // mainnet
-  5: process.env.NEXT_PUBLIC_GOERLI_TESTNET_MINING_CONTRACT_ADDRESS as Address,  // goerli
-  31337: process.env.NEXT_PUBLIC_LOCAL_TESTNET_MINING_CONTRACT_ADDRESS as Address, // local
+  [CHAIN_IDS.MAINNET]: process.env.NEXT_PUBLIC_MAINNET_TESTNET_MINING_CONTRACT_ADDRESS as Address,
+  [CHAIN_IDS.GOERLI]: process.env.NEXT_PUBLIC_GOERLI_TESTNET_MINING_CONTRACT_ADDRESS as Address,
+  [CHAIN_IDS.HARDHAT]: process.env.NEXT_PUBLIC_LOCAL_TESTNET_MINING_CONTRACT_ADDRESS as Address,
+  [CHAIN_IDS.BASE]: process.env.NEXT_PUBLIC_BASE_TESTNET_MINING_CONTRACT_ADDRESS as Address,
+  [CHAIN_IDS.IOTEX_TESTNET]: process.env.NEXT_PUBLIC_IOTEX_TESTNET_MINING_CONTRACT_ADDRESS as Address,
+  [CHAIN_IDS.SKALE_TESTNET]: process.env.NEXT_PUBLIC_SKALE_TESTNET_MINING_CONTRACT_ADDRESS as Address,
 }
 
 // Token Addresses
 export const TOKEN_ADDRESSES: Record<number, Address> = {
-  1: process.env.NEXT_PUBLIC_MAINNET_TOKEN_ADDRESS as Address,
-  5: process.env.NEXT_PUBLIC_GOERLI_TOKEN_ADDRESS as Address,
-  31337: process.env.NEXT_PUBLIC_LOCAL_TOKEN_ADDRESS as Address,
+  [CHAIN_IDS.MAINNET]: process.env.NEXT_PUBLIC_MAINNET_TOKEN_ADDRESS as Address,
+  [CHAIN_IDS.GOERLI]: process.env.NEXT_PUBLIC_GOERLI_TOKEN_ADDRESS as Address,
+  [CHAIN_IDS.HARDHAT]: process.env.NEXT_PUBLIC_LOCAL_TOKEN_ADDRESS as Address,
+  [CHAIN_IDS.IOTEX_TESTNET]: process.env.NEXT_PUBLIC_IOTEX_TESTNET_TOKEN_ADDRESS as Address,
+  [CHAIN_IDS.SKALE_TESTNET]: process.env.NEXT_PUBLIC_SKALE_TESTNET_TOKEN_ADDRESS as Address,
+  [CHAIN_IDS.SFI_TESTNET]: process.env.NEXT_PUBLIC_SFI_TESTNET_TOKEN_ADDRESS as Address,
+  [CHAIN_IDS.BASE_SEPOLIA]: process.env.NEXT_PUBLIC_BASE_SEPOLIA_TOKEN_ADDRESS as Address,
+  [CHAIN_IDS.BASE]: process.env.NEXT_PUBLIC_BASE_TOKEN_ADDRESS as Address,
 }
 
 // Contract ABI
@@ -286,10 +297,3 @@ export const CONTRACT_CONFIG: ContractConfig = {
 
 // Export common types and constants
 export { ROLES, PROPOSAL_TYPES };
-
-// RPC Configuration
-export const RPC_URLS: Record<SupportedChain, string> = {
-  mainnet: `https://eth-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
-  goerli: `https://eth-goerli.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
-  hardhat: 'http://127.0.0.1:8545',
-}

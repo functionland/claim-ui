@@ -3,12 +3,27 @@ import { keccak256, toBytes } from 'viem';
 export const APP_NAME = 'Token Vesting Dashboard'
 export const APP_DESCRIPTION = 'Manage and claim your vested tokens'
 
-export const SUPPORTED_CHAINS = ['mainnet', 'goerli', 'hardhat'] as const
+export const SUPPORTED_CHAINS = [
+  'mainnet',
+  'goerli',
+  'hardhat',
+  'iotex',
+  'skale',
+  'sfi',
+  'base',
+  'base-sepolia'
+] as const
 export type SupportedChain = (typeof SUPPORTED_CHAINS)[number]
 
 export const CHAIN_NAMES = {
   mainnet: 'Ethereum Mainnet',
   goerli: 'Goerli Testnet',
+  hardhat: 'Hardhat',
+  iotex: 'IoTeX Testnet',
+  skale: 'SKALE Testnet',
+  sfi: 'SFI Testnet',
+  base: 'Base',
+  'base-sepolia': 'Base Sepolia',
 } as const
 
 export const DEFAULT_CHAIN = 'mainnet'
