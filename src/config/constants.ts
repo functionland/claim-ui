@@ -5,7 +5,7 @@ export const APP_DESCRIPTION = 'Manage and claim your vested tokens'
 
 export const SUPPORTED_CHAINS = [
   'mainnet',
-  'goerli',
+  'sepolia',
   'hardhat',
   'iotex',
   'skale',
@@ -17,7 +17,7 @@ export type SupportedChain = (typeof SUPPORTED_CHAINS)[number]
 
 export const CHAIN_NAMES = {
   mainnet: 'Ethereum Mainnet',
-  goerli: 'Goerli Testnet',
+  sepolia: 'Sepolia Testnet',
   hardhat: 'Hardhat',
   iotex: 'IoTeX Testnet',
   skale: 'SKALE Testnet',

@@ -1,11 +1,11 @@
 import type { Chain } from 'viem'
-import { mainnet, goerli, base, baseSepolia } from 'wagmi/chains'
+import { mainnet, sepolia, base, baseSepolia } from 'wagmi/chains'
 import { SupportedChain } from './constants'
 
 // Chain IDs
 export const CHAIN_IDS = {
   MAINNET: 1,
-  GOERLI: 300,
+  SEPOLIA: 11155111,
   HARDHAT: 31337,
   IOTEX_TESTNET: 4690,
   SKALE_TESTNET: 974399131,
@@ -17,7 +17,7 @@ export const CHAIN_IDS = {
 // RPC Configuration
 export const RPC_URLS: Record<SupportedChain, string> = {
   mainnet: `https://eth-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
-  goerli: `https://eth-goerli.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
+  sepolia: `https://eth-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
   hardhat: 'http://127.0.0.1:8545',
   iotex: 'https://babel-api.testnet.iotex.io',
   skale: 'https://testnet.skalenodes.com/v1/giant-half-dual-testnet',
@@ -30,7 +30,7 @@ export const RPC_URLS: Record<SupportedChain, string> = {
 // Network names mapping
 export const NETWORK_NAMES: Record<number, string> = {
   [CHAIN_IDS.MAINNET]: 'Ethereum Mainnet',
-  [CHAIN_IDS.GOERLI]: 'Sepolia Testnet',
+  [CHAIN_IDS.SEPOLIA]: 'Sepolia Testnet',
   [CHAIN_IDS.HARDHAT]: 'Hardhat',
   [CHAIN_IDS.IOTEX_TESTNET]: 'IoTeX Testnet',
   [CHAIN_IDS.SKALE_TESTNET]: 'SKALE Testnet',
@@ -53,15 +53,15 @@ export const customMainnet: Chain = {
   },
 }
 
-export const customGoerli: Chain = {
-  ...goerli,
+export const customSepolia: Chain = {
+  ...sepolia,
   rpcUrls: {
-    ...goerli.rpcUrls,
+    ...sepolia.rpcUrls,
     default: {
-      http: [RPC_URLS.goerli],
+      http: [RPC_URLS.sepolia],
     },
     public: {
-      http: [RPC_URLS.goerli],
+      http: [RPC_URLS.sepolia],
     },
   },
 }
@@ -188,7 +188,7 @@ export const hardhat: Chain = {
 // Supported chains configuration
 export const supportedChains = [
   customMainnet,
-  customGoerli,
+  customSepolia,
   iotexTestnet,
   skaleTestnet,
   sfiTestnet,
@@ -206,7 +206,8 @@ export const wagmiChains = supportedChains.map(chain => ({
 // Block explorers
 export const BLOCK_EXPLORERS: Record<number, string> = {
   [CHAIN_IDS.MAINNET]: 'https://etherscan.io',
-  [CHAIN_IDS.GOERLI]: 'https://goerli.etherscan.io',
+  [CHAIN_IDS.SEPOLIA]: 'https://sepolia.etherscan.io',
+  [CHAIN_IDS.HARDHAT]: 'https://sepolia.etherscan.io',
   [CHAIN_IDS.IOTEX_TESTNET]: 'https://testnet.iotexscan.io',
   [CHAIN_IDS.SKALE_TESTNET]: 'https://giant-half-dual-testnet.explorer.testnet.skalenodes.com',
   [CHAIN_IDS.SFI_TESTNET]: 'https://testnet-explorer.singularityfinance.ai',
@@ -215,15 +216,16 @@ export const BLOCK_EXPLORERS: Record<number, string> = {
 } as const
 
 // Helper functions
-export function getExplorerUrl(chainId: number, hash: string, type: 'tx' | 'address' = 'tx') {
-  const baseUrl = BLOCK_EXPLORERS[chainId]
-  return `${baseUrl}/${type}/${hash}`
-}
-
 export function isSupported(chainId: number): boolean {
-  return Object.values(CHAIN_IDS).includes(chainId);
+  return chainId in NETWORK_NAMES;
 }
 
 export function getNetworkName(chainId: number): string {
-  return NETWORK_NAMES[chainId] || 'Unknown Network'
+  return NETWORK_NAMES[chainId as keyof typeof NETWORK_NAMES] || 'Unknown Network';
+}
+
+export function getExplorerUrl(chainId: number, hash: string, type: 'tx' | 'address' = 'tx'): string {
+  const baseUrl = BLOCK_EXPLORERS[chainId as keyof typeof BLOCK_EXPLORERS];
+  if (!baseUrl) return '';
+  return `${baseUrl}/${type}/${hash}`;
 }
