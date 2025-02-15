@@ -4,7 +4,7 @@ import { Tabs, Tab } from '@mui/material'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useContractContext } from '@/contexts/ContractContext'
 import { useThemeContext } from '@/contexts/ThemeContext'
-import { useAccount } from 'wagmi'
+import { useAccount, useChainId } from 'wagmi'
 import { VestingDashboard } from '@/components/vesting/VestingDashboard'
 import { ConnectButton } from '@/components/common/ConnectButton'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
@@ -35,7 +35,7 @@ import TokenIcon from '@mui/icons-material/Token'
 import Shield from '@mui/icons-material/Shield'
 import LightModeIcon from '@mui/icons-material/LightMode'
 import DarkModeIcon from '@mui/icons-material/DarkMode'
-import { CONTRACT_TYPES } from '@/config/contracts'
+import { CONTRACT_TYPES, TOKEN_ADDRESSES } from '@/config/contracts'
 
 interface ManualImportInfo {
   contractAddress?: string;
@@ -46,6 +46,7 @@ interface ManualImportInfo {
 
 export default function Home() {
   const { isConnected } = useAccount()
+  const chainId = useChainId()
   const theme = useTheme()
   const { isDarkMode, toggleTheme } = useThemeContext()
   const [showManualImportModal, setShowManualImportModal] = useState(false)
@@ -78,11 +79,16 @@ export default function Home() {
         icon: <AccessTimeIcon />,
         text: 'Import $FULA token in your wallet by clicking here',
         action: (wallet: string | undefined) => {
+          const tokenAddress = TOKEN_ADDRESSES[chainId] || TOKEN_ADDRESSES[31337] // fallback to local address
+
+          const networkName = chainId === 5 ? 'Goerli' :
+            chainId === 1 ? 'Ethereum Mainnet' : 'Local Network'
+
           const manualInfo = {
-            contractAddress: process.env.NEXT_PUBLIC_LOCAL_TOKEN_ADDRESS,
+            contractAddress: tokenAddress,
             symbol: 'FULA',
             decimals: 18,
-            network: contractType === CONTRACT_TYPES.VESTING ? 'Ethereum Mainnet' : 'Base Network'
+            network: networkName
           }
     
           if (typeof window.ethereum !== 'undefined' && wallet === 'MetaMask') {
@@ -95,7 +101,7 @@ export default function Home() {
                     params: {
                       type: 'ERC20',
                       options: {
-                        address: process.env.NEXT_PUBLIC_LOCAL_TOKEN_ADDRESS,
+                        address: tokenAddress,
                         symbol: 'FULA',
                         decimals: 18
                       },
