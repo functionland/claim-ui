@@ -1,5 +1,7 @@
 import { type Address } from 'viem'
 import { SupportedChain } from './constants'
+import { TOKEN_ABI, DISTRIBUTION_ABI, TESTNET_MINING_ABI, PROPOSAL_TYPES } from './abis';
+import { ROLES } from './constants';
 
 // Contract Addresses for vesting
 export const VESTING_CONTRACT_ADDRESSES: Record<number, Address> = {
@@ -246,140 +248,44 @@ export const CONTRACT_ABI = [
   },
 ] as const
 
-export const TESTNET_MINING_ABI = [
-  {
-    inputs: [{ name: "wallet", type: "address" }],
-    name: "getSubstrateRewards",
-    outputs: [
-      { name: "lastUpdate", type: "uint256" },
-      { name: "amount", type: "uint256" }
-    ],
-    stateMutability: "view",
-    type: "function"
-  },
-  {
-    inputs: [
-      { name: "wallet", type: "address" },
-      { name: "substrateWallet", type: "string" },
-      { name: "capId", type: "uint256" }
-    ],
-    name: "calculateDueTokens",
-    outputs: [{ type: "uint256" }],
-    stateMutability: "view",
-    type: "function"
-  },
-  {
-    inputs: [
-      { internalType: 'string',name: "substrateWallet", type: "string" },
-      { internalType: 'uint256', name: "capId", type: "uint256" }
-    ],
-    name: "claimTokens",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function"
-  },
-  {
-    inputs: [{ name: "capId", type: "uint256" }],
-    name: "getWalletsInCap",
-    outputs: [{ type: "address[]" }],
-    stateMutability: "view",
-    type: "function"
-  },
-  {
-    inputs: [{ name: "", type: "uint256" }],
-    name: "vestingCaps",
-    outputs: [
-      { name: "totalAllocation", type: "uint256" },
-      { name: "name", type: "bytes32" },
-      { name: "cliff", type: "uint256" },
-      { name: "vestingTerm", type: "uint256" },
-      { name: "vestingPlan", type: "uint256" },
-      { name: "initialRelease", type: "uint256" },
-      { name: "startDate", type: "uint256" },
-      { name: "allocatedToWallets", type: "uint256" },
-      { name: "maxRewardsPerMonth", type: "uint256" },
-      { name: "ratio", type: "uint256" }
-    ],
-    stateMutability: "view",
-    type: "function"
-  },
-  {
-    inputs: [
-      { name: "", type: "address" },
-      { name: "", type: "uint256" }
-    ],
-    name: "vestingWallets",
-    outputs: [
-      { name: "capId", type: "uint256" },
-      { name: "name", type: "bytes32" },
-      { name: "amount", type: "uint256" },
-      { name: "claimed", type: "uint256" },
-      { name: "monthlyClaimedRewards", type: "uint256" },
-      { name: "lastClaimMonth", type: "uint256" }
-    ],
-    stateMutability: "view",
-    type: "function"
-  },
-  {
-    inputs: [{ name: "", type: "address" }],
-    name: "substrateRewardInfo",
-    outputs: [
-      { name: "amount", type: "uint256" },
-      { name: "lastUpdate", type: "uint256" }
-    ],
-    stateMutability: "view",
-    type: "function"
-  },
-  {
-    inputs: [{ name: "", type: "uint256" }],
-    name: "capIds",
-    outputs: [{ type: "uint256" }],
-    stateMutability: "view",
-    type: "function"
-  },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, name: "beneficiary", type: "address" },
-      { indexed: false, name: "amount", type: "uint256" }
-    ],
-    name: "TokensClaimed",
-    type: "event"
-  },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, name: "beneficiary", type: "address" },
-      { indexed: true, name: "capId", type: "uint256" },
-      { indexed: false, name: "amount", type: "uint256" }
-    ],
-    name: "ClaimProcessed",
-    type: "event"
-  }
-] as const;
-
 // Contract Types
 export const CONTRACT_TYPES = {
+  TOKEN: 'token',
   VESTING: 'vesting',
   AIRDROP: 'airdrop',
-  TESTNET_MINING: 'testnet_mining'
+  TESTNET_MINING: 'testnet_mining',
 } as const
 
-// Contract Config
-export const CONTRACT_CONFIG = {
+export type ContractType = typeof CONTRACT_TYPES[keyof typeof CONTRACT_TYPES];
+
+interface ContractConfig {
   address: {
+    [key in ContractType]: {
+      [chainId: number]: `0x${string}`;
+    };
+  };
+  abi: {
+    [key in ContractType]: readonly any[];
+  };
+}
+
+export const CONTRACT_CONFIG: ContractConfig = {
+  address: {
+    [CONTRACT_TYPES.TOKEN]: TOKEN_ADDRESSES,
     [CONTRACT_TYPES.VESTING]: VESTING_CONTRACT_ADDRESSES,
     [CONTRACT_TYPES.AIRDROP]: AIRDROP_CONTRACT_ADDRESSES,
     [CONTRACT_TYPES.TESTNET_MINING]: TESTNET_MINING_CONTRACT_ADDRESSES
   },
   abi: {
-    [CONTRACT_TYPES.VESTING]: CONTRACT_ABI,
-    [CONTRACT_TYPES.AIRDROP]: CONTRACT_ABI,
-    [CONTRACT_TYPES.TESTNET_MINING]: TESTNET_MINING_ABI
-  }
-} as const
+    [CONTRACT_TYPES.TOKEN]: TOKEN_ABI,
+    [CONTRACT_TYPES.VESTING]: DISTRIBUTION_ABI,
+    [CONTRACT_TYPES.AIRDROP]: DISTRIBUTION_ABI,
+    [CONTRACT_TYPES.TESTNET_MINING]: TESTNET_MINING_ABI,
+  },
+};
 
-export type ContractType = typeof CONTRACT_TYPES[keyof typeof CONTRACT_TYPES]
+// Export common types and constants
+export { ROLES, PROPOSAL_TYPES };
 
 // RPC Configuration
 export const RPC_URLS: Record<SupportedChain, string> = {

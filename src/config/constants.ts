@@ -1,3 +1,5 @@
+import { keccak256, toBytes } from 'viem';
+
 export const APP_NAME = 'Token Vesting Dashboard'
 export const APP_DESCRIPTION = 'Manage and claim your vested tokens'
 
@@ -46,3 +48,30 @@ export const LINKS = {
   PRIVACY: 'https://example.com/privacy',
   SUPPORT: 'https://support.example.com',
 } as const
+
+export const ROLES = {
+  BRIDGE_OPERATOR_ROLE: keccak256(toBytes('BRIDGE_OPERATOR_ROLE')),
+  CONTRACT_OPERATOR_ROLE: keccak256(toBytes('CONTRACT_OPERATOR_ROLE')),
+  ADMIN_ROLE: keccak256(toBytes('ADMIN_ROLE')),
+} as const;
+
+export const ROLE_NAMES = {
+  [ROLES.BRIDGE_OPERATOR_ROLE]: 'Bridge Operator',
+  [ROLES.CONTRACT_OPERATOR_ROLE]: 'Contract Operator',
+  [ROLES.ADMIN_ROLE]: 'Admin',
+} as const;
+
+export const PROPOSAL_TYPES = {
+  NA: 0,
+  AddRole: 1,
+  RemoveRole: 2,
+  Upgrade: 3,
+  Recovery: 4,
+  AddWhitelist: 5,
+  RemoveWhitelist: 6,
+  AddDistributionWallets: 7,
+  RemoveDistributionWallet: 8,
+  AddToBlacklist: 9,
+  RemoveFromBlacklist: 10,
+  ChangeTreasuryFee: 11
+} as const;
