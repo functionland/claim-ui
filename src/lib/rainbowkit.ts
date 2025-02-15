@@ -2,7 +2,6 @@ import {
     getDefaultWallets,
     connectorsForWallets,
     Wallet,
-    Chain,
     RainbowKitProvider,
     darkTheme,
     lightTheme,

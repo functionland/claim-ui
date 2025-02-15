@@ -1,15 +1,6 @@
 import { useAccount, useBalance, useNetwork } from 'wagmi'
 import { useState, useEffect } from 'react'
 
-interface WalletInfo {
-  address: string | undefined
-  ensName: string | null
-  balance: bigint
-  chainId: number
-  isConnected: boolean
-  isSupported: boolean
-}
-
 export function useWalletInfo() {
   const { address, isConnected } = useAccount()
   const { chain } = useNetwork()
