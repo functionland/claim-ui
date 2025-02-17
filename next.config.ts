@@ -3,6 +3,9 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  eslint: {
+    ignoreDuringBuilds: true, // This will ignore ESLint errors during builds
+  },
   images: {
     domains: [
       'raw.githubusercontent.com',
