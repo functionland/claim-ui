@@ -94,7 +94,7 @@ WorkingDirectory=${APP_DIR}
 Environment=NODE_ENV=production
 Environment=PORT=3000
 ExecStart=/usr/bin/node ${APP_DIR}/.next/standalone/server.js
-EnvironmentFile=${APP_DIR}/.env.local
+EnvironmentFile=${APP_DIR}/.env
 Restart=on-failure
 RestartSec=120
 StartLimitInterval=1200
