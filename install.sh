@@ -173,3 +173,6 @@ setup_ssl
 echo "Setup completed successfully!"
 echo "You can check the service status with: sudo systemctl status ${SERVICE_NAME}"
 echo "The application should be accessible at https://${DOMAIN}"
+
+# give x+o permission to APP DIR and parents
+# owner of next folder should be www-data

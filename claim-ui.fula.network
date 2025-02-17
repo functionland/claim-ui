@@ -5,6 +5,16 @@ server {
         access_log off; # Optional: Disable access logs for static files
         expires max;    # Optional: Cache static files for performance
     }
+    location /favicon.png {
+        alias /home/nodejs/claim-ui/public/favicon.png;
+        access_log off; # Optional: Disable access logs for static files
+        expires max;    # Optional: Cache static files for performance
+    }
+    location /images/ {
+        alias /home/nodejs/claim-ui/public/images/;
+        access_log off; # Optional: Disable access logs for static files
+        expires max;    # Optional: Cache static files for performance
+    }
     location / {
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;

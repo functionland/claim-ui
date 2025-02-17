@@ -242,6 +242,9 @@ export default function Home() {
                       alt="Logo"
                       fill
                       style={{ objectFit: 'contain' }}
+                      unoptimized
+                      width={40}
+                      height={40}
                     />
                   </Box>
                 </Box>
