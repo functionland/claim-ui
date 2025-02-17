@@ -9,16 +9,20 @@ const nextConfig: NextConfig = {
   images: {
     domains: [
       'raw.githubusercontent.com',
-      'github.com',
+      'assets.coingecko.com',
     ],
     remotePatterns: [
       {
+        protocol: 'https',
         hostname: '**',
       },
     ],
     unoptimized: true,
-    loader: 'custom',
-    path: 'https://claim-ui.fula.network/images',
+    localPatterns: [
+      {
+        pathname: '/images/**',
+      },
+    ],
   },
   experimental: {
     turbo: {
