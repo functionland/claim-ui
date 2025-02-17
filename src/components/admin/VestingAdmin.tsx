@@ -45,8 +45,6 @@ export function VestingAdmin() {
   })
 
   const {
-    vestingCaps,
-    vestingWallets,
     vestingProposals,
     createVestingCap,
     addVestingWallet,
@@ -168,7 +166,7 @@ export function VestingAdmin() {
     try {
       setError(null)
       setIsSettingTGE(true)
-      await setTGE(formData.tgeTime)
+      await setTGE(Number(formData.tgeTime))
     } catch (error: any) {
       setError(error.message)
     } finally {

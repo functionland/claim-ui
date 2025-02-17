@@ -45,8 +45,6 @@ export function TestnetMiningAdmin() {
   })
 
   const {
-    vestingCaps,
-    vestingWallets,
     testnetMiningProposals,
     createVestingCap,
     addVestingWallet,
@@ -168,7 +166,7 @@ export function TestnetMiningAdmin() {
     try {
       setError(null)
       setIsSettingTGE(true)
-      await setTGE(formData.tgeTime)
+      await setTGE(Number(formData.tgeTime))
     } catch (error: any) {
       setError(error.message)
     } finally {

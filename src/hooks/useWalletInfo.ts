@@ -1,20 +1,22 @@
-import { useAccount, useBalance, useNetwork } from 'wagmi'
+import { useAccount, useBalance, useChainId } from 'wagmi'
 import { useState, useEffect } from 'react'
 
 export function useWalletInfo() {
   const { address, isConnected } = useAccount()
-  const { chain } = useNetwork()
+  const chainId = useChainId()
   const [ensName, setEnsName] = useState<string | null>(null)
 
   const { data: balance } = useBalance({
     address,
-    enabled: !!address,
+    query: {
+      enabled: !!address
+    }
   })
 
   // Fetch ENS name if on mainnet
   useEffect(() => {
     const fetchEnsName = async () => {
-      if (address && chain?.id === 1) {
+      if (address && chainId === 1) {
         try {
           const response = await fetch(`https://api.ensideas.com/ens/resolve/${address}`)
           const data = await response.json()
@@ -27,14 +29,14 @@ export function useWalletInfo() {
     }
 
     fetchEnsName()
-  }, [address, chain?.id])
+  }, [address, chainId])
 
   return {
     address,
     ensName,
     balance: balance?.value || 0n,
-    chainId: chain?.id || 1,
+    chainId,
     isConnected,
-    isSupported: chain?.unsupported !== true,
+    isSupported: true, // Removed chain?.unsupported check as useChainId returns a number
   }
 }

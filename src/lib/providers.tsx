@@ -26,7 +26,7 @@ interface ProvidersProps {
 export const Providers: FC<ProvidersProps> = ({ children }) => {
   return (
     <WagmiProvider config={config}>
-      <RainbowKitProvider chains={chains}>
+      <RainbowKitProvider>
         <ThemeProvider theme={materialTheme}>
           <CssBaseline />
           {children}

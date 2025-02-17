@@ -1,7 +1,7 @@
 import { useReadContract } from 'wagmi'
 import { useState, useEffect } from 'react'
 import { formatUnits, type Address } from 'viem'
-import { CONTRACT_ABI } from '@/config/contracts'
+import { TOKEN_ABI } from '@/config/abis'
 
 interface TokenBalance {
   balance: bigint
@@ -29,7 +29,7 @@ export function useTokenBalance(
   // Get token balance
   const { data: balance, error: balanceError } = useReadContract({
     address: tokenAddress,
-    abi: CONTRACT_ABI,
+    abi: TOKEN_ABI,
     functionName: 'balanceOf',
     args: [walletAddress],
     query: {
@@ -40,7 +40,7 @@ export function useTokenBalance(
   // Get token symbol
   const { data: symbol } = useReadContract({
     address: tokenAddress,
-    abi: CONTRACT_ABI,
+    abi: TOKEN_ABI,
     functionName: 'symbol',
     query: {
       enabled: Boolean(tokenAddress),

@@ -39,7 +39,9 @@ export function useVestingContract() {
     abi: contractAbi,
     functionName: 'getWalletsInCap',
     args: [BigInt(1)],
-    enabled: !!contractAddress
+    query: {
+      enabled: !!contractAddress
+    }
   })
 
   console.log("Wallets in Cap 1:", walletsInCap)
@@ -99,7 +101,7 @@ export function useVestingContract() {
               address: contractAddress,
               abi: contractAbi,
               functionName: 'capIds',
-              args: [BigInt(index)],
+              args: [BigInt(index)]
             }) as bigint;
             
             foundCapIds.push(capId);
@@ -115,7 +117,7 @@ export function useVestingContract() {
             address: contractAddress,
             abi: contractAbi,
             functionName: 'getWalletsInCap',
-            args: [capId],
+            args: [capId]
           }) as Address[]
 
           if (walletsInThisCap.includes(userAddress as Address)) {
@@ -124,7 +126,7 @@ export function useVestingContract() {
               address: contractAddress,
               abi: contractAbi,
               functionName: 'vestingCaps',
-              args: [capId],
+              args: [capId]
             }) as readonly [bigint, `0x${string}`, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
 
             const cap: VestingCap = {
@@ -143,7 +145,7 @@ export function useVestingContract() {
               address: contractAddress,
               abi: contractAbi,
               functionName: 'vestingWallets',
-              args: [userAddress as Address, capId],
+              args: [userAddress as Address, capId]
             }) as any
 
             let claimableAmount = BigInt(0)
@@ -156,7 +158,7 @@ export function useVestingContract() {
                   address: contractAddress,
                   abi: contractAbi,
                   functionName: 'calculateDueTokens',
-                  args: [userAddress as Address, substrateWallet, capId],
+                  args: [userAddress as Address, substrateWallet, capId]
                 }) as bigint
                 console.log("Claimable amount:", claimableAmount);
               }
@@ -169,7 +171,7 @@ export function useVestingContract() {
               address: contractAddress,
               abi: contractAbi,
               functionName: 'getSubstrateRewards',
-              args: [userAddress as Address],
+              args: [userAddress as Address]
             }) as [bigint, bigint]
 
             const [_capId, walletName, amount, claimed, monthlyClaimedRewards, lastClaimMonth] = walletInfo
@@ -179,16 +181,18 @@ export function useVestingContract() {
               capId: Number(capId),
               name: decodeBytes32String(name),
               totalAllocation,
-              cliff,
-              vestingTerm,
-              vestingPlan,
-              initialRelease,
-              startDate,
+              claimed: BigInt(0),  // Initialize as 0
+              claimable: claimableAmount || BigInt(0),  // Use claimableAmount if available, otherwise 0
+              cliff: Number(cliff),
+              vestingTerm: Number(vestingTerm),
+              vestingPlan: Number(vestingPlan),
+              initialRelease: Number(initialRelease),
+              startDate: Number(startDate),
               allocatedToWallets,
               maxRewardsPerMonth,
               ratio,
               walletInfo: {
-                capId: Number(_capId),
+                capId: _capId,
                 name: decodeBytes32String(walletName),
                 amount,
                 claimed,
@@ -218,6 +222,7 @@ export function useVestingContract() {
             address: contractAddress,
             abi: contractAbi,
             functionName: 'capIds',
+            args: []
           }) as bigint[]
 
           if (index >= capIds.length) break
@@ -228,7 +233,7 @@ export function useVestingContract() {
             address: contractAddress,
             abi: contractAbi,
             functionName: 'vestingCaps',
-            args: [capId],
+            args: [capId]
           }) as readonly [bigint, `0x${string}`, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
 
           const cap: VestingCap = {
@@ -248,7 +253,7 @@ export function useVestingContract() {
             address: contractAddress,
             abi: contractAbi,
             functionName: 'getWalletsInCap',
-            args: [capId],
+            args: [capId]
           }) as Address[]
 
           console.log(`Cap ${capId} wallets:`, walletsInThisCap)
@@ -261,7 +266,7 @@ export function useVestingContract() {
               address: contractAddress,
               abi: contractAbi,
               functionName: 'vestingWallets',
-              args: [userAddress as Address, capId],
+              args: [userAddress as Address, capId]
             })
 
             try {
@@ -270,7 +275,7 @@ export function useVestingContract() {
                 address: contractAddress,
                 abi: contractAbi,
                 functionName: 'calculateDueTokens',
-                args: [userAddress as Address, capId],
+                args: [userAddress as Address, capId]
               }) as bigint
             } catch (error: any) {
               errorMessage = parseContractError(error);
@@ -285,15 +290,23 @@ export function useVestingContract() {
             newVestingData.set(Number(capId), {
               capId: Number(capId),
               name: decodeBytes32String(name),
-              totalAllocation: amount,
-              claimed: claimed,
-              claimable: claimableAmount,
+              totalAllocation,
+              claimed: BigInt(0),  // Initialize as 0
+              claimable: claimableAmount || BigInt(0),  // Use claimableAmount if available, otherwise 0
+              cliff: Number(cliff),
+              vestingTerm: Number(vestingTerm),
+              vestingPlan: Number(vestingPlan),
               initialRelease: Number(initialRelease),
-              cliff: Number(cliff) / 86400,
-              vestingTerm: Number(vestingTerm) / (30 * 86400),
-              vestingPlan: Number(vestingPlan) / (30 * 86400),
-              startDate: Number(startDate) * 1000,
-              errorMessage: errorMessage,
+              startDate: Number(startDate),
+              errorMessage,
+              walletInfo: {
+                capId: _capId,
+                name: decodeBytes32String(walletName),
+                amount,
+                claimed,
+                claimableAmount,
+                errorMessage
+              }
             })
           }
           
@@ -336,7 +349,7 @@ export function useVestingContract() {
           address: contractAddress as Address,
           abi: contractAbi,
           functionName: 'getWalletsInCap',
-          args: [BigInt(0)],
+          args: [BigInt(0)]
         }) as Address[]
 
         if (!walletsInCap || !publicClient || !contractAddress) return
@@ -354,7 +367,7 @@ export function useVestingContract() {
                 address: contractAddress,
                 abi: contractAbi,
                 functionName: 'capIds',
-                args: [BigInt(index)],
+                args: [BigInt(index)]
               }) as bigint;
               
               foundCapIds.push(capId);
@@ -370,7 +383,7 @@ export function useVestingContract() {
               address: contractAddress,
               abi: contractAbi,
               functionName: 'getWalletsInCap',
-              args: [capId],
+              args: [capId]
             }) as Address[]
 
             if (walletsInThisCap.includes(userAddress as Address)) {
@@ -379,7 +392,7 @@ export function useVestingContract() {
                 address: contractAddress,
                 abi: contractAbi,
                 functionName: 'vestingCaps',
-                args: [capId],
+                args: [capId]
               }) as readonly [bigint, `0x${string}`, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
 
               const cap: VestingCap = {
@@ -398,7 +411,7 @@ export function useVestingContract() {
                 address: contractAddress,
                 abi: contractAbi,
                 functionName: 'vestingWallets',
-                args: [userAddress as Address, capId],
+                args: [userAddress as Address, capId]
               }) as any
 
               let claimableAmount = BigInt(0)
@@ -410,7 +423,7 @@ export function useVestingContract() {
                     address: contractAddress,
                     abi: contractAbi,
                     functionName: 'calculateDueTokens',
-                    args: [userAddress as Address, substrateWallet, capId],
+                    args: [userAddress as Address, substrateWallet, capId]
                   }) as bigint
                 }
               } catch (error) {
@@ -422,7 +435,7 @@ export function useVestingContract() {
                 address: contractAddress,
                 abi: contractAbi,
                 functionName: 'getSubstrateRewards',
-                args: [userAddress as Address],
+                args: [userAddress as Address]
               }) as [bigint, bigint]
 
               const [_capId, walletName, amount, claimed, monthlyClaimedRewards, lastClaimMonth] = walletInfo
@@ -432,16 +445,18 @@ export function useVestingContract() {
                 capId: Number(capId),
                 name: decodeBytes32String(name),
                 totalAllocation,
-                cliff,
-                vestingTerm,
-                vestingPlan,
-                initialRelease,
-                startDate,
+                claimed: BigInt(0),  // Initialize as 0
+                claimable: claimableAmount || BigInt(0),  // Use claimableAmount if available, otherwise 0
+                cliff: Number(cliff),
+                vestingTerm: Number(vestingTerm),
+                vestingPlan: Number(vestingPlan),
+                initialRelease: Number(initialRelease),
+                startDate: Number(startDate),
                 allocatedToWallets,
                 maxRewardsPerMonth,
                 ratio,
                 walletInfo: {
-                  capId: Number(_capId),
+                  capId: _capId,
                   name: decodeBytes32String(walletName),
                   amount,
                   claimed,
@@ -471,7 +486,7 @@ export function useVestingContract() {
               address: contractAddress,
               abi: contractAbi,
               functionName: 'capIds',
-              args: [BigInt(index)],
+              args: [BigInt(index)]
             }) as bigint;
             
             foundCapIds.push(capId);
@@ -492,7 +507,7 @@ export function useVestingContract() {
               address: contractAddress,
               abi: contractAbi,
               functionName: 'vestingCaps',
-              args: [capId],
+              args: [capId]
             }) as readonly [bigint, `0x${string}`, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
 
             const cap: VestingCap = {
@@ -512,7 +527,7 @@ export function useVestingContract() {
               address: contractAddress,
               abi: contractAbi,
               functionName: 'getWalletsInCap',
-              args: [capId],
+              args: [capId]
             }) as Address[]
 
             console.log(`Cap ${capId} wallets:`, walletsInThisCap)
@@ -525,7 +540,7 @@ export function useVestingContract() {
                 address: contractAddress,
                 abi: contractAbi,
                 functionName: 'vestingWallets',
-                args: [userAddress as Address, capId],
+                args: [userAddress as Address, capId]
               })
 
               try {
@@ -534,7 +549,7 @@ export function useVestingContract() {
                   address: contractAddress,
                   abi: contractAbi,
                   functionName: 'calculateDueTokens',
-                  args: [userAddress as Address, capId],
+                  args: [userAddress as Address, capId]
                 }) as bigint
               } catch (error: any) {
                 errorMessage = parseContractError(error);
@@ -549,15 +564,23 @@ export function useVestingContract() {
               newVestingData.set(Number(capId), {
                 capId: Number(capId),
                 name: decodeBytes32String(name),
-                totalAllocation: amount,
-                claimed: claimed,
-                claimable: claimableAmount,
+                totalAllocation,
+                claimed: BigInt(0),  // Initialize as 0
+                claimable: claimableAmount || BigInt(0),  // Use claimableAmount if available, otherwise 0
+                cliff: Number(cliff),
+                vestingTerm: Number(vestingTerm),
+                vestingPlan: Number(vestingPlan),
                 initialRelease: Number(initialRelease),
-                cliff: Number(cliff) / 86400,
-                vestingTerm: Number(vestingTerm) / (30 * 86400),
-                vestingPlan: Number(vestingPlan) / (30 * 86400),
-                startDate: Number(startDate) * 1000,
-                errorMessage: errorMessage,
+                startDate: Number(startDate),
+                errorMessage,
+                walletInfo: {
+                  capId: _capId,
+                  name: decodeBytes32String(walletName),
+                  amount,
+                  claimed,
+                  claimableAmount,
+                  errorMessage
+                }
               })
             }
             

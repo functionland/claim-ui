@@ -154,70 +154,90 @@ export function useAdminContract() {
     address: contractAddress,
     abi: contractAbi,
     functionName: 'getProposals',
-    enabled: !!contractAddress && activeContract === CONTRACT_TYPES.TOKEN,
+    query: {
+      enabled: !!contractAddress && activeContract === CONTRACT_TYPES.TOKEN
+    }
   })
 
   const { data: vestingProposals } = useReadContract({
     address: contractAddress,
     abi: contractAbi,
     functionName: 'getProposals',
-    enabled: !!contractAddress && activeContract === CONTRACT_TYPES.VESTING,
+    query: {
+      enabled: !!contractAddress && activeContract === CONTRACT_TYPES.VESTING
+    }
   })
 
   const { data: airdropProposals } = useReadContract({
     address: contractAddress,
     abi: contractAbi,
     functionName: 'getProposals',
-    enabled: !!contractAddress && activeContract === CONTRACT_TYPES.AIRDROP,
+    query: {
+      enabled: !!contractAddress && activeContract === CONTRACT_TYPES.AIRDROP
+    }
   })
 
   const { data: testnetMiningProposals } = useReadContract({
     address: contractAddress,
     abi: contractAbi,
     functionName: 'getProposals',
-    enabled: !!contractAddress && activeContract === CONTRACT_TYPES.TESTNET_MINING,
+    query: {
+      enabled: !!contractAddress && activeContract === CONTRACT_TYPES.TESTNET_MINING
+    }
   })
 
   const { data: vestingCaps } = useReadContract({
     address: contractAddress,
     abi: contractAbi,
     functionName: 'getVestingCaps',
-    enabled: !!contractAddress && activeContract === CONTRACT_TYPES.VESTING,
+    query: {
+      enabled: !!contractAddress && activeContract === CONTRACT_TYPES.VESTING
+    }
   })
 
   const { data: vestingWallets } = useReadContract({
     address: contractAddress,
     abi: contractAbi,
     functionName: 'getVestingWallets',
-    enabled: !!contractAddress && activeContract === CONTRACT_TYPES.VESTING,
+    query: {
+      enabled: !!contractAddress && activeContract === CONTRACT_TYPES.VESTING
+    }
   })
 
   const { data: airdropCaps } = useReadContract({
     address: contractAddress,
     abi: contractAbi,
     functionName: 'getVestingCaps',
-    enabled: !!contractAddress && activeContract === CONTRACT_TYPES.AIRDROP,
+    query: {
+      enabled: !!contractAddress && activeContract === CONTRACT_TYPES.AIRDROP
+    }
   })
 
   const { data: airdropWallets } = useReadContract({
     address: contractAddress,
     abi: contractAbi,
     functionName: 'getVestingWallets',
-    enabled: !!contractAddress && activeContract === CONTRACT_TYPES.AIRDROP,
+    query: {
+      enabled: !!contractAddress && activeContract === CONTRACT_TYPES.AIRDROP
+    }
   })
 
   const { data: testnetMiningCaps } = useReadContract({
     address: contractAddress,
     abi: contractAbi,
     functionName: 'getVestingCaps',
-    enabled: !!contractAddress && activeContract === CONTRACT_TYPES.TESTNET_MINING,
+    query: {
+      enabled: !!contractAddress && activeContract === CONTRACT_TYPES.TESTNET_MINING
+    }
   })
 
   const { data: testnetMiningWallets } = useReadContract({
     address: contractAddress,
     abi: contractAbi,
     functionName: 'getVestingWallets',
-    enabled: !!contractAddress && activeContract === CONTRACT_TYPES.TESTNET_MINING,
+    query: {
+      enabled: !!contractAddress && activeContract === CONTRACT_TYPES.TESTNET_MINING
+    }
   })
 
   type TimeConfig = {
@@ -244,7 +264,7 @@ export function useAdminContract() {
         abi: contractAbi,
         functionName: 'timeConfigs',
         args: [address as Address],
-      });
+      }) as TimeConfig;
 
       // If whitelistLockTime is not 0, the address is whitelisted
       return timeConfig.whitelistLockTime > 0n;
@@ -308,8 +328,8 @@ export function useAdminContract() {
     }
   }, [contractAddress, chainId, activeContract]);
 
-  const refetchWhitelistedAddresses = () => {
-    fetchWhitelistedAddresses();
+  const refetchWhitelistedAddresses = async () => {
+    return await fetchWhitelistedAddresses();
   };
 
   // Token contract functions
@@ -463,6 +483,7 @@ export function useAdminContract() {
         abi: contractAbi,
         functionName: 'initiateTGE',
         account: userAddress,
+        args: []  // Add empty args array
       });
 
       // If simulation succeeds, send the transaction
@@ -542,11 +563,12 @@ export function useAdminContract() {
         initialReleasePercent: initialReleasePercent.toString()
       })
 
-      // Call the contract method
-      const hash = await writeContractAsync({
+      // First simulate the transaction
+      const { request } = await publicClient.simulateContract({
         address: contractAddress,
         abi: contractAbi,
         functionName: 'addVestingCap',
+        account: userAddress,
         args: [
           nextCapId,
           nameBytes32,
@@ -556,8 +578,10 @@ export function useAdminContract() {
           vestingPlanMonths,
           initialReleasePercent
         ],
-      })
+      });
 
+      // If simulation succeeds, send the transaction
+      const hash = await writeContractAsync(request);
       return hash
     } catch (err) {
       console.error('Error creating vesting cap:', err)
@@ -644,7 +668,7 @@ export function useAdminContract() {
 
   type RoleConfig = {
     transactionLimit: bigint;
-    quorum: number;
+    quorum: bigint;
   };
 
   type RoleConfigInfo = {
@@ -687,7 +711,7 @@ export function useAdminContract() {
           abi: contractAbi,
           functionName: 'roleConfigs',
           args: [role],
-        });
+        }) as { transactionLimit: bigint; quorum: bigint };
 
         return {
           role,
@@ -732,33 +756,25 @@ export function useAdminContract() {
     }
   };
 
-  const setRoleQuorum = async (role: string, quorum: number) => {
+  const setRoleQuorum = async (role: string, quorum: bigint) => {
     if (!contractAddress) throw new Error('Contract address not found');
     if (!userAddress) throw new Error('Please connect your wallet');
     if (!publicClient) throw new Error('Public client not found');
-    if (quorum <= 1) throw new Error('Quorum must be greater than 1');
 
     try {
-      console.log(`setRoleQuorum simulating ${role} ${quorum}`)
-      const quorumBigInt = BigInt(quorum)
       const { request } = await publicClient.simulateContract({
         address: contractAddress,
         abi: contractAbi,
         functionName: 'setRoleQuorum',
-        args: [role as `0x${string}`, quorumBigInt],
         account: userAddress,
+        args: [role, quorum]
       });
-      console.log("setRoleQuorum request:", request)
 
       const hash = await writeContractAsync(request);
-      await publicClient.waitForTransactionReceipt({ hash });
-      
-      // Refetch role configs after update
-      await fetchRoleConfigs();
       return hash;
-    } catch (error: any) {
-      console.error('Error setting role quorum:', error);
-      throw error;
+    } catch (err) {
+      console.error('Error setting role quorum:', err);
+      throw err;
     }
   };
 
@@ -800,7 +816,7 @@ export function useAdminContract() {
         throw new Error('Quorum must be a number between 1 and 65535');
       }
       console.log(`setting role quorum for ${role}: ${quorumValue}`)
-      return setRoleQuorum(role, quorumValue);
+      return setRoleQuorum(role, BigInt(quorumValue));
     } catch (error: any) {
       if (error.message) {
         throw new Error(error.message);
@@ -830,11 +846,11 @@ export function useAdminContract() {
       const [base, exponent] = config[1].toString().split('e+').map(Number);
       const fullNumber = base * Math.pow(10, exponent);
       const transactionLimit = BigInt(Math.floor(fullNumber));
-      const quorum = Number(config[0]);
+      const quorum = BigInt(Number(config[0]));
       
       console.log('Processed role config:', { 
         transactionLimit: transactionLimit.toString(), 
-        quorum 
+        quorum: quorum.toString() 
       });
       
       return {
@@ -915,7 +931,9 @@ export function useAdminContract() {
     address: contractAddress,
     abi: contractAbi,
     functionName: 'proposalCount',
-    enabled: !!contractAddress && (activeContract === CONTRACT_TYPES.TOKEN || activeContract === CONTRACT_TYPES.VESTING || activeContract === CONTRACT_TYPES.AIRDROP || activeContract === CONTRACT_TYPES.TESTNET_MINING),
+    query: {
+      enabled: !!contractAddress && (activeContract === CONTRACT_TYPES.TOKEN || activeContract === CONTRACT_TYPES.VESTING || activeContract === CONTRACT_TYPES.AIRDROP || activeContract === CONTRACT_TYPES.TESTNET_MINING),
+    }
   })
 
   const [tokenProposalList, setTokenProposalList] = useState<(UnifiedProposal & { proposalId: string })[]>([])

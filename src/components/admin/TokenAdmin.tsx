@@ -821,7 +821,7 @@ export function TokenAdmin() {
     const fetchAddresses = async () => {
       try {
         const addresses = await refetchWhitelistedAddresses();
-        setWhitelistedAddresses(addresses);
+        setWhitelistedAddresses(addresses || []);
       } catch (error: any) {
         console.error('Error fetching whitelisted addresses:', error);
         setError(error.message || 'Failed to fetch whitelisted addresses');

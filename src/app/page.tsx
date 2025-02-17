@@ -3,6 +3,7 @@
 import { Tabs, Tab } from '@mui/material'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useContractContext } from '@/contexts/ContractContext'
+import { ContractType } from '@/config/contracts'
 import { useThemeContext } from '@/contexts/ThemeContext'
 import { useAccount, useChainId } from 'wagmi'
 import { VestingDashboard } from '@/components/vesting/VestingDashboard'
@@ -172,7 +173,7 @@ export default function Home() {
   }
 
   const instructions = getInstructions(activeContract)
-  const handleTabChange = (_, newValue: string) => {
+  const handleTabChange = (_, newValue: typeof CONTRACT_TYPES[keyof typeof CONTRACT_TYPES]) => {
     if (newValue !== activeContract) {
       setActiveContract(newValue)
       router.replace(`?type=${newValue}`, { scroll: false })

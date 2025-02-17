@@ -13,10 +13,13 @@ export interface VestingData {
   startDate: number
   errorMessage?: string
   ratio?: bigint
+  allocatedToWallets?: bigint
+  maxRewardsPerMonth?: bigint
   substrateRewards?: {
     lastUpdate: bigint
     amount: bigint
   }
+  walletInfo?: VestingWalletInfo
 }
 
 export interface VestingCap {
@@ -29,6 +32,8 @@ export interface VestingCap {
   startDate: bigint
   allocatedToWallets: bigint
   wallets: Address[]
+  maxRewardsPerMonth?: bigint
+  ratio?: bigint
 }
 
 export interface VestingWalletInfo {
@@ -36,6 +41,10 @@ export interface VestingWalletInfo {
   name: string | Uint8Array
   amount: bigint
   claimed: bigint
+  claimableAmount?: bigint
+  errorMessage?: string
+  monthlyClaimedRewards?: bigint
+  lastClaimMonth?: bigint
 }
 
 export type VestingStatus = 'Locked' | 'Available' | 'Claimed'

@@ -7,8 +7,7 @@ export const GOVERNANCE_ABI = [
     inputs: [
       {
         name: "target",
-        type: "address",
-        internalType: "address"
+        type: "address"
       }
     ]
   },
@@ -575,9 +574,35 @@ export const CONTRACT_ABI = [
   }
 ] as const;
 
+// ERC20 functions
+const ERC20_ABI = [
+  {
+    inputs: [{ name: "account", type: "address" }],
+    name: "balanceOf",
+    outputs: [{ type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "symbol",
+    outputs: [{ type: "string" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "decimals",
+    outputs: [{ type: "uint8" }],
+    stateMutability: "view",
+    type: "function"
+  }
+] as const;
+
 // Token Contract ABI
 export const TOKEN_ABI = [
   ...GOVERNANCE_ABI,
+  ...ERC20_ABI,
   // Token-specific errors
   {
     type: "error",
