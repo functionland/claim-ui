@@ -55,6 +55,7 @@ export function TestnetMiningAdmin() {
     isLoading,
     tgeStatus,
     initiateTGE,
+    cleanupExpiredProposals,
   } = useAdminContract()
 
   const [isCreatingCap, setIsCreatingCap] = useState(false)
@@ -62,6 +63,7 @@ export function TestnetMiningAdmin() {
   const [isApproving, setIsApproving] = useState(false)
   const [isExecuting, setIsExecuting] = useState(false)
   const [isSettingTGE, setIsSettingTGE] = useState(false)
+  const [isCleaning, setIsCleaning] = useState(false)
 
   const handleCreateCap = async () => {
     try {
@@ -171,6 +173,18 @@ export function TestnetMiningAdmin() {
       setError(error.message)
     } finally {
       setIsSettingTGE(false)
+    }
+  }
+
+  const handleCleanupExpiredProposals = async () => {
+    try {
+      setError(null)
+      setIsCleaning(true)
+      await cleanupExpiredProposals(10)
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setIsCleaning(false)
     }
   }
 
@@ -599,6 +613,14 @@ export function TestnetMiningAdmin() {
               </TableBody>
             </Table>
           </TableContainer>
+          <Button
+            variant="contained"
+            onClick={handleCleanupExpiredProposals}
+            disabled={isCleaning}
+            sx={{ mt: 2 }}
+          >
+            {isCleaning ? <CircularProgress size={24} /> : 'Cleanup Expired Proposals'}
+          </Button>
         </AccordionDetails>
       </Accordion>
     </Box>

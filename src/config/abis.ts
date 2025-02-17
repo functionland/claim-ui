@@ -361,6 +361,13 @@ export const GOVERNANCE_ABI = [
     name: "ProposalExecuted",
     type: "event"
   },
+  {
+    inputs: [{ type: "uint256", name: "maxProposalsToCheck" }],
+    name: "cleanupExpiredProposals",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
 ] as const;
 
 // Common Contract ABI used across multiple contracts

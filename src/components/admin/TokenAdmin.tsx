@@ -750,6 +750,14 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
                   </TableBody>
                 </Table>
               </TableContainer>
+              <Button
+                variant="contained"
+                onClick={handlers.handleCleanupExpiredProposals}
+                disabled={states.isCleaning}
+                sx={{ mt: 2 }}
+              >
+                {states.isCleaning ? <CircularProgress size={24} /> : 'Cleanup Expired Proposals'}
+              </Button>
             </AccordionDetails>
           </Accordion>
         </Grid>
@@ -803,6 +811,7 @@ export function TokenAdmin() {
     nonceEvents,
     bridgeOpEvents,
     transferFromContract,
+    cleanupExpiredProposals,
   } = useAdminContract()
 
   const [isAddingToWhitelist, setIsAddingToWhitelist] = useState(false)
@@ -814,6 +823,7 @@ export function TokenAdmin() {
   const [isWhitelisting, setIsWhitelisting] = useState(false)
   const [isSettingNonce, setIsSettingNonce] = useState(false)
   const [isTransferring, setIsTransferring] = useState(false)
+  const [isCleaning, setIsCleaning] = useState(false)
   const [whitelistedAddresses, setWhitelistedAddresses] = useState<string[]>([]);
 
   // Add this effect to fetch whitelisted addresses when component mounts
@@ -991,6 +1001,18 @@ export function TokenAdmin() {
     }
   }
 
+  const handleCleanupExpiredProposals = async () => {
+    try {
+      setError(null)
+      setIsCleaning(true)
+      await cleanupExpiredProposals(10)
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setIsCleaning(false)
+    }
+  }
+
   const handlers = {
     handleAddToWhitelist,
     handleSetTransactionLimit,
@@ -1003,6 +1025,7 @@ export function TokenAdmin() {
     handleSetBridgeOpNonce,
     handleBridgeOp,
     handleTransfer,
+    handleCleanupExpiredProposals,
   }
 
   const states = {
@@ -1016,6 +1039,7 @@ export function TokenAdmin() {
     isSettingNonce,
     isBridgeOp,
     isTransferring,
+    isCleaning,
   }
 
   const data = {

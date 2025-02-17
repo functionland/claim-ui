@@ -1258,6 +1258,27 @@ export function useAdminContract() {
     }
   }
 
+  const cleanupExpiredProposals = async (maxProposalsToCheck: number) => {
+    if (!contractAddress) throw new Error('Contract address not found');
+    if (!userAddress) throw new Error('Please connect your wallet');
+
+    try {
+      const { request } = await publicClient.simulateContract({
+        address: contractAddress,
+        abi: contractAbi,
+        functionName: 'cleanupExpiredProposals',
+        args: [BigInt(maxProposalsToCheck)],
+        account: userAddress,
+      });
+
+      const hash = await writeContractAsync(request);
+      return hash;
+    } catch (error: any) {
+      console.error('Error cleaning up expired proposals:', error);
+      throw error;
+    }
+  };
+
   return {
     whitelistInfo,
     whitelistedAddresses,
@@ -1294,5 +1315,6 @@ export function useAdminContract() {
     handleSetRoleQuorum,
     checkRoleConfig,
     roleConfigs,
+    cleanupExpiredProposals,
   }
 }
