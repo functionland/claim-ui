@@ -829,7 +829,7 @@ export function TokenAdmin() {
     };
 
     fetchAddresses();
-  }, [refetchWhitelistedAddresses]);
+  }, []);
 
   const handleAddToWhitelist = async () => {
     try {
