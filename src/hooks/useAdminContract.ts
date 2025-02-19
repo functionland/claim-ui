@@ -717,6 +717,42 @@ export function useAdminContract() {
     }
   };
 
+  const createProposal = async (
+    proposalType: number,
+    id: number,
+    target: string,
+    role: string,
+    amount: string,
+    tokenAddress: string
+  ) => {
+    if (!contractAddress) throw new Error('Contract address not found');
+
+    try {
+      // First simulate the transaction
+      const { request } = await publicClient.simulateContract({
+        address: contractAddress,
+        abi: contractAbi,
+        functionName: 'createProposal',
+        args: [
+          BigInt(proposalType),
+          BigInt(id),
+          target as Address,
+          role,
+          ethers.parseEther(amount),
+          tokenAddress as Address,
+        ],
+        account: userAddress,
+      });
+
+      // If simulation succeeds, send the transaction
+      const hash = await writeContractAsync(request);
+      return hash;
+    } catch (err: any) {
+      console.error('Error creating proposal:', err);
+      throw new Error(err.message);
+    }
+  };
+
   type RoleConfig = {
     transactionLimit: bigint;
     quorum: bigint;
@@ -1367,6 +1403,7 @@ export function useAdminContract() {
     checkRoleConfig,
     roleConfigs,
     createCap,
+    createProposal,
     cleanupExpiredProposals,
   }
 }

@@ -57,6 +57,10 @@ export function VestingAdmin() {
     tgeStatus,
     initiateTGE,
     cleanupExpiredProposals,
+    createProposal,
+    contractAddress,
+    contractAbi,
+    signer,
   } = useAdminContract()
 
   const [isCreatingCap, setIsCreatingCap] = useState(false)
@@ -65,6 +69,8 @@ export function VestingAdmin() {
   const [isExecuting, setIsExecuting] = useState(false)
   const [isSettingTGE, setIsSettingTGE] = useState(false)
   const [isCleaning, setIsCleaning] = useState(false)
+  const [isUpgrading, setIsUpgrading] = useState(false)
+  const [upgradeAddress, setUpgradeAddress] = useState('')
 
   const handleCreateVestingCap = async () => {
     try {
@@ -200,6 +206,35 @@ export function VestingAdmin() {
       setIsCleaning(false)
     }
   }
+
+  const handleCreateUpgradeProposal = async () => {
+    try {
+      setIsUpgrading(true);
+      setError(null);
+
+      console.log(`Upgrade Address: ${upgradeAddress}`);
+      if (!ethers.isAddress(upgradeAddress)) {
+        throw new Error('Invalid Ethereum address');
+      }
+
+      const hash = await createProposal(
+        PROPOSAL_TYPES.Upgrade,
+        0, // id is not used for upgrade proposals
+        upgradeAddress,
+        ethers.ZeroHash,
+        '0',
+        ethers.ZeroAddress
+      );
+      console.log('Upgrade proposal created with transaction hash:', hash);
+
+      setUpgradeAddress(''); // Reset the input field
+    } catch (error: any) {
+      console.error(error);
+      setError(error.message);
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
 
   const renderVestingCapTable = () => {
     if (isLoading) {
@@ -557,6 +592,39 @@ export function VestingAdmin() {
                 </TableBody>
               </Table>
             </TableContainer>
+          )}
+        </AccordionDetails>
+      </Accordion>
+
+      <Accordion>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="h6">Upgrade Proposal</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="New Contract Address"
+                value={upgradeAddress}
+                onChange={(e) => setUpgradeAddress(e.target.value)}
+                helperText="Enter the new contract address"
+              />
+            </Grid>
+          </Grid>
+          <Box sx={{ mt: 2 }}>
+            <Button
+              variant="contained"
+              onClick={handleCreateUpgradeProposal}
+              disabled={isUpgrading}
+            >
+              {isUpgrading ? <CircularProgress size={24} /> : 'Create Upgrade Proposal'}
+            </Button>
+          </Box>
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
+            </Alert>
           )}
         </AccordionDetails>
       </Accordion>
