@@ -1170,15 +1170,13 @@ export const DISTRIBUTION_ABI = [
       { type: "uint256", name: "capId" },
       { type: "bytes32", name: "name" },
       { type: "uint256", name: "startDate" },
-      { type: "uint256", name: "capTotalAllocation" },
+      { type: "uint256", name: "totalAllocation" },
       { type: "uint256", name: "cliff" },
       { type: "uint256", name: "vestingTerm" },
       { type: "uint256", name: "vestingPlan" },
-      { type: "uint256", name: "initialRelease" },
-      { type: "uint256", name: "maxRewardsPerMonth" },
-      { type: "uint256", name: "ratio" }
+      { type: "uint256", name: "initialRelease" }
     ],
-    name: "createCap",
+    name: "addVestingCap",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function"

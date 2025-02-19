@@ -525,8 +525,10 @@ export function useAdminContract() {
   }
 
   // Vesting contract functions
-  const createVestingCap = async (
-    capName: string,
+  const addVestingCap = async (
+    capId: string,
+    name: string,
+    startDate: string,
     totalAllocation: string,
     cliff: string,
     vestingTerm: string,
@@ -538,50 +540,32 @@ export function useAdminContract() {
     }
 
     try {
-      // Find the next available cap ID
-      let nextCapId = BigInt(1)
-      if (vestingCapTable && vestingCapTable.length > 0) {
-        const maxCapId = Math.max(...vestingCapTable.map(cap => Number(cap.capId)))
-        nextCapId = BigInt(maxCapId + 1)
-      }
-
-      // Convert parameters to the correct format
-      const nameBytes32 = ethers.encodeBytes32String(capName)
+      const nameBytes32 = ethers.encodeBytes32String(name)
+      const startDateBigInt = startDate ? BigInt(startDate) : BigInt(0)
       const totalAllocationBigInt = ethers.parseEther(totalAllocation)
-      const cliffDays = BigInt(Math.floor(Number(cliff))) // cliff already in days
-      const vestingTermMonths = BigInt(Math.floor(Number(vestingTerm) * 30)) // convert months to days
-      const vestingPlanMonths = BigInt(Math.floor(Number(vestingPlan) * 30)) // convert months to days
-      const initialReleasePercent = BigInt(Math.floor(Number(initialRelease))) // percentage (0-100)
+      const cliffDays = BigInt(Math.floor(Number(cliff)))
+      const vestingTermMonths = BigInt(Math.floor(Number(vestingTerm)))
+      const vestingPlanMonths = BigInt(Math.floor(Number(vestingPlan)))
+      const initialReleasePercent = BigInt(Math.floor(Number(initialRelease)))
 
-      console.log('Adding vesting cap with params:', {
-        nextCapId: nextCapId.toString(),
-        nameBytes32,
-        totalAllocationBigInt: totalAllocationBigInt.toString(),
-        cliffDays: cliffDays.toString(),
-        vestingTermMonths: vestingTermMonths.toString(),
-        vestingPlanMonths: vestingPlanMonths.toString(),
-        initialReleasePercent: initialReleasePercent.toString()
-      })
-
-      // First simulate the transaction
       const { request } = await publicClient.simulateContract({
         address: contractAddress,
-        abi: contractAbi,
+        abi: DISTRIBUTION_ABI,
         functionName: 'addVestingCap',
         account: userAddress,
         args: [
-          nextCapId,
+          BigInt(capId),
           nameBytes32,
+          startDateBigInt,
           totalAllocationBigInt,
           cliffDays,
           vestingTermMonths,
           vestingPlanMonths,
           initialReleasePercent
         ],
-      });
+      })
 
-      // If simulation succeeds, send the transaction
-      const hash = await writeContractAsync(request);
+      const hash = await writeContractAsync(request)
       return hash
     } catch (err) {
       console.error('Error creating vesting cap:', err)
