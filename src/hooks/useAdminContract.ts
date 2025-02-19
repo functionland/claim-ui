@@ -617,11 +617,20 @@ export function useAdminContract() {
       const initialReleasePercent = BigInt(Math.floor(Number(initialRelease)))
       const maxRewardsPerMonthBigInt = ethers.parseEther(maxRewardsPerMonth)
       const ratioBigInt = BigInt(ratio)
+      console.log(`nameBytes32: ${nameBytes32}`)
+      console.log(`startDateBigInt: ${startDateBigInt}`)
+      console.log(`totalAllocationBigInt: ${totalAllocationBigInt}`)
+      console.log(`cliffDays: ${cliffDays}`)
+      console.log(`vestingTermMonths: ${vestingTermMonths}`)
+      console.log(`vestingPlanMonths: ${vestingPlanMonths}`)
+      console.log(`initialReleasePercent: ${initialReleasePercent}`)
+      console.log(`maxRewardsPerMonthBigInt: ${maxRewardsPerMonthBigInt}`)
+      console.log(`ratioBigInt: ${ratioBigInt}`)
 
       const { request } = await publicClient.simulateContract({
         address: contractAddress,
         abi: contractAbi,
-        functionName: 'createCap',
+        functionName: 'addVestingCap',
         account: userAddress,
         args: [
           BigInt(capId),

@@ -1369,6 +1369,24 @@ export const TESTNET_MINING_ABI = [
     type: "function"
   },
   {
+    "inputs": [
+      { "name": "capId", "type": "uint256" },
+      { "name": "name", "type": "bytes32" },
+      { "name": "startDate", "type": "uint256" },
+      { "name": "capTotalAllocation", "type": "uint256" },
+      { "name": "cliff", "type": "uint256" },
+      { "name": "vestingTerm", "type": "uint256" },
+      { "name": "vestingPlan", "type": "uint256" },
+      { "name": "initialRelease", "type": "uint256" },
+      { "name": "maxRewardsPerMonth", "type": "uint256" },
+      { "name": "ratio", "type": "uint256" }
+    ],
+    "name": "addVestingCap",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     inputs: [{ name: "", type: "address" }],
     name: "substrateRewardInfo",
     outputs: [
@@ -1396,6 +1414,28 @@ export const TESTNET_MINING_ABI = [
     ],
     name: "ClaimProcessed",
     type: "event"
+  },
+  {
+    "type": "event",
+    "name": "VestingCapAction",
+    "inputs": [
+      {
+        "name": "capId",
+        "type": "uint256",
+        "indexed": true
+      },
+      {
+        "name": "name",
+        "type": "bytes32",
+        "indexed": false
+      },
+      {
+        "name": "action",
+        "type": "uint256",
+        "indexed": false
+      }
+    ],
+    "anonymous": false
   }
 ] as const;
 
