@@ -1331,6 +1331,8 @@ export function useAdminContract() {
   };
 
   return {
+    isLoading,
+    error,
     whitelistInfo,
     whitelistedAddresses,
     tokenProposals: tokenProposalList,
@@ -1341,14 +1343,12 @@ export function useAdminContract() {
     setTransactionLimit,
     initiateTGE,
     setTGE,
-    createVestingCap,
+    addVestingCap,
     addVestingWallet,
     approveProposal,
     executeProposal,
-    error,
     refetchWhitelistedAddresses,
     isWhitelisted,
-    isLoading,
     checkWhitelistConfig,
     fetchWhitelistedAddresses,
     fetchProposals,
