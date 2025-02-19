@@ -30,14 +30,17 @@ export function TestnetMiningAdmin() {
   const { isConnected } = useAccount()
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
+    capId: '',
     capName: '',
-    totalAllocation: '',
+    startDate: '',
+    capTotalAllocation: '',
     cliff: '',
     vestingTerm: '',
     vestingPlan: '',
     initialRelease: '',
+    maxRewardsPerMonth: '',
+    ratio: '',
     walletAddress: '',
-    capId: '',
     amount: '',
     note: '',
     proposalId: '',
@@ -46,7 +49,7 @@ export function TestnetMiningAdmin() {
 
   const {
     testnetMiningProposals,
-    createVestingCap,
+    createCap,
     addVestingWallet,
     approveProposal,
     executeProposal,
@@ -71,45 +74,50 @@ export function TestnetMiningAdmin() {
       setError(null)
 
       const {
+        capId,
         capName,
-        totalAllocation,
+        startDate,
+        capTotalAllocation,
         cliff,
         vestingTerm,
         vestingPlan,
         initialRelease,
+        maxRewardsPerMonth,
+        ratio,
       } = formData
 
-      if (!capName || !totalAllocation || !cliff || !vestingTerm || !vestingPlan || !initialRelease) {
+      if (!capId || !capName || !startDate || !capTotalAllocation || !cliff || !vestingTerm || !vestingPlan || !initialRelease || !maxRewardsPerMonth || !ratio) {
         throw new Error('Please fill in all fields')
       }
 
-      await createVestingCap(
+      await createCap(
+        capId,
         capName,
-        totalAllocation,
+        startDate,
+        capTotalAllocation,
         cliff,
         vestingTerm,
         vestingPlan,
-        initialRelease
+        initialRelease,
+        maxRewardsPerMonth,
+        ratio
       )
 
-      // Reset form
       setFormData({
+        ...formData,
+        capId: '',
         capName: '',
-        totalAllocation: '',
+        startDate: '',
+        capTotalAllocation: '',
         cliff: '',
         vestingTerm: '',
         vestingPlan: '',
         initialRelease: '',
-        walletAddress: '',
-        capId: '',
-        amount: '',
-        note: '',
-        proposalId: '',
-        tgeTime: '',
+        maxRewardsPerMonth: '',
+        ratio: '',
       })
-    } catch (err) {
-      console.error('Error creating testnet mining vesting cap:', err)
-      setError(err instanceof Error ? err.message : 'Failed to create testnet mining vesting cap')
+    } catch (error: any) {
+      setError(error.message)
     } finally {
       setIsCreatingCap(false)
     }
@@ -204,11 +212,11 @@ export function TestnetMiningAdmin() {
             <TableRow>
               <TableCell>Cap ID</TableCell>
               <TableCell>Name</TableCell>
-              <TableCell>Total Allocation (FIL)</TableCell>
-              <TableCell>Cliff (days)</TableCell>
-              <TableCell>Vesting Term (months)</TableCell>
-              <TableCell>Initial Release</TableCell>
-              <TableCell>Wallets</TableCell>
+              <TableCell>Start Date</TableCell>
+              <TableCell>Cliff Period (Days)</TableCell>
+              <TableCell>Vesting Term (Days)</TableCell>
+              <TableCell>Max Rewards Per Month</TableCell>
+              <TableCell>Ratio</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -216,11 +224,11 @@ export function TestnetMiningAdmin() {
               <TableRow key={cap.capId}>
                 <TableCell>{cap.capId}</TableCell>
                 <TableCell>{ethers.decodeBytes32String(cap.name)}</TableCell>
-                <TableCell>{Number(ethers.formatEther(cap.totalAllocation.toString())).toLocaleString()}</TableCell>
-                <TableCell>{(Number(cap.cliff) / 86400).toFixed(2)}</TableCell>
-                <TableCell>{(Number(cap.vestingTerm) / (30 * 86400)).toFixed(2)}</TableCell>
-                <TableCell>{Number(cap.initialRelease).toFixed(0)}%</TableCell>
-                <TableCell>{cap.wallets.length}</TableCell>
+                <TableCell>{new Date(Number(cap.startDate) * 1000).toLocaleString()}</TableCell>
+                <TableCell>{Number(cap.cliff) / 86400}</TableCell>
+                <TableCell>{Number(cap.vestingTerm) / 86400}</TableCell>
+                <TableCell>{Number(cap.maxRewardsPerMonth)}</TableCell>
+                <TableCell>{Number(cap.ratio)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -292,16 +300,37 @@ export function TestnetMiningAdmin() {
 
       <Accordion defaultExpanded sx={{ mt: 4 }}>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography variant="h6">Testnet Mining Vesting Caps</Typography>
+          <Typography variant="h6">Create Mining Cap</Typography>
         </AccordionSummary>
         <AccordionDetails>
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Cap Name"
+                label="Cap ID"
+                type="number"
+                value={formData.capId}
+                onChange={(e) => setFormData({ ...formData, capId: e.target.value })}
+                helperText="Unique identifier for the cap"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Name"
                 value={formData.capName}
                 onChange={(e) => setFormData({ ...formData, capName: e.target.value })}
+                helperText="Name for the mining cap"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Start Date"
+                type="number"
+                value={formData.startDate}
+                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                helperText="Unix timestamp in seconds"
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -309,76 +338,87 @@ export function TestnetMiningAdmin() {
                 fullWidth
                 label="Total Allocation"
                 type="number"
-                value={formData.totalAllocation}
-                onChange={(e) => setFormData({ ...formData, totalAllocation: e.target.value })}
-                helperText="Enter amount in FULA (e.g., 1000000 for 1M FULA)"
-                inputProps={{ min: 0 }}
+                value={formData.capTotalAllocation}
+                onChange={(e) => setFormData({ ...formData, capTotalAllocation: e.target.value })}
+                helperText="Total allocation for this cap"
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Cliff Period"
+                label="Cliff Period (Days)"
                 type="number"
                 value={formData.cliff}
                 onChange={(e) => setFormData({ ...formData, cliff: e.target.value })}
-                helperText="Enter cliff period in days (e.g., 14 for 2 weeks)"
+                helperText="Cliff period in days"
                 inputProps={{ min: 0 }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Vesting Term"
+                label="Vesting Term (Months)"
                 type="number"
                 value={formData.vestingTerm}
                 onChange={(e) => setFormData({ ...formData, vestingTerm: e.target.value })}
-                helperText="Enter vesting term in months (e.g., 6 for half year)"
+                helperText="Linear vesting duration in months"
                 inputProps={{ min: 1 }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Vesting Plan"
+                label="Vesting Plan (Months)"
                 type="number"
                 value={formData.vestingPlan}
                 onChange={(e) => setFormData({ ...formData, vestingPlan: e.target.value })}
-                helperText="Enter vesting interval in months (1 for monthly, 3 for quarterly)"
+                helperText="Claim intervals in months (1 for monthly, 3 for quarterly)"
                 inputProps={{ min: 1 }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Initial Release"
+                label="Initial Release (%)"
                 type="number"
                 value={formData.initialRelease}
                 onChange={(e) => setFormData({ ...formData, initialRelease: e.target.value })}
-                helperText="Enter initial release percentage (0-100)"
+                helperText="Percentage released after cliff"
                 inputProps={{ min: 0, max: 100 }}
               />
             </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Max Rewards Per Month"
+                type="number"
+                value={formData.maxRewardsPerMonth}
+                onChange={(e) => setFormData({ ...formData, maxRewardsPerMonth: e.target.value })}
+                helperText="Maximum rewards per month"
+                inputProps={{ min: 0 }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Ratio"
+                type="number"
+                value={formData.ratio}
+                onChange={(e) => setFormData({ ...formData, ratio: e.target.value })}
+                helperText="Ratio value"
+                inputProps={{ min: 0 }}
+              />
+            </Grid>
           </Grid>
-          <Box sx={{ mt: 2, mb: 4 }}>
+          <Box sx={{ mt: 2 }}>
             <Button
               variant="contained"
               onClick={handleCreateCap}
               disabled={isCreatingCap}
-              startIcon={isCreatingCap ? <CircularProgress size={20} /> : null}
             >
-              {isCreatingCap ? 'Creating...' : 'Create Vesting Cap'}
+              {isCreatingCap ? <CircularProgress size={24} /> : 'Create Cap'}
             </Button>
           </Box>
-
-          <Typography variant="subtitle1" gutterBottom>Current Vesting Caps</Typography>
-          {isLoading ? (
-            <CircularProgress />
-          ) : !vestingCapTable || vestingCapTable.length === 0 ? (
-            <Alert severity="info">No vesting caps found</Alert>
-          ) : (
-            renderVestingCapTable()
-          )}
         </AccordionDetails>
       </Accordion>
 

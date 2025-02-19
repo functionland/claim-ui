@@ -623,6 +623,60 @@ export function useAdminContract() {
     }
   }
 
+  const createCap = async (
+    capId: string,
+    name: string,
+    startDate: string,
+    capTotalAllocation: string,
+    cliff: string,
+    vestingTerm: string,
+    vestingPlan: string,
+    initialRelease: string,
+    maxRewardsPerMonth: string,
+    ratio: string
+  ) => {
+    if (!contractAddress || !chainId) {
+      throw new Error('Contract not initialized')
+    }
+
+    try {
+      const nameBytes32 = ethers.encodeBytes32String(name)
+      const startDateBigInt = BigInt(startDate)
+      const totalAllocationBigInt = ethers.parseEther(capTotalAllocation)
+      const cliffDays = BigInt(Math.floor(Number(cliff)))
+      const vestingTermMonths = BigInt(Math.floor(Number(vestingTerm)))
+      const vestingPlanMonths = BigInt(Math.floor(Number(vestingPlan)))
+      const initialReleasePercent = BigInt(Math.floor(Number(initialRelease)))
+      const maxRewardsPerMonthBigInt = ethers.parseEther(maxRewardsPerMonth)
+      const ratioBigInt = BigInt(ratio)
+
+      const { request } = await publicClient.simulateContract({
+        address: contractAddress,
+        abi: contractAbi,
+        functionName: 'createCap',
+        account: userAddress,
+        args: [
+          BigInt(capId),
+          nameBytes32,
+          startDateBigInt,
+          totalAllocationBigInt,
+          cliffDays,
+          vestingTermMonths,
+          vestingPlanMonths,
+          initialReleasePercent,
+          maxRewardsPerMonthBigInt,
+          ratioBigInt
+        ],
+      })
+
+      const hash = await writeContractAsync(request)
+      return hash
+    } catch (err) {
+      console.error('Error creating mining cap:', err)
+      throw err
+    }
+  }
+
   // Common functions for both contracts
   const approveProposal = async (proposalId: string) => {
     if (!contractAddress) throw new Error('Contract address not found');
@@ -1315,6 +1369,7 @@ export function useAdminContract() {
     handleSetRoleQuorum,
     checkRoleConfig,
     roleConfigs,
+    createCap,
     cleanupExpiredProposals,
   }
 }
