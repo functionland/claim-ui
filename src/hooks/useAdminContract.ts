@@ -534,7 +534,7 @@ export function useAdminContract() {
 
       const { request } = await publicClient.simulateContract({
         address: contractAddress,
-        abi: DISTRIBUTION_ABI,
+        abi: contractAbi,
         functionName: 'addVestingCap',
         account: userAddress,
         args: [
