@@ -540,13 +540,26 @@ export function useAdminContract() {
     }
 
     try {
+      // Input validation
+      if (Number(initialRelease) > 100) {
+        throw new Error('Initial release percentage cannot be greater than 100')
+      }
+
+      if (Number(vestingPlan) >= Number(vestingTerm)) {
+        throw new Error('Vesting plan interval must be less than vesting term')
+      }
+
+      if (Number(totalAllocation) <= 0) {
+        throw new Error('Total allocation must be greater than 0')
+      }
+
       const nameBytes32 = ethers.encodeBytes32String(name)
       const startDateBigInt = startDate ? BigInt(startDate) : BigInt(0)
       const totalAllocationBigInt = ethers.parseEther(totalAllocation)
-      const cliffDays = BigInt(Math.floor(Number(cliff)))
-      const vestingTermMonths = BigInt(Math.floor(Number(vestingTerm)))
-      const vestingPlanMonths = BigInt(Math.floor(Number(vestingPlan)))
-      const initialReleasePercent = BigInt(Math.floor(Number(initialRelease)))
+      const cliffDays = BigInt(Math.floor(Number(cliff))) // cliff in days
+      const vestingTermMonths = BigInt(Math.floor(Number(vestingTerm))) // term in months
+      const vestingPlanMonths = BigInt(Math.floor(Number(vestingPlan))) // plan in months
+      const initialReleasePercent = BigInt(Math.floor(Number(initialRelease))) // percentage 0-100
 
       const { request } = await publicClient.simulateContract({
         address: contractAddress,

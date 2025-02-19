@@ -30,14 +30,15 @@ export function VestingAdmin() {
   const { isConnected } = useAccount()
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
+    capId: '',
     capName: '',
+    startDate: '',
     totalAllocation: '',
     cliff: '',
     vestingTerm: '',
     vestingPlan: '',
     initialRelease: '',
     walletAddress: '',
-    capId: '',
     amount: '',
     note: '',
     proposalId: '',
@@ -65,13 +66,15 @@ export function VestingAdmin() {
   const [isSettingTGE, setIsSettingTGE] = useState(false)
   const [isCleaning, setIsCleaning] = useState(false)
 
-  const handleCreateCap = async () => {
+  const handleCreateVestingCap = async () => {
     try {
       setIsCreatingCap(true)
       setError(null)
 
       const {
+        capId,
         capName,
+        startDate,
         totalAllocation,
         cliff,
         vestingTerm,
@@ -79,12 +82,22 @@ export function VestingAdmin() {
         initialRelease,
       } = formData
 
-      if (!capName || !totalAllocation || !cliff || !vestingTerm || !vestingPlan || !initialRelease) {
-        throw new Error('Please fill in all fields')
+      if (!capId || !capName || !totalAllocation || !cliff || !vestingTerm || !vestingPlan || !initialRelease) {
+        throw new Error('Please fill in all required fields')
+      }
+
+      if (Number(initialRelease) > 100) {
+        throw new Error('Initial release percentage cannot be greater than 100')
+      }
+
+      if (Number(vestingPlan) >= Number(vestingTerm)) {
+        throw new Error('Vesting plan interval must be less than vesting term')
       }
 
       await createVestingCap(
+        capId,
         capName,
+        startDate,
         totalAllocation,
         cliff,
         vestingTerm,
@@ -94,22 +107,22 @@ export function VestingAdmin() {
 
       // Reset form
       setFormData({
+        capId: '',
         capName: '',
+        startDate: '',
         totalAllocation: '',
         cliff: '',
         vestingTerm: '',
         vestingPlan: '',
         initialRelease: '',
         walletAddress: '',
-        capId: '',
         amount: '',
         note: '',
         proposalId: '',
         tgeTime: '',
       })
-    } catch (err) {
-      console.error('Error creating vesting cap:', err)
-      setError(err instanceof Error ? err.message : 'Failed to create vesting cap')
+    } catch (error: any) {
+      setError(error.message)
     } finally {
       setIsCreatingCap(false)
     }
@@ -292,16 +305,38 @@ export function VestingAdmin() {
 
       <Accordion defaultExpanded sx={{ mt: 4 }}>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography variant="h6">Vesting Caps</Typography>
+          <Typography variant="h6">Create Vesting Cap</Typography>
         </AccordionSummary>
         <AccordionDetails>
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Cap Name"
+                label="Cap ID"
+                type="number"
+                value={formData.capId}
+                onChange={(e) => setFormData({ ...formData, capId: e.target.value })}
+                helperText="Unique identifier for the cap"
+                inputProps={{ min: 0 }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Name"
                 value={formData.capName}
                 onChange={(e) => setFormData({ ...formData, capName: e.target.value })}
+                helperText="Name for the vesting cap"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Start Date"
+                type="number"
+                value={formData.startDate}
+                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                helperText="Unix timestamp in seconds (optional, defaults to 30 years from now if TGE initiated)"
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -311,63 +346,62 @@ export function VestingAdmin() {
                 type="number"
                 value={formData.totalAllocation}
                 onChange={(e) => setFormData({ ...formData, totalAllocation: e.target.value })}
-                helperText="Enter amount in FULA (e.g., 1000000 for 1M FULA)"
+                helperText="Total token allocation for this cap"
                 inputProps={{ min: 0 }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Cliff Period"
+                label="Cliff Period (Days)"
                 type="number"
                 value={formData.cliff}
                 onChange={(e) => setFormData({ ...formData, cliff: e.target.value })}
-                helperText="Enter cliff period in days (e.g., 14 for 2 weeks)"
+                helperText="Cliff period in days"
                 inputProps={{ min: 0 }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Vesting Term"
+                label="Vesting Term (Months)"
                 type="number"
                 value={formData.vestingTerm}
                 onChange={(e) => setFormData({ ...formData, vestingTerm: e.target.value })}
-                helperText="Enter vesting term in months (e.g., 6 for half year)"
+                helperText="Linear vesting duration in months"
                 inputProps={{ min: 1 }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Vesting Plan"
+                label="Vesting Plan (Months)"
                 type="number"
                 value={formData.vestingPlan}
                 onChange={(e) => setFormData({ ...formData, vestingPlan: e.target.value })}
-                helperText="Enter vesting interval in months (1 for monthly, 3 for quarterly)"
+                helperText="Claim intervals in months (1 for monthly, 3 for quarterly)"
                 inputProps={{ min: 1 }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Initial Release"
+                label="Initial Release (%)"
                 type="number"
                 value={formData.initialRelease}
                 onChange={(e) => setFormData({ ...formData, initialRelease: e.target.value })}
-                helperText="Enter initial release percentage (0-100)"
+                helperText="Percentage released after cliff (0-100)"
                 inputProps={{ min: 0, max: 100 }}
               />
             </Grid>
           </Grid>
-          <Box sx={{ mt: 2, mb: 4 }}>
+          <Box sx={{ mt: 2 }}>
             <Button
               variant="contained"
-              onClick={handleCreateCap}
+              onClick={handleCreateVestingCap}
               disabled={isCreatingCap}
-              startIcon={isCreatingCap ? <CircularProgress size={20} /> : null}
             >
-              {isCreatingCap ? 'Creating...' : 'Create Vesting Cap'}
+              {isCreatingCap ? <CircularProgress size={24} /> : 'Create Vesting Cap'}
             </Button>
           </Box>
 
