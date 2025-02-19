@@ -373,6 +373,93 @@ export const GOVERNANCE_ABI = [
 // Common Contract ABI used across multiple contracts
 export const CONTRACT_ABI = [
   {
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32"
+      }
+    ],
+    "name": "roleConfigs",
+    "outputs": [
+      {
+        "name": "transactionLimit",
+        "type": "uint240"
+      },
+      {
+        "name": "quorum",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "name": "limit",
+        "type": "uint240"
+      }
+    ],
+    "name": "setRoleTransactionLimit",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "name": "quorum",
+        "type": "uint16"
+      }
+    ],
+    "name": "setRoleQuorum",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    type: "function"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "limit",
+        "type": "uint240"
+      }
+    ],
+    "name": "TransactionLimitUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "quorum",
+        "type": "uint16"
+      }
+    ],
+    "name": "QuorumUpdated",
+    "type": "event"
+  },
+  {
     inputs: [{ name: "", type: "uint256" }],
     name: "capIds",
     outputs: [{ type: "uint256" }],
@@ -1030,93 +1117,6 @@ export const TOKEN_ABI = [
     "type": "function"
   },
   ...CONTRACT_ABI,
-  {
-    "inputs": [
-      {
-        "name": "role",
-        "type": "bytes32"
-      }
-    ],
-    "name": "roleConfigs",
-    "outputs": [
-      {
-        "name": "transactionLimit",
-        "type": "uint240"
-      },
-      {
-        "name": "quorum",
-        "type": "uint16"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "name": "role",
-        "type": "bytes32"
-      },
-      {
-        "name": "limit",
-        "type": "uint240"
-      }
-    ],
-    "name": "setRoleTransactionLimit",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "name": "role",
-        "type": "bytes32"
-      },
-      {
-        "name": "quorum",
-        "type": "uint16"
-      }
-    ],
-    "name": "setRoleQuorum",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    type: "function"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "name": "role",
-        "type": "bytes32"
-      },
-      {
-        "indexed": false,
-        "name": "limit",
-        "type": "uint240"
-      }
-    ],
-    "name": "TransactionLimitUpdated",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "name": "role",
-        "type": "bytes32"
-      },
-      {
-        "indexed": false,
-        "name": "quorum",
-        "type": "uint16"
-      }
-    ],
-    "name": "QuorumUpdated",
-    "type": "event"
-  },
   {
     inputs: [],
     name: "maxSupply",
