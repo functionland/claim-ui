@@ -51,11 +51,10 @@ export function VestingAdmin() {
 
   const {
     vestingProposals,
-    createVestingCap,
+    addVestingCap,
     addVestingWallet,
     approveProposal,
     executeProposal,
-    setTGE,
     vestingCapTable,
     isLoading,
     tgeStatus,
@@ -108,7 +107,7 @@ export function VestingAdmin() {
         throw new Error('Vesting plan interval must be less than vesting term')
       }
 
-      await createVestingCap(
+      await addVestingCap(
         capId,
         capName,
         startDate,
@@ -191,18 +190,6 @@ export function VestingAdmin() {
       setError(error.message)
     } finally {
       setIsExecuting(false)
-    }
-  }
-
-  const handleSetTGE = async () => {
-    try {
-      setError(null)
-      setIsSettingTGE(true)
-      await setTGE(Number(formData.tgeTime))
-    } catch (error: any) {
-      setError(error.message)
-    } finally {
-      setIsSettingTGE(false)
     }
   }
 

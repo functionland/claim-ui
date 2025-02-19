@@ -495,35 +495,6 @@ export function useAdminContract() {
     }
   };
 
-  const setTGE = async (tgeTime: number) => {
-    if (!contractAddress) throw new Error('Contract address not found')
-
-    try {
-      // First simulate the transaction
-      const { request } = await publicClient.simulateContract({
-        address: contractAddress,
-        abi: contractAbi,
-        functionName: 'createProposal',
-        args: [
-          BigInt(1), // SetTGE type
-          BigInt(tgeTime),
-          '0x0000000000000000000000000000000000000000' as Address,
-          ethers.ZeroHash,
-          BigInt(0),
-          '0x0000000000000000000000000000000000000000' as Address,
-        ],
-        account: userAddress,
-      })
-
-      // If simulation succeeds, send the transaction
-      const hash = await writeContractAsync(request)
-      return hash
-    } catch (err: any) {
-      console.error('Error setting TGE:', err)
-      throw new Error(err.message)
-    }
-  }
-
   // Vesting contract functions
   const addVestingCap = async (
     capId: string,
@@ -1378,7 +1349,6 @@ export function useAdminContract() {
     addToWhitelist,
     setTransactionLimit,
     initiateTGE,
-    setTGE,
     addVestingCap,
     addVestingWallet,
     approveProposal,

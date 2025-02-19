@@ -19,12 +19,13 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  MenuItem,
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { ethers } from 'ethers'
 import { ConnectButton } from '@/components/common/ConnectButton'
 import { useAdminContract } from '@/hooks/useAdminContract'
-import { CONTRACT_TYPES, PROPOSAL_TYPES } from '@/config/constants'
+import { CONTRACT_TYPES, PROPOSAL_TYPES, ROLES, ROLE_NAMES } from '@/config/constants'
 
 export function AirdropAdmin() {
   const { isConnected } = useAccount()
@@ -43,20 +44,27 @@ export function AirdropAdmin() {
     note: '',
     proposalId: '',
     tgeTime: '',
+    role: '',
+    transactionLimit: '',
+    quorum: '',
   })
 
   const {
     airdropProposals,
-    createVestingCap,
+    addVestingCap,
     addVestingWallet,
     approveProposal,
     executeProposal,
-    setTGE,
     vestingCapTable,
     isLoading,
     tgeStatus,
     initiateTGE,
     cleanupExpiredProposals,
+    createProposal,
+    handleSetRoleTransactionLimit,
+    handleSetRoleQuorum,
+    roleConfigs,
+    checkRoleConfig,
   } = useAdminContract()
 
   const [isCreatingCap, setIsCreatingCap] = useState(false)
@@ -65,6 +73,11 @@ export function AirdropAdmin() {
   const [isExecuting, setIsExecuting] = useState(false)
   const [isSettingTGE, setIsSettingTGE] = useState(false)
   const [isCleaning, setIsCleaning] = useState(false)
+  const [isUpgrading, setIsUpgrading] = useState(false)
+  const [upgradeAddress, setUpgradeAddress] = useState('')
+  const [isCheckingRole, setIsCheckingRole] = useState(false)
+  const [roleCheckResult, setRoleCheckResult] = useState<{ transactionLimit: bigint, quorum: number } | null>(null)
+  const [isSettingLimit, setIsSettingLimit] = useState(false)
 
   const handleCreateVestingCap = async () => {
     try {
@@ -86,7 +99,7 @@ export function AirdropAdmin() {
         throw new Error('Please fill in all fields')
       }
 
-      await createVestingCap(
+      await addVestingCap(
         capId,
         capName,
         startDate,
@@ -112,6 +125,9 @@ export function AirdropAdmin() {
         note: '',
         proposalId: '',
         tgeTime: '',
+        role: '',
+        transactionLimit: '',
+        quorum: '',
       })
     } catch (err) {
       console.error('Error creating airdrop vesting cap:', err)
@@ -170,18 +186,6 @@ export function AirdropAdmin() {
     }
   }
 
-  const handleSetTGE = async () => {
-    try {
-      setError(null)
-      setIsSettingTGE(true)
-      await setTGE(Number(formData.tgeTime))
-    } catch (error: any) {
-      setError(error.message)
-    } finally {
-      setIsSettingTGE(false)
-    }
-  }
-
   const handleCleanupExpiredProposals = async () => {
     try {
       setError(null)
@@ -191,6 +195,129 @@ export function AirdropAdmin() {
       setError(error.message)
     } finally {
       setIsCleaning(false)
+    }
+  }
+
+  const handleCreateUpgradeProposal = async () => {
+    try {
+      setIsUpgrading(true);
+      setError(null);
+
+      console.log(`Upgrade Address: ${upgradeAddress}`);
+      if (!ethers.isAddress(upgradeAddress)) {
+        throw new Error('Invalid Ethereum address');
+      }
+
+      const hash = await createProposal(
+        PROPOSAL_TYPES.Upgrade,
+        0, // id is not used for upgrade proposals
+        upgradeAddress,
+        ethers.ZeroHash,
+        '0',
+        ethers.ZeroAddress
+      );
+      console.log('Upgrade proposal created with transaction hash:', hash);
+
+      setUpgradeAddress(''); // Reset the input field
+    } catch (error: any) {
+      console.error(error);
+      setError(error.message);
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
+
+  const handleCheckRole = async () => {
+    if (!formData.role) return;
+    
+    try {
+      setIsCheckingRole(true);
+      setError(null);
+      const result = await checkRoleConfig(formData.role);
+      if (result && result.transactionLimit !== undefined && result.quorum !== undefined) {
+        setRoleCheckResult({
+          transactionLimit: result.transactionLimit,
+          quorum: Number(result.quorum)
+        });
+      } else {
+        setError('Failed to fetch role configuration');
+      }
+    } catch (error: any) {
+      setError(error.message || 'Failed to check role configuration');
+    } finally {
+      setIsCheckingRole(false);
+    }
+  };
+
+  const formatTransactionLimit = (limit: bigint | null) => {
+    if (!limit) return '';
+    try {
+      const limitStr = limit.toString();
+      const length = limitStr.length;
+      
+      if (length <= 18) {
+        const padded = limitStr.padStart(18, '0');
+        const decimal = padded.slice(0, -18) || '0';
+        const fraction = padded.slice(-18).replace(/0+$/, '');
+        return fraction ? `${decimal}.${fraction}` : decimal;
+      } else {
+        const decimal = limitStr.slice(0, length - 18);
+        const fraction = limitStr.slice(length - 18).replace(/0+$/, '');
+        return fraction ? `${decimal}.${fraction}` : decimal;
+      }
+    } catch (error) {
+      console.error('Error formatting transaction limit:', error);
+      return '';
+    }
+  };
+
+  const parseTransactionLimit = (value: string): bigint => {
+    try {
+      return ethers.parseEther(value);
+    } catch (error) {
+      console.error('Error parsing transaction limit:', error);
+      return BigInt(0);
+    }
+  };
+
+  const roleOptions = Object.entries(ROLES).map(([key, value]) => ({
+    value,
+    label: ROLE_NAMES[value as keyof typeof ROLE_NAMES],
+  }));
+
+  const handleSetTransactionLimit = async () => {
+    try {
+      setError(null)
+      setIsSettingLimit(true)
+      await handleSetRoleTransactionLimit(formData.role, formData.transactionLimit)
+      // Clear form
+      setFormData(prev => ({
+        ...prev,
+        role: '',
+        transactionLimit: '',
+      }))
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setIsSettingLimit(false)
+    }
+  }
+
+  const handleSetQuorum = async () => {
+    try {
+      setError(null)
+      setIsSettingLimit(true)
+      await handleSetRoleQuorum(formData.role, formData.quorum)
+      // Clear form
+      setFormData(prev => ({
+        ...prev,
+        role: '',
+        quorum: '',
+      }))
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setIsSettingLimit(false)
     }
   }
 
@@ -451,6 +578,169 @@ export function AirdropAdmin() {
               </Grid>
             )}
           </Grid>
+        </AccordionDetails>
+      </Accordion>
+
+      <Accordion>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="h6">Upgrade Proposal</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="New Contract Address"
+                value={upgradeAddress}
+                onChange={(e) => setUpgradeAddress(e.target.value)}
+                helperText="Enter the new contract address"
+              />
+            </Grid>
+          </Grid>
+          <Box sx={{ mt: 2 }}>
+            <Button
+              variant="contained"
+              onClick={handleCreateUpgradeProposal}
+              disabled={isUpgrading}
+            >
+              {isUpgrading ? <CircularProgress size={24} /> : 'Create Upgrade Proposal'}
+            </Button>
+          </Box>
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
+            </Alert>
+          )}
+        </AccordionDetails>
+      </Accordion>
+
+      <Accordion>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="h6">Role Configuration</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Box component="form" noValidate sx={{ mt: 1 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  select
+                  fullWidth
+                  label="Role"
+                  value={formData.role || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
+                  margin="normal"
+                >
+                  {roleOptions.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Transaction Limit (ETH)"
+                  type="number"
+                  value={formData.transactionLimit || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, transactionLimit: e.target.value }))}
+                  margin="normal"
+                  inputProps={{
+                    step: "0.000000000000000001"
+                  }}
+                  helperText="Enter the limit in ETH"
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Quorum"
+                  type="number"
+                  value={formData.quorum || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, quorum: e.target.value }))}
+                  margin="normal"
+                  inputProps={{
+                    min: "1",
+                    max: "65535",
+                    step: "1"
+                  }}
+                  helperText="Enter a number between 1 and 65535"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Button
+                  variant="contained"
+                  onClick={handleSetTransactionLimit}
+                  disabled={!formData.role || !formData.transactionLimit || isSettingLimit}
+                  sx={{ mr: 1 }}
+                >
+                  {isSettingLimit ? <CircularProgress size={24} /> : 'Set Transaction Limit'}
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={handleSetQuorum}
+                  disabled={
+                    !formData.role || 
+                    !formData.quorum || 
+                    Number(formData.quorum) < 1 || 
+                    Number(formData.quorum) > 65535 || 
+                    isSettingLimit
+                  }
+                  sx={{ mr: 1 }}
+                >
+                  {isSettingLimit ? <CircularProgress size={24} /> : 'Set Quorum'}
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={handleCheckRole}
+                  disabled={!formData.role || isCheckingRole}
+                  sx={{ mr: 1 }}
+                >
+                  {isCheckingRole ? <CircularProgress size={24} /> : 'Check Role Config'}
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={async () => {
+                    if (!formData.role) return;
+                    try {
+                      const result = await checkRoleConfig(formData.role);
+                      if (result) {
+                        const formattedLimit = formatTransactionLimit(result.transactionLimit);
+                        console.log('Setting form data with:', { 
+                          transactionLimit: formattedLimit,
+                          quorum: result.quorum.toString()
+                        });
+                        setFormData(prev => ({
+                          ...prev,
+                          transactionLimit: formattedLimit,
+                          quorum: result.quorum.toString()
+                        }));
+                      }
+                    } catch (error: any) {
+                      console.error('Error loading current values:', error);
+                      setError(error.message || 'Failed to fetch current values');
+                    }
+                  }}
+                  disabled={!formData.role}
+                >
+                  Load Current Values
+                </Button>
+              </Grid>
+              {roleCheckResult && (
+                <Grid item xs={12}>
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    <Typography variant="subtitle2">Role Configuration:</Typography>
+                    <Typography>
+                      Transaction Limit: {formatTransactionLimit(roleCheckResult.transactionLimit)} ETH
+                    </Typography>
+                    <Typography>
+                      Quorum: {roleCheckResult.quorum}
+                    </Typography>
+                  </Alert>
+                </Grid>
+              )}
+            </Grid>
+          </Box>
         </AccordionDetails>
       </Accordion>
 
