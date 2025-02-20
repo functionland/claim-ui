@@ -138,6 +138,27 @@ export const GOVERNANCE_ABI = [
       }
     ]
   },
+  {
+    type: "error",
+    name: "UpgradeNotAuthorized",
+    inputs: []
+  },
+  {
+    "inputs": [
+      {
+        "name": "newImplementation",
+        "type": "address"
+      },
+      {
+        "name": "data",
+        "type": "bytes"
+      }
+    ],
+    "name": "upgradeToAndCall",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
   // Events
   {
     type: "event",

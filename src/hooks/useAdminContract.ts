@@ -1346,6 +1346,27 @@ export function useAdminContract() {
     }
   };
 
+  const upgradeContract = async (newImplementation: string) => {
+    if (!contractAddress) throw new Error('Contract address not found')
+    if (!ethers.isAddress(newImplementation)) throw new Error('Invalid implementation address')
+
+    try {
+      const { request } = await publicClient.simulateContract({
+        address: contractAddress,
+        abi: contractAbi,
+        functionName: 'upgradeToAndCall',
+        account: userAddress,
+        args: [newImplementation as Address, '0x' as `0x${string}`]
+      })
+
+      const hash = await writeContractAsync(request)
+      return hash
+    } catch (err: any) {
+      console.error('Error upgrading contract:', err)
+      throw new Error(err.message)
+    }
+  }
+
   return {
     isLoading,
     error,
@@ -1384,5 +1405,6 @@ export function useAdminContract() {
     createCap,
     createProposal,
     cleanupExpiredProposals,
+    upgradeContract,
   }
 }
