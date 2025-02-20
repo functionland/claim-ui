@@ -49,6 +49,7 @@ export function TestnetMiningAdmin() {
     role: '',
     transactionLimit: '',
     quorum: '',
+    upgradeAddress: '',
   })
 
   const {
@@ -67,6 +68,7 @@ export function TestnetMiningAdmin() {
     handleSetRoleQuorum,
     roleConfigs,
     checkRoleConfig,
+    upgradeContract,
   } = useAdminContract()
 
   const [isCreatingCap, setIsCreatingCap] = useState(false)
@@ -76,7 +78,6 @@ export function TestnetMiningAdmin() {
   const [isSettingTGE, setIsSettingTGE] = useState(false)
   const [isCleaning, setIsCleaning] = useState(false)
   const [isUpgrading, setIsUpgrading] = useState(false)
-  const [upgradeAddress, setUpgradeAddress] = useState('')
   const [isCheckingRole, setIsCheckingRole] = useState(false)
   const [roleCheckResult, setRoleCheckResult] = useState<{ transactionLimit: bigint, quorum: number } | null>(null)
   const [isSettingLimit, setIsSettingLimit] = useState(false)
@@ -205,22 +206,22 @@ export function TestnetMiningAdmin() {
       setIsUpgrading(true);
       setError(null);
 
-      console.log(`Upgrade Address: ${upgradeAddress}`);
-      if (!ethers.isAddress(upgradeAddress)) {
+      console.log(`Upgrade Address: ${formData.upgradeAddress}`);
+      if (!ethers.isAddress(formData.upgradeAddress)) {
         throw new Error('Invalid Ethereum address');
       }
 
       const hash = await createProposal(
         PROPOSAL_TYPES.Upgrade,
         0, // id is not used for upgrade proposals
-        upgradeAddress,
+        formData.upgradeAddress,
         ethers.ZeroHash,
         '0',
         ethers.ZeroAddress
       );
       console.log('Upgrade proposal created with transaction hash:', hash);
 
-      setUpgradeAddress(''); // Reset the input field
+      setFormData(prev => ({ ...prev, upgradeAddress: '' })); // Reset the input field
     } catch (error: any) {
       console.error(error);
       setError(error.message);
@@ -704,8 +705,8 @@ export function TestnetMiningAdmin() {
               <TextField
                 fullWidth
                 label="New Contract Address"
-                value={upgradeAddress}
-                onChange={(e) => setUpgradeAddress(e.target.value)}
+                value={formData.upgradeAddress}
+                onChange={(e) => setFormData({ ...formData, upgradeAddress: e.target.value })}
                 helperText="Enter the new contract address"
               />
             </Grid>
@@ -719,6 +720,51 @@ export function TestnetMiningAdmin() {
               {isUpgrading ? <CircularProgress size={24} /> : 'Create Upgrade Proposal'}
             </Button>
           </Box>
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
+            </Alert>
+          )}
+        </AccordionDetails>
+      </Accordion>
+
+      <Accordion>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="h6">Execute Upgrade</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="New Implementation Address"
+                value={formData.upgradeAddress || ''}
+                onChange={(e) => setFormData({ ...formData, upgradeAddress: e.target.value })}
+                helperText="Enter the new contract implementation address"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Button
+                variant="contained"
+                onClick={async () => {
+                  try {
+                    setError(null);
+                    if (!formData.upgradeAddress || !ethers.isAddress(formData.upgradeAddress)) {
+                      throw new Error('Invalid contract address');
+                    }
+                    await upgradeContract(formData.upgradeAddress);
+                    setFormData(prev => ({ ...prev, upgradeAddress: '' })); // Clear the input after success
+                  } catch (error: any) {
+                    console.error('Error executing upgrade:', error);
+                    setError(error.message);
+                  }
+                }}
+                disabled={!formData.upgradeAddress || !ethers.isAddress(formData.upgradeAddress)}
+              >
+                Execute Upgrade
+              </Button>
+            </Grid>
+          </Grid>
           {error && (
             <Alert severity="error" sx={{ mt: 2 }}>
               {error}
