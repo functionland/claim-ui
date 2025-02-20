@@ -1367,6 +1367,26 @@ export function useAdminContract() {
     }
   }
 
+  const emergencyAction = async (op: 1 | 2) => {
+    if (!contractAddress) throw new Error('Contract address not found')
+
+    try {
+      const { request } = await publicClient.simulateContract({
+        address: contractAddress,
+        abi: contractAbi,
+        functionName: 'emergencyAction',
+        account: userAddress,
+        args: [op]
+      })
+
+      const hash = await writeContractAsync(request)
+      return hash
+    } catch (err: any) {
+      console.error('Error executing emergency action:', err)
+      throw new Error(err.message)
+    }
+  }
+
   return {
     isLoading,
     error,
@@ -1406,5 +1426,6 @@ export function useAdminContract() {
     createProposal,
     cleanupExpiredProposals,
     upgradeContract,
+    emergencyAction,
   }
 }

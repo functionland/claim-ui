@@ -144,6 +144,28 @@ export const GOVERNANCE_ABI = [
     inputs: []
   },
   {
+    type: "error",
+    name: "CoolDownActive",
+    inputs: [
+      {
+        name: "nextValidTime",
+        type: "uint256",
+        internalType: "uint256"
+      }
+    ]
+  },
+  {
+    type: "error",
+    name: "TimeLockActive",
+    inputs: [
+      {
+        name: "account",
+        type: "address",
+        internalType: "address"
+      }
+    ]
+  },
+  {
     "inputs": [
       {
         "name": "newImplementation",
@@ -158,6 +180,43 @@ export const GOVERNANCE_ABI = [
     "outputs": [],
     "stateMutability": "payable",
     "type": "function"
+  },
+  {
+    type: "event",
+    name: "EA",
+    inputs: [
+      {
+        name: "op",
+        type: "uint8",
+        indexed: false,
+        internalType: "uint8"
+      },
+      {
+        name: "timestamp",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256"
+      },
+      {
+        name: "account",
+        type: "address",
+        indexed: false,
+        internalType: "address"
+      }
+    ]
+  },
+  {
+    type: "function",
+    name: "emergencyAction",
+    inputs: [
+      {
+        name: "op",
+        type: "uint8",
+        internalType: "uint8"
+      }
+    ],
+    outputs: [],
+    stateMutability: "nonpayable"
   },
   // Events
   {
@@ -1135,7 +1194,7 @@ export const TOKEN_ABI = [
       }
     ],
     "stateMutability": "view",
-    "type": "function"
+    type: "function"
   },
   ...CONTRACT_ABI,
   {
