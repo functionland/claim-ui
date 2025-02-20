@@ -69,6 +69,7 @@ export function TestnetMiningAdmin() {
     roleConfigs,
     checkRoleConfig,
     upgradeContract,
+    emergencyAction,
   } = useAdminContract()
 
   const [isCreatingCap, setIsCreatingCap] = useState(false)
@@ -900,6 +901,54 @@ export function TestnetMiningAdmin() {
               )}
             </Grid>
           </Box>
+        </AccordionDetails>
+      </Accordion>
+
+      <Accordion>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="h6">Emergency Actions</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <Button
+                variant="contained"
+                color="warning"
+                onClick={async () => {
+                  try {
+                    setError(null);
+                    await emergencyAction(1);
+                  } catch (error: any) {
+                    console.error('Error pausing contract:', error);
+                    setError(error.message);
+                  }
+                }}
+                sx={{ mr: 2 }}
+              >
+                Pause
+              </Button>
+              <Button
+                variant="contained"
+                color="success"
+                onClick={async () => {
+                  try {
+                    setError(null);
+                    await emergencyAction(2);
+                  } catch (error: any) {
+                    console.error('Error unpausing contract:', error);
+                    setError(error.message);
+                  }
+                }}
+              >
+                Unpause
+              </Button>
+            </Grid>
+          </Grid>
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
+            </Alert>
+          )}
         </AccordionDetails>
       </Accordion>
 

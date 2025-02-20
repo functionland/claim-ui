@@ -761,6 +761,57 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
             </AccordionDetails>
           </Accordion>
         </Grid>
+
+        {/* Emergency Actions */}
+        <Grid item xs={12}>
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="h6">Emergency Actions</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <Button
+                    variant="contained"
+                    color="warning"
+                    onClick={async () => {
+                      try {
+                        setError(null);
+                        await handlers.emergencyAction(1);
+                      } catch (error: any) {
+                        console.error('Error pausing contract:', error);
+                        setError(error.message);
+                      }
+                    }}
+                    sx={{ mr: 2 }}
+                  >
+                    Pause
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    onClick={async () => {
+                      try {
+                        setError(null);
+                        await handlers.emergencyAction(2);
+                      } catch (error: any) {
+                        console.error('Error unpausing contract:', error);
+                        setError(error.message);
+                      }
+                    }}
+                  >
+                    Unpause
+                  </Button>
+                </Grid>
+              </Grid>
+              {error && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                  {error}
+                </Alert>
+              )}
+            </AccordionDetails>
+          </Accordion>
+        </Grid>
       </Grid>
     </Box>
   )
@@ -812,6 +863,7 @@ export function TokenAdmin() {
     bridgeOpEvents,
     transferFromContract,
     cleanupExpiredProposals,
+    emergencyAction,
   } = useAdminContract()
 
   const [isAddingToWhitelist, setIsAddingToWhitelist] = useState(false)
@@ -1026,6 +1078,7 @@ export function TokenAdmin() {
     handleBridgeOp,
     handleTransfer,
     handleCleanupExpiredProposals,
+    emergencyAction,
   }
 
   const states = {
