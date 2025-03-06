@@ -28,6 +28,7 @@ export function useAdminContract() {
   const contractAbi = CONTRACT_CONFIG.abi[activeContract]
 
   console.log("Admin Contract - Active Contract:", activeContract)
+  console.log("Admin Contract - Active ChainId:", chainId)
   console.log("Admin Contract - Contract Address:", contractAddress)
 
   const [vestingCapTable, setVestingCapTable] = useState<any[]>([])

@@ -240,7 +240,6 @@ export default function Home() {
                     <Image
                       src="/images/logo.png"
                       alt="Logo"
-                      fill
                       style={{ objectFit: 'contain' }}
                       unoptimized
                       width={40}
