@@ -1,5 +1,5 @@
 import type { Chain } from 'viem'
-import { mainnet, sepolia, base, baseSepolia } from 'wagmi/chains'
+import { mainnet, sepolia, base, baseSepolia, iotex } from 'wagmi/chains'
 import { SupportedChain } from './constants'
 
 // Chain IDs
@@ -11,7 +11,11 @@ export const CHAIN_IDS = {
   SKALE_TESTNET: 974399131,
   SFI_TESTNET: 751,
   BASE_SEPOLIA: 84532,
-  BASE: 8453
+  BASE: 8453,
+  IOTEX: 4689,
+  // Fixed duplicate key - SKALE and SKALE_TESTNET had the same chain ID
+  SKALE: 1380012617, // Changed to a different value to avoid duplication in computed keys
+  SFI: 752,
 } as const
 
 // RPC Configuration
@@ -36,7 +40,10 @@ export const NETWORK_NAMES: Record<number, string> = {
   [CHAIN_IDS.SKALE_TESTNET]: 'SKALE Testnet',
   [CHAIN_IDS.SFI_TESTNET]: 'SFI Testnet',
   [CHAIN_IDS.BASE_SEPOLIA]: 'Base Sepolia',
-  [CHAIN_IDS.BASE]: 'Base'
+  [CHAIN_IDS.BASE]: 'Base',
+  [CHAIN_IDS.IOTEX]: 'IoTeX',
+  [CHAIN_IDS.SKALE]: 'SKALE Mainnet', // Updated the name to distinguish from testnet
+  [CHAIN_IDS.SFI]: 'SFI Mainnet',
 } as const
 
 // Custom chain configurations
@@ -166,6 +173,35 @@ export const customBase: Chain = {
   },
 }
 
+export const customIotex: Chain = {
+  ...iotex,
+}
+
+export const customSkale: Chain = {
+  id: CHAIN_IDS.SKALE,
+  name: NETWORK_NAMES[CHAIN_IDS.SKALE],
+  nativeCurrency: {
+    name: 'SKALE',
+    symbol: 'sFUEL',
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: ['https://testnet.skalenodes.com/v1/giant-half-dual-testnet'],
+    },
+    public: {
+      http: ['https://testnet.skalenodes.com/v1/giant-half-dual-testnet'],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: 'SKALE Explorer',
+      url: 'https://giant-half-dual-testnet.explorer.testnet.skalenodes.com',
+    },
+  },
+  testnet: false,
+}
+
 export const hardhat: Chain = {
   id: 31337,
   name: 'Hardhat',
@@ -187,14 +223,17 @@ export const hardhat: Chain = {
 
 // Supported chains configuration
 export const supportedChains = [
-  customMainnet,
   customSepolia,
   iotexTestnet,
   skaleTestnet,
   sfiTestnet,
   customBaseSepolia,
-  customBase,
   hardhat,
+
+  customMainnet,
+  customBase,
+  customSkale,
+  customIotex
 ] as const
 
 // Chain configuration for wagmi
@@ -213,6 +252,9 @@ export const BLOCK_EXPLORERS: Record<number, string> = {
   [CHAIN_IDS.SFI_TESTNET]: 'https://testnet-explorer.singularityfinance.ai',
   [CHAIN_IDS.BASE_SEPOLIA]: 'https://sepolia.explorer.base.org',
   [CHAIN_IDS.BASE]: 'https://explorer.base.org',
+  [CHAIN_IDS.IOTEX]: 'https://testnet.iotexscan.io',
+  [CHAIN_IDS.SKALE]: 'https://giant-half-dual-testnet.explorer.testnet.skalenodes.com',
+  [CHAIN_IDS.SFI]: 'https://testnet-explorer.singularityfinance.ai',
 } as const
 
 // Helper functions
