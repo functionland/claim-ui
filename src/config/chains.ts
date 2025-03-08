@@ -8,7 +8,7 @@ export const CHAIN_IDS = {
   SEPOLIA: 11155111,
   HARDHAT: 31337,
   IOTEX_TESTNET: 4690,
-  SKALE_TESTNET: 974399131,
+  SKALE_TESTNET: 1444673419,
   SFI_TESTNET: 751,
   BASE_SEPOLIA: 84532,
   BASE: 8453,
@@ -23,10 +23,10 @@ export const RPC_URLS: Record<SupportedChain, string> = {
   mainnet: `https://eth-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
   sepolia: `https://eth-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
   hardhat: 'http://127.0.0.1:8545',
-  iotex: 'https://babel-api.testnet.iotex.io',
-  skale: 'https://testnet.skalenodes.com/v1/giant-half-dual-testnet',
+  iotex: 'https://babel-api.mainnet.iotex.one',
+  'skale-testnet': 'https://testnet.skalenodes.com/v1/juicy-low-small-testnet',
   sfi: 'https://rpc-testnet.singularityfinance.ai',
-  base: 'https://mainnet.base.org',
+  base: `https://base-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
   'base-sepolia': 'https://sepolia.base.org',
 }
 
@@ -107,16 +107,16 @@ export const skaleTestnet: Chain = {
   },
   rpcUrls: {
     default: {
-      http: ['https://testnet.skalenodes.com/v1/giant-half-dual-testnet'],
+      http: ['https://testnet.skalenodes.com/v1/juicy-low-small-testnet'],
     },
     public: {
-      http: ['https://testnet.skalenodes.com/v1/giant-half-dual-testnet'],
+      http: ['https://testnet.skalenodes.com/v1/juicy-low-small-testnet'],
     },
   },
   blockExplorers: {
     default: {
       name: 'SKALE Explorer',
-      url: 'https://giant-half-dual-testnet.explorer.testnet.skalenodes.com',
+      url: 'https://europa-explorer.testnet.skalenodes.com',
     },
   },
   testnet: true,

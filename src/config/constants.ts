@@ -8,7 +8,7 @@ export const SUPPORTED_CHAINS = [
   'sepolia',
   'hardhat',
   'iotex',
-  'skale',
+  'skale-testnet',
   'sfi',
   'base',
   'base-sepolia'
@@ -20,7 +20,7 @@ export const CHAIN_NAMES = {
   sepolia: 'Sepolia Testnet',
   hardhat: 'Hardhat',
   iotex: 'IoTeX Testnet',
-  skale: 'SKALE Testnet',
+  'skale-testnet': 'SKALE Testnet',
   sfi: 'SFI Testnet',
   base: 'Base',
   'base-sepolia': 'Base Sepolia',
