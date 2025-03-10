@@ -1146,6 +1146,7 @@ export function useAdminContract() {
         abi: contractAbi,
         functionName: 'transferFromContract',
         args: [to, ethers.parseEther(amount)],
+        account: userAddress,
       })
 
       console.log('Transfer request:', request)
@@ -1247,6 +1248,7 @@ export function useAdminContract() {
         abi: contractAbi,
         functionName: 'setBridgeOpNonce',
         args: [BigInt(chainId), BigInt(nonce)],
+        account: userAddress,
       })
 
       await writeContractAsync(request)
@@ -1272,6 +1274,7 @@ export function useAdminContract() {
         abi: contractAbi,
         functionName: 'bridgeOp',
         args: [BigInt(amount), BigInt(chainId), BigInt(nonce), opType],
+        account: userAddress,
       })
 
       await writeContractAsync(request)
