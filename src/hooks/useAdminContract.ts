@@ -1450,6 +1450,12 @@ export function useAdminContract() {
     }
 
     try {
+      console.log('Checking role:', {
+        address: contractAddress,
+        functionName: 'hasRole',
+        args: [roleValue, address]
+      });
+      
       const hasRole = await publicClient.readContract({
         address: contractAddress,
         abi: contractAbi,

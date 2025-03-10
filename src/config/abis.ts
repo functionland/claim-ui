@@ -448,6 +448,27 @@ export const GOVERNANCE_ABI = [
     stateMutability: "nonpayable",
     type: "function"
   },
+  {
+    inputs: [
+      {
+        name: "role",
+        type: "bytes32"
+      },
+      {
+        name: "account",
+        type: "address"
+      }
+    ],
+    name: "hasRole",
+    outputs: [
+      {
+        name: "",
+        type: "bool"
+      }
+    ],
+    stateMutability: "view",
+    type: "function"
+  }
 ] as const;
 
 // Common Contract ABI used across multiple contracts
