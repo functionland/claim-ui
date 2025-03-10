@@ -11,6 +11,7 @@ export const SUPPORTED_CHAINS = [
   'skale-testnet',
   'sfi',
   'base',
+  'skale',
   'base-sepolia'
 ] as const
 export type SupportedChain = (typeof SUPPORTED_CHAINS)[number]
@@ -24,6 +25,7 @@ export const CHAIN_NAMES = {
   sfi: 'SFI Testnet',
   base: 'Base',
   'base-sepolia': 'Base Sepolia',
+  skale: 'SKALE EUROPA',
 } as const
 
 export const DEFAULT_CHAIN = 'mainnet'

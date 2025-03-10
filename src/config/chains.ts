@@ -1,5 +1,5 @@
 import type { Chain } from 'viem'
-import { mainnet, sepolia, base, baseSepolia, iotex } from 'wagmi/chains'
+import { mainnet, sepolia, base, baseSepolia, iotex, skaleEuropa } from 'wagmi/chains'
 import { SupportedChain } from './constants'
 
 // Chain IDs
@@ -14,7 +14,7 @@ export const CHAIN_IDS = {
   BASE: 8453,
   IOTEX: 4689,
   // Fixed duplicate key - SKALE and SKALE_TESTNET had the same chain ID
-  SKALE: 1380012617, // Changed to a different value to avoid duplication in computed keys
+  SKALE: 2046399126, // Changed to a different value to avoid duplication in computed keys
   SFI: 752,
 } as const
 
@@ -25,6 +25,7 @@ export const RPC_URLS: Record<SupportedChain, string> = {
   hardhat: 'http://127.0.0.1:8545',
   iotex: 'https://babel-api.mainnet.iotex.one',
   'skale-testnet': 'https://testnet.skalenodes.com/v1/juicy-low-small-testnet',
+  "skale": 'https://mainnet.skalenodes.com/v1/elated-tan-skat',
   sfi: 'https://rpc-testnet.singularityfinance.ai',
   base: `https://base-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
   'base-sepolia': 'https://sepolia.base.org',
@@ -178,28 +179,7 @@ export const customIotex: Chain = {
 }
 
 export const customSkale: Chain = {
-  id: CHAIN_IDS.SKALE,
-  name: NETWORK_NAMES[CHAIN_IDS.SKALE],
-  nativeCurrency: {
-    name: 'SKALE',
-    symbol: 'sFUEL',
-    decimals: 18,
-  },
-  rpcUrls: {
-    default: {
-      http: ['https://testnet.skalenodes.com/v1/giant-half-dual-testnet'],
-    },
-    public: {
-      http: ['https://testnet.skalenodes.com/v1/giant-half-dual-testnet'],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: 'SKALE Explorer',
-      url: 'https://giant-half-dual-testnet.explorer.testnet.skalenodes.com',
-    },
-  },
-  testnet: false,
+  ...skaleEuropa,
 }
 
 export const hardhat: Chain = {
