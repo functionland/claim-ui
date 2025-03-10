@@ -21,7 +21,8 @@ import {
   TableHead,
   TableRow,
   MenuItem,
-  Paper
+  Paper,
+  Divider,
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { ConnectButton } from '@/components/common/ConnectButton'
@@ -30,6 +31,8 @@ import { CONTRACT_TYPES } from '@/config/contracts'
 import ClientOnly from '../common/ClientOnly'
 import { useContractContext } from '@/contexts/ContractContext'
 import { ROLES, ROLE_NAMES } from '@/config/constants'
+import { CONTRACT_CONFIG } from '../../config/contracts'
+import { ZERO_ADDRESS } from '../../config/token'
 
 interface WhitelistTimeConfig {
   address: string;
@@ -64,6 +67,7 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
   const [isCheckingRole, setIsCheckingRole] = useState(false);
   const [timeConfigs, setTimeConfigs] = useState<TimeConfig[]>([]);
   const [isCheckingWhitelist, setIsCheckingWhitelist] = useState(false);
+  const [hasRoleResult, setHasRoleResult] = useState<boolean | null>(null);
 
   const handleCheckRole = async () => {
     if (!formData.role) return;
@@ -105,6 +109,21 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
       setError(error.message || 'Failed to check whitelist configuration');
     } finally {
       setIsCheckingWhitelist(false);
+    }
+  };
+
+  const checkHasRole = async (address: string, role: string) => {
+    try {
+      setIsCheckingRole(true);
+      setHasRoleResult(null);
+      setError(null);
+      
+      const result = await handlers.checkHasRole(address, role);
+      setHasRoleResult(result);
+    } catch (error: any) {
+      setError(error.message || 'Failed to check role');
+    } finally {
+      setIsCheckingRole(false);
     }
   };
 
@@ -172,10 +191,12 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
   console.log('ConnectedView rendered with data:', data);
   console.log('Role check result:', roleCheckResult);
 
-  const roleOptions = Object.entries(ROLES).map(([key, value]) => ({
-    value,
-    label: ROLE_NAMES[value as keyof typeof ROLE_NAMES],
-  }));
+  const roleOptions = [
+    { label: 'ADMIN_ROLE', value: 'ADMIN_ROLE' },
+    { label: 'CONTRACT_OPERATOR_ROLE', value: 'CONTRACT_OPERATOR_ROLE' },
+    { label: 'BRIDGE_OPERATOR_ROLE', value: 'BRIDGE_OPERATOR_ROLE' },
+    { label: 'DEFAULT_ADMIN_ROLE', value: 'DEFAULT_ADMIN_ROLE' },
+  ];
 
   return (
     <Box>
@@ -812,6 +833,94 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
             </AccordionDetails>
           </Accordion>
         </Grid>
+
+        {/* Role Management */}
+        <Grid item xs={12}>
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="h6">Role Management</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Box component="form" noValidate sx={{ mt: 1 }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      label="Address"
+                      value={formData.roleAddress || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, roleAddress: e.target.value }))}
+                      margin="normal"
+                      placeholder="0x..."
+                      helperText="Address to check or modify role"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      select
+                      fullWidth
+                      label="Role"
+                      value={formData.role || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
+                      margin="normal"
+                      helperText="Select the role to check or modify"
+                    >
+                      {roleOptions.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Button
+                      variant="outlined"
+                      onClick={() => checkHasRole(formData.roleAddress, formData.role)}
+                      disabled={!formData.roleAddress || !formData.role || isCheckingRole}
+                      sx={{ mr: 1 }}
+                    >
+                      {isCheckingRole ? <CircularProgress size={24} /> : 'Check Role'}
+                    </Button>
+                    {hasRoleResult !== null && (
+                      <Typography sx={{ mt: 1 }}>
+                        {hasRoleResult 
+                          ? `Address ${formData.roleAddress} HAS the ${formData.role} role.`
+                          : `Address ${formData.roleAddress} DOES NOT HAVE the ${formData.role} role.`}
+                      </Typography>
+                    )}
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Divider sx={{ my: 2 }} />
+                    <Typography variant="subtitle1" sx={{ mb: 2 }}>
+                      Create Role Proposal
+                    </Typography>
+                    <TextField
+                      select
+                      fullWidth
+                      label="Proposal Type"
+                      value={formData.roleType || '1'}
+                      onChange={(e) => setFormData(prev => ({ ...prev, roleType: e.target.value }))}
+                      margin="normal"
+                      sx={{ mb: 2 }}
+                    >
+                      <MenuItem value="1">Add Role</MenuItem>
+                      <MenuItem value="2">Remove Role</MenuItem>
+                    </TextField>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Note: Role changes require multi-signature approval through the proposal system.
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      onClick={handlers.handleCreateRoleProposal}
+                      disabled={!formData.roleAddress || !formData.role || !formData.roleType || states.isCreatingRoleProposal}
+                    >
+                      {states.isCreatingRoleProposal ? <CircularProgress size={24} /> : 'Create Role Proposal'}
+                    </Button>
+                  </Grid>
+                </Grid>
+              </Box>
+            </AccordionDetails>
+          </Accordion>
+        </Grid>
       </Grid>
     </Box>
   )
@@ -836,6 +945,8 @@ export function TokenAdmin() {
     bridgeAmount: '',
     transferTo: '',
     transferAmount: '',
+    roleAddress: '',
+    roleType: '1', // Default to "Add Role" (1)
   })
 
   // Set the active contract to TOKEN when the component mounts
@@ -864,6 +975,8 @@ export function TokenAdmin() {
     transferFromContract,
     cleanupExpiredProposals,
     emergencyAction,
+    createRoleProposal,
+    checkHasRole,
   } = useAdminContract()
 
   const [isAddingToWhitelist, setIsAddingToWhitelist] = useState(false)
@@ -876,6 +989,7 @@ export function TokenAdmin() {
   const [isSettingNonce, setIsSettingNonce] = useState(false)
   const [isTransferring, setIsTransferring] = useState(false)
   const [isCleaning, setIsCleaning] = useState(false)
+  const [isCreatingRoleProposal, setIsCreatingRoleProposal] = useState(false)
   const [whitelistedAddresses, setWhitelistedAddresses] = useState<string[]>([]);
 
   // Add this effect to fetch whitelisted addresses when component mounts
@@ -1057,11 +1171,41 @@ export function TokenAdmin() {
     try {
       setError(null)
       setIsCleaning(true)
-      await cleanupExpiredProposals(10)
+      await cleanupExpiredProposals(10) // Default to checking 10 proposals
     } catch (error: any) {
       setError(error.message)
     } finally {
       setIsCleaning(false)
+    }
+  }
+
+  const handleCreateRoleProposal = async () => {
+    try {
+      setError(null)
+      setIsCreatingRoleProposal(true)
+      
+      const { roleAddress, role, roleType } = formData
+      
+      if (!roleAddress || !role) {
+        throw new Error('Please fill in all required fields')
+      }
+      
+      // Convert roleType to number
+      const proposalType = parseInt(roleType)
+      
+      // Create role proposal
+      await createRoleProposal(proposalType, roleAddress, role)
+      
+      // Reset form
+      setFormData(prev => ({
+        ...prev,
+        roleAddress: '',
+        role: '',
+      }))
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setIsCreatingRoleProposal(false)
     }
   }
 
@@ -1078,7 +1222,9 @@ export function TokenAdmin() {
     handleBridgeOp,
     handleTransfer,
     handleCleanupExpiredProposals,
+    handleCreateRoleProposal,
     emergencyAction,
+    checkHasRole,
   }
 
   const states = {
@@ -1093,6 +1239,7 @@ export function TokenAdmin() {
     isBridgeOp,
     isTransferring,
     isCleaning,
+    isCreatingRoleProposal,
   }
 
   const data = {

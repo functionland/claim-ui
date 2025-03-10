@@ -1391,6 +1391,82 @@ export function useAdminContract() {
     }
   }
 
+  const createRoleProposal = async (proposalType: number, targetAddress: string, role: string) => {
+    if (!contractAddress) throw new Error('Contract address not found')
+    if (!ethers.isAddress(targetAddress)) throw new Error('Invalid target address')
+    if (!role) throw new Error('Role is required')
+    
+    // Convert role string identifiers to their byte32 representation if needed
+    let roleValue: string = role;
+    if (role === 'ADMIN_ROLE') {
+      roleValue = ethers.keccak256(ethers.toUtf8Bytes("ADMIN_ROLE"));
+    } else if (role === 'CONTRACT_OPERATOR_ROLE') {
+      roleValue = ethers.keccak256(ethers.toUtf8Bytes("CONTRACT_OPERATOR_ROLE"));
+    } else if (role === 'BRIDGE_OPERATOR_ROLE') {
+      roleValue = ethers.keccak256(ethers.toUtf8Bytes("BRIDGE_OPERATOR_ROLE"));
+    } else if (role === 'DEFAULT_ADMIN_ROLE') {
+      roleValue = ethers.ZeroHash;
+    }
+
+    try {
+      const { request } = await publicClient.simulateContract({
+        address: contractAddress,
+        abi: contractAbi,
+        functionName: 'createProposal',
+        account: userAddress,
+        args: [
+          proposalType, // Type 1 = AddRole, Type 2 = RemoveRole
+          0n, // id (not used for role proposals)
+          targetAddress as `0x${string}`,
+          roleValue as `0x${string}`,
+          0n, // amount (not used for role proposals)
+          ethers.ZeroAddress as `0x${string}` // tokenAddress (not used for role proposals)
+        ]
+      })
+
+      const hash = await writeContractAsync(request)
+      return hash
+    } catch (err: any) {
+      console.error('Error creating role proposal:', err)
+      throw new Error(err.message)
+    }
+  }
+
+  const checkHasRole = async (address: string, role: string) => {
+    if (!contractAddress) throw new Error('Contract address not found')
+    if (!ethers.isAddress(address)) throw new Error('Invalid address')
+    if (!role) throw new Error('Role is required')
+    
+    // Convert role string identifiers to their byte32 representation if needed
+    let roleValue: string = role;
+    if (role === 'ADMIN_ROLE') {
+      roleValue = ethers.keccak256(ethers.toUtf8Bytes("ADMIN_ROLE"));
+    } else if (role === 'CONTRACT_OPERATOR_ROLE') {
+      roleValue = ethers.keccak256(ethers.toUtf8Bytes("CONTRACT_OPERATOR_ROLE"));
+    } else if (role === 'BRIDGE_OPERATOR_ROLE') {
+      roleValue = ethers.keccak256(ethers.toUtf8Bytes("BRIDGE_OPERATOR_ROLE"));
+    } else if (role === 'DEFAULT_ADMIN_ROLE') {
+      roleValue = ethers.ZeroHash;
+    }
+
+    try {
+      const hasRole = await publicClient.readContract({
+        address: contractAddress,
+        abi: contractAbi,
+        functionName: 'hasRole',
+        args: [
+          roleValue as `0x${string}`,
+          address as `0x${string}`
+        ]
+      })
+
+      return Boolean(hasRole)
+    } catch (err: any) {
+      console.error('Error checking role:', err)
+      throw new Error(err.message)
+    }
+  }
+
   return {
     isLoading,
     error,
@@ -1431,5 +1507,7 @@ export function useAdminContract() {
     cleanupExpiredProposals,
     upgradeContract,
     emergencyAction,
+    createRoleProposal,
+    checkHasRole,
   }
 }
