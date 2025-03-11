@@ -1530,7 +1530,10 @@ export function useAdminContract() {
         to: userAddress,
         value: BigInt(0),
         nonce,
-        gasPrice: increasedGasPrice
+        gasPrice: increasedGasPrice,
+        kzg: undefined,
+        account: userAddress,
+        chain: undefined
       })
       
       return hash
