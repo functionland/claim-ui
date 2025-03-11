@@ -14,6 +14,21 @@ type VestingWalletInfo = {
   claimed: bigint;
 }
 
+// Helper function to get the bytes32 hash of a role string
+const getRoleHash = (role: string): string => {
+  if (role === 'ADMIN_ROLE') {
+    return ethers.keccak256(ethers.toUtf8Bytes("ADMIN_ROLE"));
+  } else if (role === 'CONTRACT_OPERATOR_ROLE') {
+    return ethers.keccak256(ethers.toUtf8Bytes("CONTRACT_OPERATOR_ROLE"));
+  } else if (role === 'BRIDGE_OPERATOR_ROLE') {
+    return ethers.keccak256(ethers.toUtf8Bytes("BRIDGE_OPERATOR_ROLE"));
+  } else if (role === 'DEFAULT_ADMIN_ROLE') {
+    return ethers.ZeroHash;
+  } else {
+    throw new Error(`Invalid role: ${role}`);
+  }
+};
+
 export function useAdminContract() {
   const { activeContract } = useContractContext()
   const { address: userAddress, chainId } = useAccount()
@@ -804,11 +819,13 @@ export function useAdminContract() {
     if (!publicClient) throw new Error('Public client not found');
 
     try {
+      console.log('Setting role transaction limit:', { role, limit: limit.toString() });
+      
       const { request } = await publicClient.simulateContract({
         address: contractAddress,
         abi: contractAbi,
         functionName: 'setRoleTransactionLimit',
-        args: [role as `0x${string}`, limit],
+        args: [getRoleHash(role), limit],
         account: userAddress,
       });
 
@@ -830,12 +847,14 @@ export function useAdminContract() {
     if (!publicClient) throw new Error('Public client not found');
 
     try {
+      console.log('Setting role quorum:', { role, quorum: quorum.toString() });
+      
       const { request } = await publicClient.simulateContract({
         address: contractAddress,
         abi: contractAbi,
         functionName: 'setRoleQuorum',
         account: userAddress,
-        args: [role, quorum]
+        args: [getRoleHash(role), quorum]
       });
 
       const hash = await writeContractAsync(request);
@@ -894,36 +913,37 @@ export function useAdminContract() {
   };
 
   const checkRoleConfig = async (role: string) => {
-    if (!role) throw new Error('Role is required');
-    if (!contractAddress) throw new Error('Contract not connected');
-    if (!publicClient) throw new Error('Public client not available');
+    if (!contractAddress) throw new Error('Contract address not found')
     
     try {
       console.log('Checking role config for:', { role });
 
       const config = await publicClient.readContract({
-        address: contractAddress as `0x${string}`,
+        address: contractAddress,
         abi: contractAbi,
         functionName: 'roleConfigs',
-        args: [role],
-      }) as readonly [bigint, number];
-      
+        args: [getRoleHash(role)],
+      }) as { transactionLimit: bigint; quorum: bigint };
+
       console.log('Raw role config result:', config);
       
-      // Handle scientific notation by converting to full number first
-      const [base, exponent] = config[1].toString().split('e+').map(Number);
-      const fullNumber = base * Math.pow(10, exponent);
-      const transactionLimit = BigInt(Math.floor(fullNumber));
-      const quorum = BigInt(Number(config[0]));
+      // Check if config or its properties are undefined
+      if (!config || config.transactionLimit === undefined || config.quorum === undefined) {
+        throw new Error('Invalid role configuration data received');
+      }
+      
+      // Convert BigInt values to strings for safer processing
+      const transactionLimitStr = config.transactionLimit.toString();
+      const quorumStr = config.quorum.toString();
       
       console.log('Processed role config:', { 
-        transactionLimit: transactionLimit.toString(), 
-        quorum: quorum.toString() 
+        transactionLimit: transactionLimitStr, 
+        quorum: quorumStr
       });
       
       return {
-        transactionLimit,
-        quorum
+        transactionLimit: config.transactionLimit,
+        quorum: config.quorum
       };
     } catch (error: any) {
       console.error('Error checking role config:', error);
@@ -1396,18 +1416,6 @@ export function useAdminContract() {
     if (!ethers.isAddress(targetAddress)) throw new Error('Invalid target address')
     if (!role) throw new Error('Role is required')
     
-    // Convert role string identifiers to their byte32 representation if needed
-    let roleValue: string = role;
-    if (role === 'ADMIN_ROLE') {
-      roleValue = ethers.keccak256(ethers.toUtf8Bytes("ADMIN_ROLE"));
-    } else if (role === 'CONTRACT_OPERATOR_ROLE') {
-      roleValue = ethers.keccak256(ethers.toUtf8Bytes("CONTRACT_OPERATOR_ROLE"));
-    } else if (role === 'BRIDGE_OPERATOR_ROLE') {
-      roleValue = ethers.keccak256(ethers.toUtf8Bytes("BRIDGE_OPERATOR_ROLE"));
-    } else if (role === 'DEFAULT_ADMIN_ROLE') {
-      roleValue = ethers.ZeroHash;
-    }
-
     try {
       const { request } = await publicClient.simulateContract({
         address: contractAddress,
@@ -1418,7 +1426,7 @@ export function useAdminContract() {
           proposalType, // Type 1 = AddRole, Type 2 = RemoveRole
           0n, // id (not used for role proposals)
           targetAddress as `0x${string}`,
-          roleValue as `0x${string}`,
+          getRoleHash(role) as `0x${string}`,
           0n, // amount (not used for role proposals)
           ethers.ZeroAddress as `0x${string}` // tokenAddress (not used for role proposals)
         ]
@@ -1437,23 +1445,11 @@ export function useAdminContract() {
     if (!ethers.isAddress(address)) throw new Error('Invalid address')
     if (!role) throw new Error('Role is required')
     
-    // Convert role string identifiers to their byte32 representation if needed
-    let roleValue: string = role;
-    if (role === 'ADMIN_ROLE') {
-      roleValue = ethers.keccak256(ethers.toUtf8Bytes("ADMIN_ROLE"));
-    } else if (role === 'CONTRACT_OPERATOR_ROLE') {
-      roleValue = ethers.keccak256(ethers.toUtf8Bytes("CONTRACT_OPERATOR_ROLE"));
-    } else if (role === 'BRIDGE_OPERATOR_ROLE') {
-      roleValue = ethers.keccak256(ethers.toUtf8Bytes("BRIDGE_OPERATOR_ROLE"));
-    } else if (role === 'DEFAULT_ADMIN_ROLE') {
-      roleValue = ethers.ZeroHash;
-    }
-
     try {
       console.log('Checking role:', {
         address: contractAddress,
         functionName: 'hasRole',
-        args: [roleValue, address]
+        args: [getRoleHash(role), address]
       });
       
       const hasRole = await publicClient.readContract({
@@ -1461,7 +1457,7 @@ export function useAdminContract() {
         abi: contractAbi,
         functionName: 'hasRole',
         args: [
-          roleValue as `0x${string}`,
+          getRoleHash(role) as `0x${string}`,
           address as `0x${string}`
         ]
       })
@@ -1471,7 +1467,7 @@ export function useAdminContract() {
       console.error('Error checking role:', err)
       throw new Error(err.message)
     }
-  }
+  };
 
   return {
     isLoading,
