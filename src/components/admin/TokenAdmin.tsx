@@ -32,7 +32,6 @@ import ClientOnly from '../common/ClientOnly'
 import { useContractContext } from '@/contexts/ContractContext'
 import { ROLES, ROLE_NAMES } from '@/config/constants'
 import { CONTRACT_CONFIG } from '../../config/contracts'
-import { ZERO_ADDRESS } from '../../config/token'
 
 interface WhitelistTimeConfig {
   address: string;
