@@ -928,13 +928,14 @@ export function useAdminContract() {
       console.log('Raw role config result:', config);
       
       // Check if config or its properties are undefined
-      if (!config || config.transactionLimit === undefined || config.quorum === undefined) {
+      if (!config || config[0] === undefined || config[1] === undefined) {
         throw new Error('Invalid role configuration data received');
       }
       
+      const transactionLimit18 = BigInt(config[1]);
       // Convert BigInt values to strings for safer processing
-      const transactionLimitStr = config.transactionLimit.toString();
-      const quorumStr = config.quorum.toString();
+      const transactionLimitStr = transactionLimit18.toString();
+      const quorumStr = config[0].toString();
       
       console.log('Processed role config:', { 
         transactionLimit: transactionLimitStr, 
@@ -942,8 +943,8 @@ export function useAdminContract() {
       });
       
       return {
-        transactionLimit: config.transactionLimit,
-        quorum: config.quorum
+        transactionLimit: transactionLimit18,
+        quorum: config[0]
       };
     } catch (error: any) {
       console.error('Error checking role config:', error);
