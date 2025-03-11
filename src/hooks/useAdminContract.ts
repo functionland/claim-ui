@@ -1290,11 +1290,14 @@ export function useAdminContract() {
       setIsBridgeOp(true)
       setError(null)
 
+      // Convert amount to wei (multiply by 10^18)
+      const amountInWei = ethers.parseEther(amount)
+
       const { request } = await publicClient.simulateContract({
         address: contractAddress,
         abi: contractAbi,
         functionName: 'bridgeOp',
-        args: [BigInt(amount), BigInt(chainId), BigInt(nonce), opType],
+        args: [amountInWei, BigInt(chainId), BigInt(nonce), opType],
         account: userAddress,
       })
 
