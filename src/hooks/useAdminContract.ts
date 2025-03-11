@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useReadContract, useWriteContract, useAccount, usePublicClient, useSimulateContract } from 'wagmi'
+import { useReadContract, useWriteContract, useAccount, usePublicClient, useSimulateContract, useWalletClient } from 'wagmi'
 import { type Address, parseAbiItem } from 'viem'
 import { CONTRACT_CONFIG, CONTRACT_TYPES } from '@/config/contracts'
 import { useContractContext } from '@/contexts/ContractContext'
@@ -35,6 +35,7 @@ export function useAdminContract() {
   const [error, setError] = useState<string | null>(null)
   const publicClient = usePublicClient()
   const { writeContractAsync } = useWriteContract()
+  const { data: walletClient } = useWalletClient()
 
   const contractAddress = chainId 
     ? CONTRACT_CONFIG.address[activeContract][chainId] 
@@ -1473,6 +1474,72 @@ export function useAdminContract() {
     }
   };
 
+  const getTransactionDetails = async (txHash: string) => {
+    if (!txHash || !txHash.startsWith('0x')) {
+      throw new Error('Invalid transaction hash')
+    }
+
+    try {
+      try {
+        // Get transaction details
+        const txDetails = await publicClient.getTransaction({
+          hash: txHash as `0x${string}`
+        })
+        
+        if (!txDetails) {
+          throw new Error('Transaction not found on the current network')
+        }
+        
+        return {
+          nonce: Number(txDetails.nonce),
+          from: txDetails.from,
+          status: txDetails.blockNumber ? 'Confirmed' : 'Pending'
+        }
+      } catch (innerErr: any) {
+        // If transaction is not found, suggest manual nonce entry
+        console.error('Error fetching transaction:', innerErr)
+        throw new Error('Transaction not found on the current network. Try entering the nonce directly.')
+      }
+    } catch (err: any) {
+      console.error('Error getting transaction details:', err)
+      throw new Error(`Failed to get transaction details: ${err.message}`)
+    }
+  };
+
+  const cancelTransaction = async (nonce: number) => {
+    if (!userAddress) {
+      throw new Error('No connected account')
+    }
+
+    try {
+      setError(null)
+      
+      // Get current gas price
+      const currentGasPrice = await publicClient.getGasPrice()
+      
+      // Increase gas price by 10% to prioritize the cancellation
+      const increasedGasPrice = currentGasPrice * BigInt(110) / BigInt(100)
+      
+      // Check if walletClient is available
+      if (!walletClient) {
+        throw new Error('Wallet client not available. Please make sure your wallet is connected.')
+      }
+      
+      // Send cancellation transaction
+      const hash = await walletClient.sendTransaction({
+        to: userAddress,
+        value: BigInt(0),
+        nonce,
+        gasPrice: increasedGasPrice
+      })
+      
+      return hash
+    } catch (err: any) {
+      console.error('Error cancelling transaction:', err)
+      throw new Error(`Failed to cancel transaction: ${err.message}`)
+    }
+  }
+
   return {
     isLoading,
     error,
@@ -1515,5 +1582,7 @@ export function useAdminContract() {
     emergencyAction,
     createRoleProposal,
     checkHasRole,
+    cancelTransaction,
+    getTransactionDetails,
   }
 }

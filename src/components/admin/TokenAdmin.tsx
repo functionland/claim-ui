@@ -921,6 +921,108 @@ function ConnectedView({ error, setError, formData, setFormData, handlers, state
             </AccordionDetails>
           </Accordion>
         </Grid>
+
+        {/* Transaction Cancellation */}
+        <Grid item xs={12}>
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="h6">Cancel Transaction</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Box component="form" noValidate sx={{ mt: 1 }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                      <Typography>
+                        Cancelling a transaction works by submitting a new transaction with the same nonce but a higher gas price. 
+                        This new transaction will replace the pending one. The replacement transaction will send 0 ETH to your own address.
+                      </Typography>
+                    </Alert>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      select
+                      fullWidth
+                      label="Cancel by"
+                      value={formData.cancelMethod || 'hash'}
+                      onChange={(e) => setFormData(prev => ({ ...prev, cancelMethod: e.target.value }))}
+                      margin="normal"
+                    >
+                      <MenuItem value="hash">Transaction Hash</MenuItem>
+                      <MenuItem value="nonce">Transaction Nonce</MenuItem>
+                    </TextField>
+                  </Grid>
+                  
+                  {formData.cancelMethod === 'hash' ? (
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="Transaction Hash"
+                        value={formData.cancelTxHash || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, cancelTxHash: e.target.value }))}
+                        margin="normal"
+                        placeholder="0x..."
+                        helperText="Enter the transaction hash of the pending transaction you want to cancel"
+                      />
+                      {formData.txDetails && (
+                        <Alert severity="info" sx={{ mt: 2 }}>
+                          <Typography variant="subtitle2">Transaction Details:</Typography>
+                          <Typography>From: {formData.txDetails.from}</Typography>
+                          <Typography>Nonce: {formData.txDetails.nonce}</Typography>
+                          <Typography>Status: {formData.txDetails.status}</Typography>
+                          {formData.txDetails.status === 'Confirmed' && (
+                            <Typography color="error">
+                              Warning: This transaction is already confirmed and cannot be cancelled.
+                            </Typography>
+                          )}
+                        </Alert>
+                      )}
+                      <Button
+                        variant="outlined"
+                        onClick={handlers.handleLookupTransaction}
+                        disabled={!formData.cancelTxHash || states.isLookingUpTx}
+                        sx={{ mt: 2, mr: 1 }}
+                      >
+                        {states.isLookingUpTx ? <CircularProgress size={24} /> : 'Lookup Transaction'}
+                      </Button>
+                      <Button
+                        variant="contained"
+                        color="warning"
+                        onClick={() => handlers.handleCancelByHash(formData.cancelTxHash)}
+                        disabled={!formData.cancelTxHash || states.isCancellingTx || !formData.txDetails || formData.txDetails.status === 'Confirmed'}
+                        sx={{ mt: 2 }}
+                      >
+                        {states.isCancellingTx ? <CircularProgress size={24} /> : 'Cancel Transaction'}
+                      </Button>
+                    </Grid>
+                  ) : (
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="Transaction Nonce"
+                        type="number"
+                        value={formData.cancelNonce || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, cancelNonce: e.target.value }))}
+                        margin="normal"
+                        inputProps={{ min: 0 }}
+                        helperText="Enter the nonce of the pending transaction you want to cancel"
+                      />
+                      <Button
+                        variant="contained"
+                        color="warning"
+                        onClick={() => handlers.handleCancelByNonce(Number(formData.cancelNonce))}
+                        disabled={!formData.cancelNonce || states.isCancellingTx}
+                        sx={{ mt: 2 }}
+                      >
+                        {states.isCancellingTx ? <CircularProgress size={24} /> : 'Cancel Transaction'}
+                      </Button>
+                    </Grid>
+                  )}
+                </Grid>
+              </Box>
+            </AccordionDetails>
+          </Accordion>
+        </Grid>
       </Grid>
     </Box>
   )
@@ -947,6 +1049,10 @@ export function TokenAdmin() {
     transferAmount: '',
     roleAddress: '',
     roleType: '1', // Default to "Add Role" (1)
+    cancelNonce: '',
+    cancelTxHash: '',
+    cancelMethod: 'hash', // Default to cancelling by hash
+    txDetails: null as { nonce: number, from: string, status: string } | null,
   })
 
   // Set the active contract to TOKEN when the component mounts
@@ -977,6 +1083,8 @@ export function TokenAdmin() {
     emergencyAction,
     createRoleProposal,
     checkHasRole,
+    cancelTransaction,
+    getTransactionDetails, // Add this line
   } = useAdminContract()
 
   const [isAddingToWhitelist, setIsAddingToWhitelist] = useState(false)
@@ -991,6 +1099,8 @@ export function TokenAdmin() {
   const [isCleaning, setIsCleaning] = useState(false)
   const [isCreatingRoleProposal, setIsCreatingRoleProposal] = useState(false)
   const [whitelistedAddresses, setWhitelistedAddresses] = useState<string[]>([]);
+  const [isCancellingTx, setIsCancellingTx] = useState(false);
+  const [isLookingUpTx, setIsLookingUpTx] = useState(false); // Add this line
 
   // Add this effect to fetch whitelisted addresses when component mounts
   useEffect(() => {
@@ -1006,6 +1116,59 @@ export function TokenAdmin() {
 
     fetchAddresses();
   }, []);
+
+  const handleLookupTransaction = async () => {
+    if (!formData.cancelTxHash) return;
+    
+    try {
+      setError(null);
+      setIsLookingUpTx(true);
+      
+      const details = await getTransactionDetails(formData.cancelTxHash);
+      
+      // Update form data with transaction details
+      setFormData(prev => ({ ...prev, txDetails: details }));
+    } catch (error: any) {
+      setError(error.message);
+      setFormData(prev => ({ ...prev, txDetails: null }));
+    } finally {
+      setIsLookingUpTx(false);
+    }
+  };
+
+  const handleCancelByHash = async (txHash: string) => {
+    if (!txHash || !formData.txDetails) return;
+    
+    try {
+      await handleCancelByNonce(formData.txDetails.nonce);
+      
+      // Clear form
+      setFormData(prev => ({ ...prev, cancelTxHash: '', txDetails: null }));
+    } catch (error: any) {
+      setError(error.message);
+    }
+  };
+
+  const handleCancelByNonce = async (nonce: number) => {
+    if (isNaN(nonce)) return;
+    
+    try {
+      setError(null);
+      setIsCancellingTx(true);
+      
+      const txHash = await cancelTransaction(nonce);
+      
+      // Show success message
+      alert(`Transaction cancellation submitted. Hash: ${txHash}`);
+      
+      // Clear form
+      setFormData(prev => ({ ...prev, cancelNonce: '' }));
+    } catch (error: any) {
+      setError(error.message);
+    } finally {
+      setIsCancellingTx(false);
+    }
+  };
 
   const handleAddToWhitelist = async () => {
     try {
@@ -1212,12 +1375,9 @@ export function TokenAdmin() {
   const handlers = {
     handleAddToWhitelist,
     handleSetTransactionLimit,
+    handleSetQuorum,
     handleApproveProposal,
     handleExecuteProposal,
-    handleSetQuorum,
-    checkRoleConfig,
-    checkWhitelistConfig,
-    handleRemoveFromWhitelist,
     handleSetBridgeOpNonce,
     handleBridgeOp,
     handleTransfer,
@@ -1225,21 +1385,25 @@ export function TokenAdmin() {
     handleCreateRoleProposal,
     emergencyAction,
     checkHasRole,
+    handleLookupTransaction, // Update this line
+    handleCancelByHash,      // Add this line
+    handleCancelByNonce,     // Update this line
   }
 
   const states = {
-    isAddingToWhitelist,
     isSettingLimit,
     isSettingTGE,
     isApproving,
     isExecuting,
-    isRemovingFromWhitelist,
     isWhitelisting,
+    isRemovingFromWhitelist,
     isSettingNonce,
     isBridgeOp,
     isTransferring,
     isCleaning,
     isCreatingRoleProposal,
+    isCancellingTx,
+    isLookingUpTx, // Add this line
   }
 
   const data = {
