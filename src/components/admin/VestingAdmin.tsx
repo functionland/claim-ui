@@ -151,6 +151,13 @@ export function VestingAdmin() {
     try {
       setError(null)
       setIsAddingWallet(true)
+      
+      // Validate note length - bytes32 can only store up to 32 bytes
+      if (formData.note && formData.note.length > 31) {
+        setError("Note must be 31 characters or less (bytes32 limit)")
+        return
+      }
+      
       await addVestingWallet(
         formData.walletAddress,
         Number(formData.capId),
@@ -631,10 +638,17 @@ export function VestingAdmin() {
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
+                id="note"
+                placeholder="Optional note"
                 label="Note"
                 value={formData.note}
-                onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                helperText="Optional note for the beneficiary"
+                onChange={(e) => {
+                  // Limit to 31 characters
+                  const value = e.target.value.slice(0, 31);
+                  setFormData({ ...formData, note: value });
+                }}
+                helperText={`Optional note for the beneficiary (${formData.note ? formData.note.length : 0}/31 characters)`}
+                inputProps={{ maxLength: 31 }}
               />
             </Grid>
           </Grid>

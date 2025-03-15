@@ -1282,6 +1282,13 @@ export const DISTRIBUTION_ABI = [
     stateMutability: "nonpayable",
     type: "function"
   },
+  {
+    inputs: [],
+    name: "initiateTGE",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
   // Distribution-specific errors
   {
     type: "error",
