@@ -6,6 +6,7 @@ import { type Address, parseAbiItem } from 'viem'
 import { CONTRACT_CONFIG, CONTRACT_TYPES } from '@/config/contracts'
 import { useContractContext } from '@/contexts/ContractContext'
 import { ethers } from 'ethers'
+import { PROPOSAL_TYPES } from '../config/constants';
 
 type VestingWalletInfo = {
   capId: bigint;
@@ -369,9 +370,16 @@ export function useAdminContract() {
       console.log('Contract bytecode:', code ? 'Found' : 'Not found');
       if (!code) throw new Error('Contract not found at the specified address');
 
+      // Import proposal types from config
+      console.log('Available proposal types:', PROPOSAL_TYPES);
+      
+      // Determine the correct proposal type to use
+      // Try to use AddWhitelist (5), but if that fails, we might need a different value
+      const proposalType = PROPOSAL_TYPES.AddWhitelist; // 5
+      
       // Create the proposal
       const proposalArgs = [
-        5n, // AddWhitelist type as uint8
+        BigInt(proposalType), // AddWhitelist type as uint8
         0n, // id as uint40
         address as Address, // target address
         '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`, // role as bytes32

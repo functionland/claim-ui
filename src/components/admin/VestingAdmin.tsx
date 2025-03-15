@@ -290,10 +290,12 @@ export function VestingAdmin() {
     }
   };
 
-  const roleOptions = Object.entries(ROLES).map(([key, value]) => ({
-    value,
-    label: ROLE_NAMES[value as keyof typeof ROLE_NAMES],
-  }));
+  const roleOptions = [
+    { label: 'Admin', value: 'ADMIN_ROLE' },
+    { label: 'Contract Operator', value: 'CONTRACT_OPERATOR_ROLE' },
+    { label: 'Bridge Operator', value: 'BRIDGE_OPERATOR_ROLE' },
+    { label: 'Default Admin', value: 'DEFAULT_ADMIN_ROLE' },
+  ];
 
   const handleSetTransactionLimit = async () => {
     try {

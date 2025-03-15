@@ -8,7 +8,9 @@ export const VESTING_CONTRACT_ADDRESSES: Record<number, Address> = {
   [CHAIN_IDS.SEPOLIA]: process.env.NEXT_PUBLIC_SEPOLIA_VESTING_CONTRACT_ADDRESS as Address,
   [CHAIN_IDS.HARDHAT]: process.env.NEXT_PUBLIC_LOCAL_VESTING_CONTRACT_ADDRESS as Address,
 
+
   [CHAIN_IDS.MAINNET]: process.env.NEXT_PUBLIC_ETHEREUM_VESTING_CONTRACT_ADDRESS as Address,
+  [CHAIN_IDS.BASE]: process.env.NEXT_PUBLIC_BASE_VESTING_CONTRACT_ADDRESS as Address,
 }
 
 // Contract Addresses for airdrop

@@ -1384,9 +1384,11 @@ export function TokenAdmin() {
     handleCreateRoleProposal,
     emergencyAction,
     checkHasRole,
-    handleLookupTransaction, // Update this line
-    handleCancelByHash,      // Add this line
-    handleCancelByNonce,     // Update this line
+    checkWhitelistConfig, // Add checkWhitelistConfig to the handlers
+    checkRoleConfig, // Add checkRoleConfig to ensure it's available too
+    handleLookupTransaction,
+    handleCancelByHash,
+    handleCancelByNonce,
   }
 
   const states = {
