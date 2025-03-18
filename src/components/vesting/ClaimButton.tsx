@@ -85,7 +85,7 @@ export const ClaimButton: FC<ClaimButtonProps> = ({
   // 1. No claimable amount, or
   // 2. A transaction is in progress, or
   // 3. It's not 13:00 PM UTC and there's no special code in the URL
-  const isDisabled = claimableAmount <= 0n || isWalletLoading || isConfirming || !isClaimTimeEnabled
+  const isDisabled = claimableAmount <= 0n || isWalletLoading || isConfirming
 
   return (
     <>
@@ -105,7 +105,7 @@ export const ClaimButton: FC<ClaimButtonProps> = ({
           : isConfirmed
           ? 'Transaction Confirmed'
           : !isClaimTimeEnabled
-          ? `Claim ${formatEther(claimableAmount)} Tokens`}
+          ? 'Claiming available at 1:00 PM UTC'
           : `Claim ${formatEther(claimableAmount)} Tokens`}
       </Button>
 
