@@ -30,18 +30,18 @@ export const ClaimButton: FC<ClaimButtonProps> = ({
     hash: transactionHash,
   })
 
-  // Check if the current time is 13:00 PM UTC or if the special code is in URL
+  // Check if the current time is 12:00 PM UTC or if the special code is in URL
   useEffect(() => {
     const checkTimeAndCode = () => {
       // Check for code=ehsan in URL
       const codeParam = searchParams.get('code')
       const hasSpecialCode = codeParam === 'ehsan'
       
-      // Check if it's 13:00 PM UTC (1:00 PM UTC)
+      // Check if it's 12:00 PM UTC
       const now = new Date()
-      const isTimeEnabled = now.getUTCHours() === 13 && now.getUTCMinutes() === 0
+      const isNoonUTC = now.getUTCHours() === 12 && now.getUTCMinutes() === 0
       
-      setIsClaimTimeEnabled(isTimeEnabled || hasSpecialCode)
+      setIsClaimTimeEnabled(isNoonUTC || hasSpecialCode)
     }
     
     // Check immediately and then every minute
@@ -84,8 +84,8 @@ export const ClaimButton: FC<ClaimButtonProps> = ({
   // Button is disabled if:
   // 1. No claimable amount, or
   // 2. A transaction is in progress, or
-  // 3. It's not 13:00 PM UTC and there's no special code in the URL
-  const isDisabled = claimableAmount <= 0n || isWalletLoading || isConfirming
+  // 3. It's not 12:00 PM UTC and there's no special code in the URL
+  const isDisabled = claimableAmount <= 0n || isWalletLoading || isConfirming || !isClaimTimeEnabled
 
   return (
     <>
@@ -105,7 +105,7 @@ export const ClaimButton: FC<ClaimButtonProps> = ({
           : isConfirmed
           ? 'Transaction Confirmed'
           : !isClaimTimeEnabled
-          ? 'Claiming available at 1:00 PM UTC'
+          ? 'Claiming available at 12:00 PM UTC'
           : `Claim ${formatEther(claimableAmount)} Tokens`}
       </Button>
 
