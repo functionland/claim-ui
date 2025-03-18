@@ -105,7 +105,7 @@ export const ClaimButton: FC<ClaimButtonProps> = ({
           : isConfirmed
           ? 'Transaction Confirmed'
           : !isClaimTimeEnabled
-          ? 'Claiming available at 1:00 PM UTC'
+          ? `Claim ${formatEther(claimableAmount)} Tokens`}
           : `Claim ${formatEther(claimableAmount)} Tokens`}
       </Button>
 
