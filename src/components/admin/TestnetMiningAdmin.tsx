@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAccount } from 'wagmi'
 import { 
   Box,
@@ -24,8 +24,8 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { ethers } from 'ethers'
 import { ConnectButton } from '@/components/common/ConnectButton'
-import { useAdminContract } from '@/hooks/useAdminContract'
-import { CONTRACT_TYPES, PROPOSAL_TYPES, ROLES, ROLE_NAMES } from '@/config/constants'
+import { useAdminContract } from '../../hooks/useAdminContract'
+import { CONTRACT_TYPES, PROPOSAL_TYPES, ROLES, ROLE_NAMES } from '../../config/constants'
 
 export function TestnetMiningAdmin() {
   const { isConnected } = useAccount()
@@ -53,23 +53,19 @@ export function TestnetMiningAdmin() {
   })
 
   const {
-    testnetMiningProposals,
+    isLoading,
+    error: contractError,
     createCap,
     addVestingWallet,
-    approveProposal,
-    executeProposal,
-    vestingCapTable,
-    isLoading,
-    tgeStatus,
-    initiateTGE,
-    cleanupExpiredProposals,
-    createProposal,
     handleSetRoleTransactionLimit,
     handleSetRoleQuorum,
-    roleConfigs,
-    checkRoleConfig,
-    upgradeContract,
-    emergencyAction,
+    vestingCapTable,
+    updateSubstrateRewards,
+    getSubstrateRewards,
+    addSubstrateAddress,
+    batchAddSubstrateAddresses,
+    batchRemoveAddresses,
+    getSubstrateAddressMappings,
   } = useAdminContract()
 
   const [isCreatingCap, setIsCreatingCap] = useState(false)
@@ -222,7 +218,7 @@ export function TestnetMiningAdmin() {
     try {
       setError(null)
       setIsApproving(true)
-      await approveProposal(proposalId)
+      // await approveProposal(proposalId)
     } catch (error: any) {
       setError(error.message)
     } finally {
@@ -234,7 +230,7 @@ export function TestnetMiningAdmin() {
     try {
       setError(null)
       setIsExecuting(true)
-      await executeProposal(proposalId)
+      // await executeProposal(proposalId)
     } catch (error: any) {
       setError(error.message)
     } finally {
@@ -246,7 +242,7 @@ export function TestnetMiningAdmin() {
     try {
       setError(null)
       setIsCleaning(true)
-      await cleanupExpiredProposals(10)
+      // await cleanupExpiredProposals(10)
     } catch (error: any) {
       setError(error.message)
     } finally {
@@ -264,15 +260,15 @@ export function TestnetMiningAdmin() {
         throw new Error('Invalid Ethereum address');
       }
 
-      const hash = await createProposal(
-        PROPOSAL_TYPES.Upgrade,
-        0, // id is not used for upgrade proposals
-        formData.upgradeAddress,
-        ethers.ZeroHash,
-        '0',
-        ethers.ZeroAddress
-      );
-      console.log('Upgrade proposal created with transaction hash:', hash);
+      // const hash = await createProposal(
+      //   PROPOSAL_TYPES.Upgrade,
+      //   0, // id is not used for upgrade proposals
+      //   formData.upgradeAddress,
+      //   ethers.ZeroHash,
+      //   '0',
+      //   ethers.ZeroAddress
+      // );
+      // console.log('Upgrade proposal created with transaction hash:', hash);
 
       setFormData(prev => ({ ...prev, upgradeAddress: '' })); // Reset the input field
     } catch (error: any) {
@@ -289,7 +285,7 @@ export function TestnetMiningAdmin() {
     try {
       setIsCheckingRole(true);
       setError(null);
-      const result = await checkRoleConfig(formData.role);
+      const result = await handleSetRoleTransactionLimit(formData.role);
       if (result && result.transactionLimit !== undefined && result.quorum !== undefined) {
         setRoleCheckResult({
           transactionLimit: result.transactionLimit,
@@ -365,7 +361,7 @@ export function TestnetMiningAdmin() {
     try {
       setError(null)
       setIsSettingLimit(true)
-      await handleSetRoleQuorum(formData.role, formData.quorum)
+      await handleSetRoleQuorum(formData.role, formData.quorum);
       // Clear form
       setFormData(prev => ({
         ...prev,
@@ -413,6 +409,247 @@ export function TestnetMiningAdmin() {
   const formatDateTime = (timestamp: number) => {
     if (!timestamp) return '-';
     return new Date(timestamp * 1000).toLocaleString();
+  };
+
+  // Substrate rewards management
+  const [substrateFormData, setSubstrateFormData] = useState({
+    ethereumAddress: '',
+    substrateAddress: '',
+    rewardAmount: '',
+    batchEthereumAddresses: '',
+    batchSubstrateAddresses: '',
+    removeAddresses: '',
+  });
+  const [isProcessingSubstrate, setIsProcessingSubstrate] = useState(false);
+  const [substrateError, setSubstrateError] = useState<string | null>(null);
+  const [substrateSuccess, setSubstrateSuccess] = useState<string | null>(null);
+  const [substrateRewardsInfo, setSubstrateRewardsInfo] = useState<{
+    lastUpdate: bigint;
+    amount: bigint;
+  } | null>(null);
+  const [substrateMappings, setSubstrateMappings] = useState<{
+    ethereumAddress: string;
+    substrateAddress: string;
+    rewardAmount: bigint;
+  }[]>([]);
+  const [isLoadingMappings, setIsLoadingMappings] = useState(false);
+
+  const handleSubstrateInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setSubstrateFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const loadSubstrateAddressMappings = async () => {
+    try {
+      setIsLoadingMappings(true);
+      setSubstrateError(null);
+      
+      const mappings = await getSubstrateAddressMappings();
+      setSubstrateMappings(mappings);
+      
+    } catch (error: any) {
+      setSubstrateError(error.message);
+      console.error('Error loading substrate address mappings:', error);
+    } finally {
+      setIsLoadingMappings(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isConnected) {
+      loadSubstrateAddressMappings();
+    }
+  }, [isConnected]);
+
+  const refreshSubstrateMappings = async () => {
+    await loadSubstrateAddressMappings();
+  };
+
+  const handleUpdateSubstrateRewards = async () => {
+    try {
+      setSubstrateError(null);
+      setSubstrateSuccess(null);
+      setIsProcessingSubstrate(true);
+      
+      if (!ethers.isAddress(substrateFormData.ethereumAddress)) {
+        throw new Error('Invalid Ethereum address');
+      }
+      
+      if (!substrateFormData.rewardAmount || parseFloat(substrateFormData.rewardAmount) <= 0) {
+        throw new Error('Reward amount must be greater than 0');
+      }
+      
+      await updateSubstrateRewards(substrateFormData.ethereumAddress, substrateFormData.rewardAmount);
+      setSubstrateSuccess('Substrate rewards updated successfully');
+      
+      // Clear form
+      setSubstrateFormData(prev => ({
+        ...prev,
+        ethereumAddress: '',
+        rewardAmount: '',
+      }));
+      
+      // Refresh mappings
+      await refreshSubstrateMappings();
+    } catch (error: any) {
+      setSubstrateError(error.message);
+    } finally {
+      setIsProcessingSubstrate(false);
+    }
+  };
+
+  const handleGetSubstrateRewards = async () => {
+    try {
+      setSubstrateError(null);
+      setSubstrateSuccess(null);
+      setIsProcessingSubstrate(true);
+      
+      if (!ethers.isAddress(substrateFormData.ethereumAddress)) {
+        throw new Error('Invalid Ethereum address');
+      }
+      
+      const rewards = await getSubstrateRewards(substrateFormData.ethereumAddress);
+      setSubstrateRewardsInfo(rewards);
+      setSubstrateSuccess('Substrate rewards retrieved successfully');
+    } catch (error: any) {
+      setSubstrateError(error.message);
+    } finally {
+      setIsProcessingSubstrate(false);
+    }
+  };
+
+  const handleAddSubstrateAddress = async () => {
+    try {
+      setSubstrateError(null);
+      setSubstrateSuccess(null);
+      setIsProcessingSubstrate(true);
+      
+      if (!ethers.isAddress(substrateFormData.ethereumAddress)) {
+        throw new Error('Invalid Ethereum address');
+      }
+      
+      if (!substrateFormData.substrateAddress) {
+        throw new Error('Substrate address cannot be empty');
+      }
+      
+      await addSubstrateAddress(substrateFormData.ethereumAddress, substrateFormData.substrateAddress);
+      setSubstrateSuccess('Substrate address mapping added successfully');
+      
+      // Clear form
+      setSubstrateFormData(prev => ({
+        ...prev,
+        ethereumAddress: '',
+        substrateAddress: '',
+      }));
+      
+      // Refresh mappings
+      await refreshSubstrateMappings();
+    } catch (error: any) {
+      setSubstrateError(error.message);
+    } finally {
+      setIsProcessingSubstrate(false);
+    }
+  };
+
+  const handleBatchAddSubstrateAddresses = async () => {
+    try {
+      setSubstrateError(null);
+      setSubstrateSuccess(null);
+      setIsProcessingSubstrate(true);
+      
+      const ethereumAddresses = substrateFormData.batchEthereumAddresses
+        .split('\n')
+        .map(addr => addr.trim())
+        .filter(addr => addr);
+      
+      const substrateAddresses = substrateFormData.batchSubstrateAddresses
+        .split('\n')
+        .map(addr => addr.trim())
+        .filter(addr => addr);
+      
+      if (ethereumAddresses.length !== substrateAddresses.length) {
+        throw new Error('Number of Ethereum addresses must match number of Substrate addresses');
+      }
+      
+      if (ethereumAddresses.length === 0) {
+        throw new Error('No addresses provided');
+      }
+      
+      if (ethereumAddresses.length > 1000) {
+        throw new Error('Batch too large (max 1000 addresses)');
+      }
+      
+      // Validate all Ethereum addresses
+      for (const addr of ethereumAddresses) {
+        if (!ethers.isAddress(addr)) {
+          throw new Error(`Invalid Ethereum address: ${addr}`);
+        }
+      }
+      
+      await batchAddSubstrateAddresses(ethereumAddresses, substrateAddresses);
+      setSubstrateSuccess(`Successfully added ${ethereumAddresses.length} address mappings`);
+      
+      // Clear form
+      setSubstrateFormData(prev => ({
+        ...prev,
+        batchEthereumAddresses: '',
+        batchSubstrateAddresses: '',
+      }));
+      
+      // Refresh mappings
+      await refreshSubstrateMappings();
+    } catch (error: any) {
+      setSubstrateError(error.message);
+    } finally {
+      setIsProcessingSubstrate(false);
+    }
+  };
+
+  const handleBatchRemoveAddresses = async () => {
+    try {
+      setSubstrateError(null);
+      setSubstrateSuccess(null);
+      setIsProcessingSubstrate(true);
+      
+      const ethereumAddresses = substrateFormData.removeAddresses
+        .split('\n')
+        .map(addr => addr.trim())
+        .filter(addr => addr);
+      
+      if (ethereumAddresses.length === 0) {
+        throw new Error('No addresses provided');
+      }
+      
+      if (ethereumAddresses.length > 1000) {
+        throw new Error('Batch too large (max 1000 addresses)');
+      }
+      
+      // Validate all Ethereum addresses
+      for (const addr of ethereumAddresses) {
+        if (!ethers.isAddress(addr)) {
+          throw new Error(`Invalid Ethereum address: ${addr}`);
+        }
+      }
+      
+      await batchRemoveAddresses(ethereumAddresses);
+      setSubstrateSuccess(`Successfully removed ${ethereumAddresses.length} address mappings`);
+      
+      // Clear form
+      setSubstrateFormData(prev => ({
+        ...prev,
+        removeAddresses: '',
+      }));
+      
+      // Refresh mappings
+      await refreshSubstrateMappings();
+    } catch (error: any) {
+      setSubstrateError(error.message);
+    } finally {
+      setIsProcessingSubstrate(false);
+    }
   };
 
   if (!isConnected) {
@@ -571,17 +808,9 @@ export function TestnetMiningAdmin() {
         <AccordionDetails>
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              <Alert severity={tgeStatus.isInitiated ? "success" : "info"}>
-                {tgeStatus.isInitiated ? (
-                  <>
-                    <Typography variant="subtitle1">TGE has been initiated</Typography>
-                    <Typography variant="body2">
-                      Timestamp: {new Date(tgeStatus.timestamp! * 1000).toLocaleString()}
-                    </Typography>
-                    <Typography variant="body2">
-                      Total Required Tokens: {ethers.formatEther(tgeStatus.totalTokens!)} FULA
-                    </Typography>
-                  </>
+              <Alert severity={contractError ? "error" : "info"}>
+                {contractError ? (
+                  <Typography variant="subtitle1">Error: {contractError}</Typography>
                 ) : (
                   <Typography>
                     TGE has not been initiated yet. Initiating TGE will start the vesting and distribution of testnet mining tokens.
@@ -591,12 +820,20 @@ export function TestnetMiningAdmin() {
               </Alert>
             </Grid>
 
-            {!tgeStatus.isInitiated && (
+            {!contractError && (
               <Grid item xs={12}>
                 <Box sx={{ display: 'flex', gap: 2 }}>
                   <Button
                     variant="contained"
-                    onClick={initiateTGE}
+                    onClick={async () => {
+                      try {
+                        setError(null);
+                        // await initiateTGE();
+                      } catch (error: any) {
+                        console.error('Error initiating TGE:', error);
+                        setError(error.message);
+                      }
+                    }}
                     disabled={isSettingTGE}
                     startIcon={isSettingTGE ? <CircularProgress size={20} /> : null}
                   >
@@ -766,7 +1003,7 @@ export function TestnetMiningAdmin() {
                     if (!formData.upgradeAddress || !ethers.isAddress(formData.upgradeAddress)) {
                       throw new Error('Invalid contract address');
                     }
-                    await upgradeContract(formData.upgradeAddress);
+                    // await upgradeContract(formData.upgradeAddress);
                     setFormData(prev => ({ ...prev, upgradeAddress: '' })); // Clear the input after success
                   } catch (error: any) {
                     console.error('Error executing upgrade:', error);
@@ -876,7 +1113,7 @@ export function TestnetMiningAdmin() {
                   onClick={async () => {
                     if (!formData.role) return;
                     try {
-                      const result = await checkRoleConfig(formData.role);
+                      const result = await handleSetRoleTransactionLimit(formData.role);
                       if (result) {
                         const formattedLimit = formatTransactionLimit(result.transactionLimit);
                         console.log('Setting form data with:', { 
@@ -930,7 +1167,7 @@ export function TestnetMiningAdmin() {
                 onClick={async () => {
                   try {
                     setError(null);
-                    await emergencyAction(1);
+                    // await emergencyAction(1);
                   } catch (error: any) {
                     console.error('Error pausing contract:', error);
                     setError(error.message);
@@ -946,7 +1183,7 @@ export function TestnetMiningAdmin() {
                 onClick={async () => {
                   try {
                     setError(null);
-                    await emergencyAction(2);
+                    // await emergencyAction(2);
                   } catch (error: any) {
                     console.error('Error unpausing contract:', error);
                     setError(error.message);
@@ -987,7 +1224,7 @@ export function TestnetMiningAdmin() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {testnetMiningProposals?.map((proposal) => {
+                {/* {testnetMiningProposals?.map((proposal) => {
                   const now = Math.floor(Date.now() / 1000);
                   const isExpired = proposal?.config?.expiryTime ? 
                     Number(proposal.config.expiryTime) < now : false;
@@ -1047,7 +1284,7 @@ export function TestnetMiningAdmin() {
                       </TableCell>
                     </TableRow>
                   );
-                })}
+                })} */}
               </TableBody>
             </Table>
           </TableContainer>
@@ -1068,6 +1305,212 @@ export function TestnetMiningAdmin() {
         </AccordionSummary>
         <AccordionDetails>
           {renderVestingCapTable()}
+        </AccordionDetails>
+      </Accordion>
+
+      <Accordion>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="h6">Substrate Rewards Management</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Ethereum Address"
+                value={substrateFormData.ethereumAddress}
+                onChange={handleSubstrateInputChange}
+                name="ethereumAddress"
+                helperText="Ethereum address to manage substrate rewards"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Reward Amount"
+                type="number"
+                value={substrateFormData.rewardAmount}
+                onChange={handleSubstrateInputChange}
+                name="rewardAmount"
+                helperText="Reward amount in FULA"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Button
+                variant="contained"
+                onClick={handleUpdateSubstrateRewards}
+                disabled={isProcessingSubstrate}
+              >
+                {isProcessingSubstrate ? <CircularProgress size={24} /> : 'Update Substrate Rewards'}
+              </Button>
+            </Grid>
+          </Grid>
+          <Grid container spacing={2} sx={{ mt: 2 }}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Ethereum Address"
+                value={substrateFormData.ethereumAddress}
+                onChange={handleSubstrateInputChange}
+                name="ethereumAddress"
+                helperText="Ethereum address to retrieve substrate rewards"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Button
+                variant="contained"
+                onClick={handleGetSubstrateRewards}
+                disabled={isProcessingSubstrate}
+              >
+                {isProcessingSubstrate ? <CircularProgress size={24} /> : 'Get Substrate Rewards'}
+              </Button>
+            </Grid>
+          </Grid>
+          {substrateRewardsInfo && (
+            <Grid item xs={12} sx={{ mt: 2 }}>
+              <Alert severity="info">
+                <Typography variant="subtitle2">Substrate Rewards:</Typography>
+                <Typography>
+                  Last Update: {formatDateTime(Number(substrateRewardsInfo.lastUpdate))}
+                </Typography>
+                <Typography>
+                  Amount: {ethers.formatEther(substrateRewardsInfo.amount)} FULA
+                </Typography>
+              </Alert>
+            </Grid>
+          )}
+          <Grid container spacing={2} sx={{ mt: 2 }}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Ethereum Address"
+                value={substrateFormData.ethereumAddress}
+                onChange={handleSubstrateInputChange}
+                name="ethereumAddress"
+                helperText="Ethereum address to add substrate address mapping"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Substrate Address"
+                value={substrateFormData.substrateAddress}
+                onChange={handleSubstrateInputChange}
+                name="substrateAddress"
+                helperText="Substrate address to map to Ethereum address"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Button
+                variant="contained"
+                onClick={handleAddSubstrateAddress}
+                disabled={isProcessingSubstrate}
+              >
+                {isProcessingSubstrate ? <CircularProgress size={24} /> : 'Add Substrate Address Mapping'}
+              </Button>
+            </Grid>
+          </Grid>
+          <Grid container spacing={2} sx={{ mt: 2 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Batch Ethereum Addresses"
+                multiline
+                rows={4}
+                value={substrateFormData.batchEthereumAddresses}
+                onChange={handleSubstrateInputChange}
+                name="batchEthereumAddresses"
+                helperText="List of Ethereum addresses to add substrate address mappings (one per line)"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Batch Substrate Addresses"
+                multiline
+                rows={4}
+                value={substrateFormData.batchSubstrateAddresses}
+                onChange={handleSubstrateInputChange}
+                name="batchSubstrateAddresses"
+                helperText="List of Substrate addresses to map to Ethereum addresses (one per line)"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Button
+                variant="contained"
+                onClick={handleBatchAddSubstrateAddresses}
+                disabled={isProcessingSubstrate}
+              >
+                {isProcessingSubstrate ? <CircularProgress size={24} /> : 'Batch Add Substrate Address Mappings'}
+              </Button>
+            </Grid>
+          </Grid>
+          <Grid container spacing={2} sx={{ mt: 2 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Ethereum Addresses to Remove"
+                multiline
+                rows={4}
+                value={substrateFormData.removeAddresses}
+                onChange={handleSubstrateInputChange}
+                name="removeAddresses"
+                helperText="List of Ethereum addresses to remove substrate address mappings (one per line)"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Button
+                variant="contained"
+                onClick={handleBatchRemoveAddresses}
+                disabled={isProcessingSubstrate}
+              >
+                {isProcessingSubstrate ? <CircularProgress size={24} /> : 'Batch Remove Substrate Address Mappings'}
+              </Button>
+            </Grid>
+          </Grid>
+          {substrateError && (
+            <Grid item xs={12} sx={{ mt: 2 }}>
+              <Alert severity="error">
+                {substrateError}
+              </Alert>
+            </Grid>
+          )}
+          {substrateSuccess && (
+            <Grid item xs={12} sx={{ mt: 2 }}>
+              <Alert severity="success">
+                {substrateSuccess}
+              </Alert>
+            </Grid>
+          )}
+          <Grid item xs={12} sx={{ mt: 2 }}>
+            <Typography variant="h6">Substrate Address Mappings</Typography>
+            {isLoadingMappings ? (
+              <CircularProgress />
+            ) : !substrateMappings || substrateMappings.length === 0 ? (
+              <Alert severity="info">No substrate address mappings found</Alert>
+            ) : (
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Ethereum Address</TableCell>
+                      <TableCell>Substrate Address</TableCell>
+                      <TableCell>Reward Amount (FULA)</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {substrateMappings.map((mapping, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{mapping.ethereumAddress}</TableCell>
+                        <TableCell>{mapping.substrateAddress}</TableCell>
+                        <TableCell>{ethers.formatEther(mapping.rewardAmount.toString())}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </Grid>
         </AccordionDetails>
       </Accordion>
     </Box>

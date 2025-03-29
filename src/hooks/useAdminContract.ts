@@ -1555,6 +1555,245 @@ export function useAdminContract() {
     }
   }
 
+  const handleSetQuorum = async (role: string, quorum: string) => {
+    try {
+      if (!contractAddress) throw new Error('Contract address not found');
+      if (!userAddress) throw new Error('Please connect your wallet');
+
+      const roleHash = getRoleHash(role);
+      console.log(`Setting quorum for role ${role} (${roleHash}) to ${quorum}`);
+
+      const { request } = await publicClient.simulateContract({
+        address: contractAddress,
+        abi: contractAbi,
+        functionName: 'setRoleQuorum',
+        args: [roleHash, BigInt(quorum)],
+        account: userAddress,
+      });
+
+      const hash = await writeContractAsync(request);
+      return hash;
+    } catch (error: any) {
+      console.error('Error setting role quorum:', error);
+      throw error;
+    }
+  };
+
+  // Add functions for substrate rewards management
+  const updateSubstrateRewards = async (wallet: string, amount: string) => {
+    try {
+      if (!contractAddress) throw new Error('Contract address not found');
+      if (!userAddress) throw new Error('Please connect your wallet');
+      if (!ethers.isAddress(wallet)) throw new Error('Invalid wallet address');
+      
+      const amountBigInt = ethers.parseEther(amount);
+      console.log(`Updating substrate rewards for ${wallet} to ${amountBigInt.toString()}`);
+
+      const { request } = await publicClient.simulateContract({
+        address: contractAddress,
+        abi: contractAbi,
+        functionName: 'updateSubstrateRewards',
+        args: [wallet as Address, amountBigInt],
+        account: userAddress,
+      });
+
+      const hash = await writeContractAsync(request);
+      return hash;
+    } catch (error: any) {
+      console.error('Error updating substrate rewards:', error);
+      throw error;
+    }
+  };
+
+  const getSubstrateRewards = async (wallet: string) => {
+    try {
+      if (!contractAddress) throw new Error('Contract address not found');
+      if (!ethers.isAddress(wallet)) throw new Error('Invalid wallet address');
+
+      const result = await publicClient.readContract({
+        address: contractAddress,
+        abi: contractAbi,
+        functionName: 'getSubstrateRewards',
+        args: [wallet as Address],
+      }) as [bigint, bigint]; // [lastUpdate, amount]
+
+      return {
+        lastUpdate: result[0],
+        amount: result[1]
+      };
+    } catch (error: any) {
+      console.error('Error getting substrate rewards:', error);
+      throw error;
+    }
+  };
+
+  const addSubstrateAddress = async (ethereumAddr: string, substrateAddr: string) => {
+    try {
+      if (!contractAddress) throw new Error('Contract address not found');
+      if (!userAddress) throw new Error('Please connect your wallet');
+      if (!ethers.isAddress(ethereumAddr)) throw new Error('Invalid Ethereum address');
+      if (!substrateAddr) throw new Error('Invalid Substrate address');
+
+      // Convert the substrate address to a hex string that viem can handle
+      const hexString = `0x${Buffer.from(substrateAddr).toString('hex')}`;
+      console.log(`Adding substrate address mapping: ${ethereumAddr} -> ${substrateAddr} (hex: ${hexString})`);
+
+      const { request } = await publicClient.simulateContract({
+        address: contractAddress,
+        abi: contractAbi,
+        functionName: 'addAddress',
+        args: [ethereumAddr as Address, hexString],
+        account: userAddress,
+      });
+
+      const hash = await writeContractAsync(request);
+      return hash;
+    } catch (error: any) {
+      console.error('Error adding substrate address:', error);
+      throw error;
+    }
+  };
+
+  const batchAddSubstrateAddresses = async (ethereumAddrs: string[], substrateAddrs: string[]) => {
+    try {
+      if (!contractAddress) throw new Error('Contract address not found');
+      if (!userAddress) throw new Error('Please connect your wallet');
+      if (ethereumAddrs.length !== substrateAddrs.length) throw new Error('Address arrays must have the same length');
+      if (ethereumAddrs.length > 1000) throw new Error('Batch too large (max 1000)');
+
+      // Convert all Ethereum addresses to Address type
+      const ethAddresses = ethereumAddrs.map(addr => {
+        if (!ethers.isAddress(addr)) throw new Error(`Invalid Ethereum address: ${addr}`);
+        return addr as Address;
+      });
+
+      // Convert all Substrate addresses to hex strings
+      const hexStrings = substrateAddrs.map(addr => 
+        `0x${Buffer.from(addr).toString('hex')}`
+      );
+
+      console.log(`Adding batch of ${ethereumAddrs.length} substrate address mappings`);
+
+      const { request } = await publicClient.simulateContract({
+        address: contractAddress,
+        abi: contractAbi,
+        functionName: 'batchAddAddresses',
+        args: [ethAddresses, hexStrings],
+        account: userAddress,
+      });
+
+      const hash = await writeContractAsync(request);
+      return hash;
+    } catch (error: any) {
+      console.error('Error batch adding substrate addresses:', error);
+      throw error;
+    }
+  };
+
+  const batchRemoveAddresses = async (ethereumAddrs: string[]) => {
+    try {
+      if (!contractAddress) throw new Error('Contract address not found');
+      if (!userAddress) throw new Error('Please connect your wallet');
+      if (ethereumAddrs.length > 1000) throw new Error('Batch too large (max 1000)');
+
+      // Convert all Ethereum addresses to Address type
+      const ethAddresses = ethereumAddrs.map(addr => {
+        if (!ethers.isAddress(addr)) throw new Error(`Invalid Ethereum address: ${addr}`);
+        return addr as Address;
+      });
+
+      console.log(`Removing batch of ${ethereumAddrs.length} substrate address mappings`);
+
+      const { request } = await publicClient.simulateContract({
+        address: contractAddress,
+        abi: contractAbi,
+        functionName: 'batchRemoveAddresses',
+        args: [ethAddresses],
+        account: userAddress,
+      });
+
+      const hash = await writeContractAsync(request);
+      return hash;
+    } catch (error: any) {
+      console.error('Error batch removing substrate addresses:', error);
+      throw error;
+    }
+  };
+
+  const getSubstrateAddressMappings = async () => {
+    try {
+      if (!contractAddress) throw new Error('Contract address not found');
+
+      // Get all AddressesAdded events
+      const addedEvents = await publicClient.getLogs({
+        address: contractAddress,
+        event: {
+          type: 'event',
+          name: 'AddressesAdded',
+          inputs: [
+            { indexed: false, name: 'count', type: 'uint256' }
+          ]
+        },
+        fromBlock: 'earliest',
+        toBlock: 'latest'
+      });
+
+      // Get all AddressRemoved events
+      const removedEvents = await publicClient.getLogs({
+        address: contractAddress,
+        event: {
+          type: 'event',
+          name: 'AddressRemoved',
+          inputs: [
+            { indexed: true, name: 'ethereumAddr', type: 'address' }
+          ]
+        },
+        fromBlock: 'earliest',
+        toBlock: 'latest'
+      });
+
+      // Get all SubstrateRewardsUpdated events
+      const rewardsEvents = await publicClient.getLogs({
+        address: contractAddress,
+        event: {
+          type: 'event',
+          name: 'SubstrateRewardsUpdated',
+          inputs: [
+            { indexed: true, name: 'wallet', type: 'address' },
+            { indexed: false, name: 'amount', type: 'uint256' }
+          ]
+        },
+        fromBlock: 'earliest',
+        toBlock: 'latest'
+      });
+
+      // Process rewards events to get the latest reward for each address
+      const rewardsMap = new Map<string, bigint>();
+      for (const event of rewardsEvents) {
+        if (event.args && event.args.wallet && event.args.amount) {
+          const wallet = event.args.wallet.toLowerCase();
+          rewardsMap.set(wallet, event.args.amount);
+        }
+      }
+
+      // Get all ethereum addresses with substrate mappings
+      // Note: Since we can't directly query all mappings, we'll need to check specific addresses
+      // This is a limitation of the current contract design
+      
+      // For now, we'll return the rewards data we have
+      const mappings = Array.from(rewardsMap.entries()).map(([wallet, amount]) => ({
+        ethereumAddress: wallet,
+        substrateAddress: "Unknown", // We can't get this directly from events
+        rewardAmount: amount
+      }));
+
+      return mappings;
+    } catch (error: any) {
+      console.error('Error getting substrate address mappings:', error);
+      throw error;
+    }
+  };
+
   return {
     isLoading,
     error,
@@ -1599,5 +1838,12 @@ export function useAdminContract() {
     checkHasRole,
     cancelTransaction,
     getTransactionDetails,
+    handleSetQuorum,
+    updateSubstrateRewards,
+    getSubstrateRewards,
+    addSubstrateAddress,
+    batchAddSubstrateAddresses,
+    batchRemoveAddresses,
+    getSubstrateAddressMappings
   }
 }

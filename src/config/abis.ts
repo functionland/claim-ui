@@ -1477,6 +1477,70 @@ export const TESTNET_MINING_ABI = [
     type: "function"
   },
   {
+    inputs: [
+      { name: "wallet", type: "address" },
+      { name: "amount", type: "uint256" }
+    ],
+    name: "updateSubstrateRewards",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "ethereumAddr", type: "address" },
+      { name: "substrateAddr", type: "bytes" }
+    ],
+    name: "addAddress",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "ethereumAddrs", type: "address[]" },
+      { name: "substrateAddrs", type: "bytes[]" }
+    ],
+    name: "batchAddAddresses",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "ethereumAddrs", type: "address[]" }
+    ],
+    name: "batchRemoveAddresses",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "wallet", type: "address" },
+      { indexed: false, name: "amount", type: "uint256" }
+    ],
+    name: "SubstrateRewardsUpdated",
+    type: "event"
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: false, name: "count", type: "uint256" }
+    ],
+    name: "AddressesAdded",
+    type: "event"
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "ethereumAddr", type: "address" }
+    ],
+    name: "AddressRemoved",
+    type: "event"
+  },
+  {
     type: "error",
     name: "InvalidOperation",
     inputs: [{ name: "code", type: "uint8" }]
