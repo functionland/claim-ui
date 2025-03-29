@@ -1477,6 +1477,54 @@ export const TESTNET_MINING_ABI = [
     type: "function"
   },
   {
+    type: "error",
+    name: "InvalidOperation",
+    inputs: [{ name: "code", type: "uint8" }]
+  },
+  {
+    type: "error",
+    name: "InvalidState",
+    inputs: [{ name: "code", type: "uint8" }]
+  },
+  {
+    type: "error",
+    name: "InvalidParameter",
+    inputs: [{ name: "code", type: "uint8" }]
+  },
+  {
+    type: "error",
+    name: "NothingToClaim",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "WalletMismatch",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "InvalidAddressLength",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "LowContractBalance",
+    inputs: [
+      { name: "available", type: "uint256" },
+      { name: "required", type: "uint256" }
+    ]
+  },
+  {
+    type: "error",
+    name: "TransferFailed",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "AmountMustBePositive",
+    inputs: []
+  },
+  {
     "inputs": [
       { "name": "capId", "type": "uint256" },
       { "name": "name", "type": "bytes32" },

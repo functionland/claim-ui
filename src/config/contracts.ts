@@ -80,6 +80,8 @@ export const CONTRACT_ABI = [
       { internalType: 'uint256', name: 'initialRelease', type: 'uint256' },
       { internalType: 'uint256', name: 'startDate', type: 'uint256' },
       { internalType: 'uint256', name: 'allocatedToWallets', type: 'uint256' },
+      { internalType: 'uint256', name: 'maxRewardsPerMonth', type: 'uint256' },
+      { internalType: 'uint256', name: 'ratio', type: 'uint256' },
     ],
     stateMutability: 'view',
     type: 'function',

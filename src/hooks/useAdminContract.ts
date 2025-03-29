@@ -91,6 +91,8 @@ export function useAdminContract() {
             args: [capId],
           }) as readonly [bigint, `0x${string}`, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
 
+          console.log("Cap tuple for debugging:", capTuple);
+
           const walletsInCap = await publicClient.readContract({
             address: contractAddress,
             abi: contractAbi,
@@ -140,6 +142,8 @@ export function useAdminContract() {
             initialRelease: Number(capTuple[5]),
             startDate: Number(capTuple[6]),
             allocatedToWallets: capTuple[7],
+            maxRewardsPerMonth: capTuple[8],
+            ratio: capTuple[9],
             wallets: walletsInCap,
             walletDetails
           }

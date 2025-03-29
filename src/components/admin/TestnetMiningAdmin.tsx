@@ -105,6 +105,11 @@ export function TestnetMiningAdmin() {
         throw new Error('Please fill in all fields')
       }
 
+      // Check if vestingPlan is >= vestingTerm and show warning instead of auto-adjusting
+      if (Number(vestingPlan) >= Number(vestingTerm)) {
+        throw new Error('Vesting Plan must be less than Vesting Term. Please adjust your values.')
+      }
+
       await createCap(
         capId,
         capName,
@@ -139,6 +144,53 @@ export function TestnetMiningAdmin() {
     } finally {
       setIsCreatingCap(false)
     }
+  }
+
+  const renderVestingCapTable = () => {
+    if (isLoading) {
+      return <CircularProgress />
+    }
+
+    if (!vestingCapTable || vestingCapTable.length === 0) {
+      return <Alert severity="info">No vesting caps found</Alert>
+    }
+
+    return (
+      <TableContainer>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Cap ID</TableCell>
+              <TableCell>Name</TableCell>
+              <TableCell>Total Allocation (FIL)</TableCell>
+              <TableCell>Cliff (days)</TableCell>
+              <TableCell>Vesting Term (months)</TableCell>
+              <TableCell>Vesting Plan (months)</TableCell>
+              <TableCell>Initial Release</TableCell>
+              <TableCell>Max Rewards/Month</TableCell>
+              <TableCell>Ratio</TableCell>
+              <TableCell>Wallets</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {vestingCapTable.map((cap) => (
+              <TableRow key={cap.capId}>
+                <TableCell>{cap.capId}</TableCell>
+                <TableCell>{ethers.decodeBytes32String(cap.name)}</TableCell>
+                <TableCell>{Number(ethers.formatEther(cap.totalAllocation.toString())).toLocaleString()}</TableCell>
+                <TableCell>{(Number(cap.cliff) / 86400).toFixed(2)}</TableCell>
+                <TableCell>{(Number(cap.vestingTerm) / (30 * 86400)).toFixed(2)}</TableCell>
+                <TableCell>{(Number(cap.vestingPlan) / (30 * 86400)).toFixed(2)}</TableCell>
+                <TableCell>{Number(cap.initialRelease).toFixed(0)}%</TableCell>
+                <TableCell>{Number(ethers.formatEther(cap.maxRewardsPerMonth?.toString() || '0')).toLocaleString()}</TableCell>
+                <TableCell>{Number(cap.ratio || 0).toString()}</TableCell>
+                <TableCell>{cap.wallets?.length || 0}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    )
   }
 
   const handleAddVestingWallet = async () => {
@@ -284,10 +336,12 @@ export function TestnetMiningAdmin() {
     }
   };
 
-  const roleOptions = Object.entries(ROLES).map(([key, value]) => ({
-    value,
-    label: ROLE_NAMES[value as keyof typeof ROLE_NAMES],
-  }));
+  const roleOptions = [
+    { label: 'Admin', value: 'ADMIN_ROLE' },
+    { label: 'Contract Operator', value: 'CONTRACT_OPERATOR_ROLE' },
+    { label: 'Bridge Operator', value: 'BRIDGE_OPERATOR_ROLE' },
+    { label: 'Default Admin', value: 'DEFAULT_ADMIN_ROLE' },
+  ];
 
   const handleSetTransactionLimit = async () => {
     try {
@@ -323,47 +377,6 @@ export function TestnetMiningAdmin() {
     } finally {
       setIsSettingLimit(false)
     }
-  }
-
-  const renderVestingCapTable = () => {
-    if (isLoading) {
-      return <CircularProgress />
-    }
-
-    if (!vestingCapTable || vestingCapTable.length === 0) {
-      return <Alert severity="info">No testnet mining vesting caps found</Alert>
-    }
-
-    return (
-      <TableContainer>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Cap ID</TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell>Start Date</TableCell>
-              <TableCell>Cliff Period (Days)</TableCell>
-              <TableCell>Vesting Term (Days)</TableCell>
-              <TableCell>Max Rewards Per Month</TableCell>
-              <TableCell>Ratio</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {vestingCapTable.map((cap) => (
-              <TableRow key={cap.capId}>
-                <TableCell>{cap.capId}</TableCell>
-                <TableCell>{ethers.decodeBytes32String(cap.name)}</TableCell>
-                <TableCell>{new Date(Number(cap.startDate) * 1000).toLocaleString()}</TableCell>
-                <TableCell>{Number(cap.cliff) / 86400}</TableCell>
-                <TableCell>{Number(cap.vestingTerm) / 86400}</TableCell>
-                <TableCell>{Number(cap.maxRewardsPerMonth)}</TableCell>
-                <TableCell>{Number(cap.ratio)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    )
   }
 
   const getProposalType = (type: number): string => {
@@ -1046,6 +1059,15 @@ export function TestnetMiningAdmin() {
           >
             {isCleaning ? <CircularProgress size={24} /> : 'Cleanup Expired Proposals'}
           </Button>
+        </AccordionDetails>
+      </Accordion>
+
+      <Accordion>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="h6">Current Vesting Caps</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          {renderVestingCapTable()}
         </AccordionDetails>
       </Accordion>
     </Box>
