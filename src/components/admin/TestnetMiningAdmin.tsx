@@ -72,6 +72,8 @@ export function TestnetMiningAdmin() {
     tgeStatus,
     initiateTGE,
     checkRoleConfig,
+    upgradeContract,
+    createProposal,
   } = useAdminContract()
 
   const [isCreatingCap, setIsCreatingCap] = useState(false)
@@ -266,15 +268,15 @@ export function TestnetMiningAdmin() {
         throw new Error('Invalid Ethereum address');
       }
 
-      // const hash = await createProposal(
-      //   PROPOSAL_TYPES.Upgrade,
-      //   0, // id is not used for upgrade proposals
-      //   formData.upgradeAddress,
-      //   ethers.ZeroHash,
-      //   '0',
-      //   ethers.ZeroAddress
-      // );
-      // console.log('Upgrade proposal created with transaction hash:', hash);
+      const hash = await createProposal(
+        PROPOSAL_TYPES.Upgrade,
+        0, // id is not used for upgrade proposals
+        formData.upgradeAddress,
+        ethers.ZeroHash,
+        '0',
+        ethers.ZeroAddress
+      );
+      console.log('Upgrade proposal created with transaction hash:', hash);
 
       setFormData(prev => ({ ...prev, upgradeAddress: '' })); // Reset the input field
     } catch (error: any) {
@@ -1020,7 +1022,7 @@ export function TestnetMiningAdmin() {
                     if (!formData.upgradeAddress || !ethers.isAddress(formData.upgradeAddress)) {
                       throw new Error('Invalid contract address');
                     }
-                    // await upgradeContract(formData.upgradeAddress);
+                    await upgradeContract(formData.upgradeAddress);
                     setFormData(prev => ({ ...prev, upgradeAddress: '' })); // Clear the input after success
                   } catch (error: any) {
                     console.error('Error executing upgrade:', error);

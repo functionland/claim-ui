@@ -618,6 +618,7 @@ export const CONTRACT_ABI = [
   {
     inputs: [
       { internalType: 'address', name: 'wallet', type: 'address' },
+      { internalType: 'string', name: 'substrateWallet', type: 'string' },
       { internalType: 'uint256', name: 'capId', type: 'uint256' },
     ],
     name: 'calculateDueTokens',
