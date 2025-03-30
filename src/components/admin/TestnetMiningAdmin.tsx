@@ -66,6 +66,9 @@ export function TestnetMiningAdmin() {
     batchAddSubstrateAddresses,
     batchRemoveAddresses,
     getSubstrateAddressMappings,
+    testnetMiningProposals,
+    approveProposal,
+    executeProposal,
   } = useAdminContract()
 
   const [isCreatingCap, setIsCreatingCap] = useState(false)
@@ -218,7 +221,7 @@ export function TestnetMiningAdmin() {
     try {
       setError(null)
       setIsApproving(true)
-      // await approveProposal(proposalId)
+      await approveProposal(proposalId)
     } catch (error: any) {
       setError(error.message)
     } finally {
@@ -230,7 +233,7 @@ export function TestnetMiningAdmin() {
     try {
       setError(null)
       setIsExecuting(true)
-      // await executeProposal(proposalId)
+      await executeProposal(proposalId)
     } catch (error: any) {
       setError(error.message)
     } finally {
@@ -1224,7 +1227,7 @@ export function TestnetMiningAdmin() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {/* {testnetMiningProposals?.map((proposal) => {
+                {testnetMiningProposals?.map((proposal) => {
                   const now = Math.floor(Date.now() / 1000);
                   const isExpired = proposal?.config?.expiryTime ? 
                     Number(proposal.config.expiryTime) < now : false;
@@ -1284,7 +1287,7 @@ export function TestnetMiningAdmin() {
                       </TableCell>
                     </TableRow>
                   );
-                })} */}
+                })}
               </TableBody>
             </Table>
           </TableContainer>
