@@ -71,6 +71,7 @@ export function TestnetMiningAdmin() {
     executeProposal,
     tgeStatus,
     initiateTGE,
+    checkRoleConfig,
   } = useAdminContract()
 
   const [isCreatingCap, setIsCreatingCap] = useState(false)
@@ -290,7 +291,7 @@ export function TestnetMiningAdmin() {
     try {
       setIsCheckingRole(true);
       setError(null);
-      const result = await handleSetRoleTransactionLimit(formData.role);
+      const result = await checkRoleConfig(formData.role);
       if (result && result.transactionLimit !== undefined && result.quorum !== undefined) {
         setRoleCheckResult({
           transactionLimit: result.transactionLimit,
@@ -1129,7 +1130,7 @@ export function TestnetMiningAdmin() {
                   onClick={async () => {
                     if (!formData.role) return;
                     try {
-                      const result = await handleSetRoleTransactionLimit(formData.role);
+                      const result = await checkRoleConfig(formData.role);
                       if (result) {
                         const formattedLimit = formatTransactionLimit(result.transactionLimit);
                         console.log('Setting form data with:', { 
