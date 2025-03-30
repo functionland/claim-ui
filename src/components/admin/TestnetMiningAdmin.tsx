@@ -69,6 +69,8 @@ export function TestnetMiningAdmin() {
     testnetMiningProposals,
     approveProposal,
     executeProposal,
+    tgeStatus,
+    initiateTGE,
   } = useAdminContract()
 
   const [isCreatingCap, setIsCreatingCap] = useState(false)
@@ -811,9 +813,17 @@ export function TestnetMiningAdmin() {
         <AccordionDetails>
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              <Alert severity={contractError ? "error" : "info"}>
-                {contractError ? (
-                  <Typography variant="subtitle1">Error: {contractError}</Typography>
+              <Alert severity={tgeStatus?.isInitiated ? "success" : "info"}>
+                {tgeStatus?.isInitiated ? (
+                  <>
+                    <Typography variant="subtitle1">TGE has been initiated</Typography>
+                    <Typography variant="body2">
+                      Timestamp: {new Date(Number(tgeStatus.timestamp) * 1000).toLocaleString()}
+                    </Typography>
+                    <Typography variant="body2">
+                      Total Required Tokens: {ethers.formatEther(tgeStatus.totalTokens)} FULA
+                    </Typography>
+                  </>
                 ) : (
                   <Typography>
                     TGE has not been initiated yet. Initiating TGE will start the vesting and distribution of testnet mining tokens.
@@ -823,7 +833,7 @@ export function TestnetMiningAdmin() {
               </Alert>
             </Grid>
 
-            {!contractError && (
+            {!tgeStatus?.isInitiated && (
               <Grid item xs={12}>
                 <Box sx={{ display: 'flex', gap: 2 }}>
                   <Button
@@ -831,10 +841,13 @@ export function TestnetMiningAdmin() {
                     onClick={async () => {
                       try {
                         setError(null);
-                        // await initiateTGE();
+                        setIsSettingTGE(true);
+                        await initiateTGE();
                       } catch (error: any) {
                         console.error('Error initiating TGE:', error);
                         setError(error.message);
+                      } finally {
+                        setIsSettingTGE(false);
                       }
                     }}
                     disabled={isSettingTGE}
@@ -849,7 +862,7 @@ export function TestnetMiningAdmin() {
         </AccordionDetails>
       </Accordion>
 
-      <Accordion defaultExpanded sx={{ mt: 4 }}>
+      <Accordion>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Typography variant="h6">Vesting Wallets</Typography>
         </AccordionSummary>
