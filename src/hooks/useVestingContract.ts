@@ -638,6 +638,18 @@ export function useVestingContract() {
           return Promise.reject(new Error('Substrate wallet not provided'))
         }
         try {
+          // Create a custom ABI entry for the claimTokens function with correct types
+          const customClaimFunction = {
+            name: 'claimTokens',
+            type: 'function',
+            stateMutability: 'nonpayable',
+            inputs: [
+              { name: 'substrateWallet', type: 'string' },
+              { name: 'capId', type: 'uint256' }
+            ],
+            outputs: []
+          };
+
           console.log("Simulating contract call with params:", {
             account: userAddress,
             address: contractAddress,
@@ -645,11 +657,11 @@ export function useVestingContract() {
             args: [substrateWallet, BigInt(capId)]
           });
 
-          // First simulate the contract call
+          // First simulate the contract call with the custom ABI
           const { request } = await publicClient.simulateContract({
             account: userAddress,
             address: contractAddress,
-            abi: contractAbi,
+            abi: [customClaimFunction],
             functionName: 'claimTokens',
             args: [substrateWallet, BigInt(capId)],
             gas: BigInt(3000000),
