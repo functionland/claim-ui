@@ -15,6 +15,9 @@ import { formatEther } from 'viem'
 import { useContractContext } from '@/contexts/ContractContext';
 import { CONTRACT_TYPES } from '@/config/constants';
 import type { VestingData } from '@/types/vesting'
+import { useEffect, useState } from 'react'
+import { useReadContract, useAccount } from 'wagmi'
+import { CONTRACT_CONFIG } from '@/config/contracts'
 
 interface VestingInfoProps {
   vestingData: VestingData
@@ -38,8 +41,53 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
   
   const theme = useTheme();
   const { activeContract } = useContractContext();
-  console.log({activeContract});
+  const { chainId } = useAccount();
+  console.log({activeContract, chainId});
   const isTestnetMining = activeContract === CONTRACT_TYPES.TESTNET_MINING;
+  const [ratio, setRatio] = useState<number | null>(null);
+
+  // Direct contract query for ratio when in testnet mining mode
+  const { data: capData, isLoading: isCapDataLoading, isError: isCapDataError, error: capDataError } = useReadContract({
+    address: chainId ? CONTRACT_CONFIG.address[CONTRACT_TYPES.TESTNET_MINING][chainId] : undefined,
+    abi: CONTRACT_CONFIG.abi[CONTRACT_TYPES.TESTNET_MINING],
+    functionName: 'vestingCaps',
+    args: [BigInt(vestingData.capId)],
+    query: {
+      enabled: isTestnetMining && !!vestingData.capId && !!chainId
+    }
+  });
+
+  // Debug the contract query conditions and results
+  console.log("Contract query conditions:", { 
+    isTestnetMining, 
+    capId: vestingData.capId, 
+    chainId,
+    isEnabled: isTestnetMining && !!vestingData.capId && !!chainId,
+    contractAddress: chainId ? CONTRACT_CONFIG.address[CONTRACT_TYPES.TESTNET_MINING][chainId] : undefined
+  });
+  
+  console.log("Contract query status:", { 
+    isCapDataLoading, 
+    isCapDataError, 
+    capDataError,
+    hasData: !!capData
+  });
+
+  console.log("Direct capData log:", capData);
+
+  useEffect(() => {
+    console.log("Raw capData:", capData);
+    
+    // Try to get ratio from capData
+    if (capData && Array.isArray(capData) && capData.length >= 10) {
+      setRatio(Number(capData[9]));
+      console.log("Ratio from contract (array):", capData[9]);
+    } 
+    else if (capData && typeof capData === 'object' && 'ratio' in capData) {
+      setRatio(Number(capData.ratio));
+      console.log("Ratio from contract (named fields):", capData.ratio);
+    }
+  }, [capData]);
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp * (isTestnetMining ? 1000 : 1)).toLocaleDateString();
@@ -65,7 +113,21 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
 
   const getTotalAllocation = () => {
     if (isTestnetMining) {
-      return vestingData.walletInfo?.amount || BigInt(0);
+      const substrateRewards = vestingData.substrateRewards.amount || BigInt(0);
+      console.log("Substrate rewards:", substrateRewards.toString());
+      
+      if (ratio && ratio > 0) {
+        // For 1:10 ratio, we need to divide by 10 to get the actual token amount
+        // This is because 1 token = 10 substrate rewards
+        const actualTokens = substrateRewards / BigInt(ratio);
+        console.log(`Calculating with ratio ${ratio}: ${substrateRewards.toString()} / ${ratio} = ${actualTokens.toString()}`);
+        return actualTokens;
+      }
+      
+      // Fallback if ratio isn't loaded yet - assume 1:10 ratio
+      const fallbackTokens = substrateRewards / BigInt(10);
+      console.log(`Using fallback ratio 10: ${substrateRewards.toString()} / 10 = ${fallbackTokens.toString()}`);
+      return fallbackTokens;
     }
     return vestingData.totalAllocation || BigInt(0);
   };
@@ -167,6 +229,18 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
                     value={vestingData.substrateRewards.amount ? 
                       `${formatEther(vestingData.substrateRewards.amount)} Tokens` : 
                       undefined}
+                  />
+                  <InfoItem 
+                    label="Cap Ratio"
+                    value={ratio !== null ? `1:${ratio}` : 'Loading...'}
+                  />
+                  <InfoItem 
+                    label="Vesting Start Date"
+                    value={vestingData.startDate ? formatDate(Number(vestingData.startDate)) : undefined}
+                  />
+                  <InfoItem 
+                    label="Cliff Period"
+                    value={vestingData.cliff !== undefined ? `${vestingData.cliff} days` : undefined}
                   />
                 </>
               )}
