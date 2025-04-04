@@ -159,7 +159,7 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
                   <InfoItem 
                     label="Last Update"
                     value={vestingData.substrateRewards.lastUpdate ? 
-                      new Date(Number(vestingData.substrateRewards.lastUpdate)).toLocaleString() : 
+                      new Date(Number(vestingData.substrateRewards.lastUpdate) * 1000).toLocaleString() : 
                       undefined}
                   />
                   <InfoItem 
