@@ -74,6 +74,7 @@ export function TestnetMiningAdmin() {
     checkRoleConfig,
     upgradeContract,
     createProposal,
+    cleanupExpiredProposals,
   } = useAdminContract()
 
   const [isCreatingCap, setIsCreatingCap] = useState(false)
@@ -250,7 +251,7 @@ export function TestnetMiningAdmin() {
     try {
       setError(null)
       setIsCleaning(true)
-      // await cleanupExpiredProposals(10)
+      await cleanupExpiredProposals(10)
     } catch (error: any) {
       setError(error.message)
     } finally {
@@ -660,6 +661,29 @@ export function TestnetMiningAdmin() {
     }
   };
 
+  const handleRemoveWallet = async (walletAddress: string, capId: number) => {
+    try {
+      setError(null)
+      setIsAddingWallet(true) // Reuse the loading state
+      
+      await createProposal(
+        PROPOSAL_TYPES.RemoveDistributionWallet, // Type 8 for RemoveDistributionWallet
+        capId, // The cap ID
+        walletAddress, // The wallet address to remove
+        ethers.ZeroHash, // Role is not used for removal
+        '0', // Amount must be 0 for removal
+        ethers.ZeroAddress // Token address not used
+      )
+      
+      // Show success message
+      setError('Wallet removal proposal created successfully. Please check the proposals section to approve and execute it.')
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setIsAddingWallet(false)
+    }
+  }
+
   if (!isConnected) {
     return (
       <Box sx={{ textAlign: 'center', py: 4 }}>
@@ -937,6 +961,7 @@ export function TestnetMiningAdmin() {
                     <TableCell>Amount (FULA)</TableCell>
                     <TableCell>Claimed (FULA)</TableCell>
                     <TableCell>Remaining (FULA)</TableCell>
+                    <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -954,6 +979,17 @@ export function TestnetMiningAdmin() {
                           {ethers.formatEther(
                             BigInt(wallet.amount || '0') - BigInt(wallet.claimed || '0')
                           )}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outlined"
+                            color="error"
+                            size="small"
+                            onClick={() => handleRemoveWallet(wallet.address, cap.capId)}
+                            disabled={isAddingWallet}
+                          >
+                            Remove
+                          </Button>
                         </TableCell>
                       </TableRow>
                     )) || []
