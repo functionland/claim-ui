@@ -113,18 +113,32 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
   useEffect(() => {
     console.log("Raw capData:", capData);
     
-    // Try to get ratio from capData
+    // Try to get ratio and maxRewardsPerMonth from capData
     if (capData && Array.isArray(capData) && capData.length >= 10) {
+      // For array format response
       setRatio(Number(capData[9]));
-      setMaxRewardsPerMonth(capData[8]);
+      setMaxRewardsPerMonth(capData[8] as bigint);
       console.log("Ratio from contract (array):", capData[9]);
       console.log("Max Rewards Per Month from contract (array):", capData[8]);
     } 
-    else if (capData && typeof capData === 'object' && 'ratio' in capData) {
-      setRatio(Number(capData.ratio));
-      setMaxRewardsPerMonth(capData.maxRewardsPerMonth);
-      console.log("Ratio from contract (named fields):", capData.ratio);
-      console.log("Max Rewards Per Month from contract (named fields):", capData.maxRewardsPerMonth);
+    else if (capData && typeof capData === 'object') {
+      // For named fields format response (handle both possible response formats)
+      // Check if we can access the data as an indexed object
+      if ('9' in capData && '8' in capData) {
+        setRatio(Number(capData['9']));
+        setMaxRewardsPerMonth(capData['8'] as bigint);
+        console.log("Ratio from contract (indexed object):", capData['9']);
+        console.log("Max Rewards Per Month from contract (indexed object):", capData['8']);
+      }
+      // Check if we can access the data as named properties
+      else if ('ratio' in capData && 'maxRewardsPerMonth' in capData) {
+        // TypeScript doesn't know these properties exist, so we need to use type assertion
+        const typedCapData = capData as { ratio: bigint, maxRewardsPerMonth: bigint };
+        setRatio(Number(typedCapData.ratio));
+        setMaxRewardsPerMonth(typedCapData.maxRewardsPerMonth);
+        console.log("Ratio from contract (named fields):", typedCapData.ratio);
+        console.log("Max Rewards Per Month from contract (named fields):", typedCapData.maxRewardsPerMonth);
+      }
     }
   }, [capData]);
 
