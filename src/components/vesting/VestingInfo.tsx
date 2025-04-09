@@ -112,6 +112,16 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
     return new Date(timestamp * (isTestnetMining ? 1000 : 1)).toLocaleDateString();
   };
 
+  // Convert seconds to days
+  const secondsToDays = (seconds: number) => {
+    return Math.round(seconds / (60 * 60 * 24));
+  };
+
+  // Convert seconds to months (approximate)
+  const secondsToMonths = (seconds: number) => {
+    return Math.round(seconds / (60 * 60 * 24 * 30));
+  };
+
   const getClaimed = () => {
     console.log({isTestnetMining});
     if (isTestnetMining) {
@@ -225,12 +235,12 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
                   />
                   <InfoItem 
                     label="Cliff Period"
-                    value={vestingData.cliff !== undefined ? `${vestingData.cliff} days` : undefined}
+                    value={vestingData.cliff !== undefined ? `${secondsToDays(Number(vestingData.cliff))} days` : undefined}
                   />
                   <InfoItem 
                     label="Vesting Term"
                     value={vestingData.vestingTerm !== undefined && vestingData.vestingPlan !== undefined ? 
-                      `${vestingData.vestingTerm} months (every ${vestingData.vestingPlan} months)` : 
+                      `${secondsToMonths(Number(vestingData.vestingTerm))} months (every ${secondsToMonths(Number(vestingData.vestingPlan))} months)` : 
                       undefined}
                   />
                 </>
@@ -259,7 +269,7 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
                   />
                   <InfoItem 
                     label="Cliff Period"
-                    value={vestingData.cliff !== undefined ? `${vestingData.cliff} days` : undefined}
+                    value={vestingData.cliff !== undefined ? `${secondsToDays(Number(vestingData.cliff))} days` : undefined}
                   />
                 </>
               )}
