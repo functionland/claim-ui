@@ -45,6 +45,7 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
   console.log({activeContract, chainId});
   const isTestnetMining = activeContract === CONTRACT_TYPES.TESTNET_MINING;
   const [ratio, setRatio] = useState<number | null>(null);
+  const [maxRewardsPerMonth, setMaxRewardsPerMonth] = useState<bigint | null>(null);
 
   // Direct contract query for ratio when in testnet mining mode
   const { data: capData, isLoading: isCapDataLoading, isError: isCapDataError, error: capDataError } = useReadContract({
@@ -93,6 +94,21 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
   });
 
   console.log("Direct capData log:", capData);
+  
+  // Log the maxRewardsPerMonth specifically
+  if (capData && Array.isArray(capData) && capData.length >= 9) {
+    console.log("Max Rewards Per Month from contract:", {
+      raw: capData[8],
+      formatted: formatEther(capData[8])
+    });
+  } else if (capData && typeof capData === 'object' && 'maxRewardsPerMonth' in capData) {
+    console.log("Max Rewards Per Month from contract (named fields):", {
+      raw: capData.maxRewardsPerMonth,
+      formatted: formatEther(capData.maxRewardsPerMonth)
+    });
+  } else {
+    console.log("Max Rewards Per Month not found in contract data");
+  }
 
   useEffect(() => {
     console.log("Raw capData:", capData);
@@ -100,11 +116,15 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
     // Try to get ratio from capData
     if (capData && Array.isArray(capData) && capData.length >= 10) {
       setRatio(Number(capData[9]));
+      setMaxRewardsPerMonth(capData[8]);
       console.log("Ratio from contract (array):", capData[9]);
+      console.log("Max Rewards Per Month from contract (array):", capData[8]);
     } 
     else if (capData && typeof capData === 'object' && 'ratio' in capData) {
       setRatio(Number(capData.ratio));
+      setMaxRewardsPerMonth(capData.maxRewardsPerMonth);
       console.log("Ratio from contract (named fields):", capData.ratio);
+      console.log("Max Rewards Per Month from contract (named fields):", capData.maxRewardsPerMonth);
     }
   }, [capData]);
 
@@ -262,6 +282,12 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
                   <InfoItem 
                     label="Cap Ratio"
                     value={ratio !== null ? `1:${ratio}` : 'Loading...'}
+                  />
+                  <InfoItem 
+                    label="Max Rewards Per Month"
+                    value={maxRewardsPerMonth !== null ? 
+                      `${formatEther(maxRewardsPerMonth)} Tokens` : 
+                      'Loading...'}
                   />
                   <InfoItem 
                     label="Vesting Start Date"

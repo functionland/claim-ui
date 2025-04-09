@@ -1487,6 +1487,24 @@ export const TESTNET_MINING_ABI = [
     type: "function"
   },
   {
+    inputs: [{ name: "", type: "uint256" }],
+    name: "vestingCaps",
+    outputs: [
+      { name: "totalAllocation", type: "uint256" },
+      { name: "name", type: "bytes32" },
+      { name: "cliff", type: "uint256" },
+      { name: "vestingTerm", type: "uint256" },
+      { name: "vestingPlan", type: "uint256" },
+      { name: "initialRelease", type: "uint256" },
+      { name: "startDate", type: "uint256" },
+      { name: "allocatedToWallets", type: "uint256" },
+      { name: "maxRewardsPerMonth", type: "uint256" },
+      { name: "ratio", type: "uint256" }
+    ],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
     inputs: [
       { name: "wallet", type: "address" },
       { name: "amount", type: "uint256" }
