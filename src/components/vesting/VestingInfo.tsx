@@ -104,7 +104,7 @@ export function VestingInfo({ vestingData }: VestingInfoProps) {
   } else if (capData && typeof capData === 'object' && 'maxRewardsPerMonth' in capData) {
     console.log("Max Rewards Per Month from contract (named fields):", {
       raw: capData.maxRewardsPerMonth,
-      formatted: formatEther(capData.maxRewardsPerMonth)
+      formatted: formatEther(capData.maxRewardsPerMonth as bigint)
     });
   } else {
     console.log("Max Rewards Per Month not found in contract data");
