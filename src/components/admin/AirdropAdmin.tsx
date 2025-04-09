@@ -68,6 +68,7 @@ export function AirdropAdmin() {
     checkRoleConfig,
     upgradeContract,
     emergencyAction,
+    transferBackToStorage,
   } = useAdminContract()
 
   const [isCreatingCap, setIsCreatingCap] = useState(false)
@@ -80,6 +81,7 @@ export function AirdropAdmin() {
   const [isCheckingRole, setIsCheckingRole] = useState(false)
   const [roleCheckResult, setRoleCheckResult] = useState<{ transactionLimit: bigint, quorum: number } | null>(null)
   const [isSettingLimit, setIsSettingLimit] = useState(false)
+  const [isTransferringToStorage, setIsTransferringToStorage] = useState(false)
 
   const handleCreateVestingCap = async () => {
     try {
@@ -325,6 +327,31 @@ export function AirdropAdmin() {
       setIsSettingLimit(false)
     }
   }
+
+  const handleTransferBackToStorage = async () => {
+    try {
+      setIsTransferringToStorage(true);
+      setError(null);
+
+      if (!formData.amount) {
+        throw new Error('Please enter an amount to transfer');
+      }
+
+      const hash = await transferBackToStorage(formData.amount);
+      console.log('Transfer back to storage transaction hash:', hash);
+
+      // Reset form
+      setFormData(prev => ({
+        ...prev,
+        amount: ''
+      }));
+    } catch (err) {
+      console.error('Error transferring tokens back to storage:', err);
+      setError(err instanceof Error ? err.message : 'Failed to transfer tokens back to storage');
+    } finally {
+      setIsTransferringToStorage(false);
+    }
+  };
 
   const renderVestingCapTable = () => {
     if (isLoading) {
@@ -988,6 +1015,44 @@ export function AirdropAdmin() {
               )}
             </Grid>
           </Box>
+        </AccordionDetails>
+      </Accordion>
+
+      <Accordion>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="h6">Transfer Tokens Back to Storage</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            This function transfers tokens from this contract back to the StorageToken contract.
+            Only ADMIN_ROLE can perform this action.
+          </Typography>
+            
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Amount (in tokens)"
+                type="text"
+                value={formData.amount}
+                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                placeholder="e.g., 1000"
+                helperText="Enter the amount of tokens to transfer back to the storage contract"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleTransferBackToStorage}
+                disabled={isTransferringToStorage || !formData.amount}
+                startIcon={isTransferringToStorage && <CircularProgress size={20} color="inherit" />}
+                fullWidth
+              >
+                {isTransferringToStorage ? 'Processing...' : 'Transfer Tokens to Storage'}
+              </Button>
+            </Grid>
+          </Grid>
         </AccordionDetails>
       </Accordion>
 

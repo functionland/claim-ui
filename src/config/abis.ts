@@ -1290,6 +1290,15 @@ export const DISTRIBUTION_ABI = [
     stateMutability: "nonpayable",
     type: "function"
   },
+  {
+    inputs: [
+      { name: "amount", type: "uint256" }
+    ],
+    name: "transferBackToStorage",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
   // Distribution-specific errors
   {
     type: "error",
@@ -1298,15 +1307,15 @@ export const DISTRIBUTION_ABI = [
   },
   {
     type: "error",
-    name: "NothingDue",
+    name: "AmountMustBePositive",
     inputs: []
   },
   {
     type: "error",
     name: "LowContractBalance",
     inputs: [
-      { name: "available", type: "uint256" },
-      { name: "required", type: "uint256" }
+      { name: "contractBalance", type: "uint256" },
+      { name: "requestedAmount", type: "uint256" }
     ]
   },
   {

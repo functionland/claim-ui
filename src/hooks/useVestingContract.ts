@@ -30,6 +30,60 @@ export function useVestingContract() {
 
   const contractAbi = CONTRACT_CONFIG.abi[activeContract]
 
+  // Create a custom ABI for the Airdrop contract's calculateDueTokens function with error definitions
+  const customAirdropCalculateDueTokensAbi = [
+    {
+      inputs: [
+        { internalType: 'address', name: 'wallet', type: 'address' },
+        { internalType: 'uint256', name: 'capId', type: 'uint256' },
+      ],
+      name: 'calculateDueTokens',
+      outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+      stateMutability: 'view',
+      type: 'function',
+    },
+    // Add error definitions from the Airdrop contract
+    {
+      type: "error",
+      name: "NothingToClaim",
+      inputs: []
+    },
+    {
+      type: "error",
+      name: "CliffNotReached",
+      inputs: [
+        { name: "currentTime", type: "uint256" },
+        { name: "startDate", type: "uint256" },
+        { name: "cliffEnd", type: "uint256" }
+      ]
+    },
+    {
+      type: "error",
+      name: "NoWalletBalance",
+      inputs: []
+    },
+    {
+      type: "error",
+      name: "InvalidAllocationParameters",
+      inputs: []
+    },
+    {
+      type: "error",
+      name: "WalletNotInCap",
+      inputs: [
+        { name: "wallet", type: "address" },
+        { name: "capId", type: "uint256" }
+      ]
+    },
+    {
+      type: "error",
+      name: "InvalidCapId",
+      inputs: [
+        { name: "capId", type: "uint256" }
+      ]
+    }
+  ]
+
   console.log("Contract Address:", contractAddress)
   console.log("activeContract:", activeContract)
   console.log("chainId:", chainId)
@@ -47,31 +101,52 @@ export function useVestingContract() {
   console.log("Wallets in Cap 1:", walletsInCap)
 
   const parseContractError = (error: any): string => {
-    // Extract error name and parameters
-    const errorMatch = error.message.match(/Error: ([a-zA-Z]+)\((.*?)\)\s*\((.*?)\)/);
-    if (!errorMatch) return 'Unknown error occurred';
-  
-    const [_, errorName, paramTypes, values] = errorMatch;
-    const valueArray = values.split(',').map(v => v.trim());
-  
-    switch (errorName) {
-      case 'CliffNotReached':
-        const [currentTime, startDate, cliffEnd] = valueArray.map(v => Number(v));
+    // Check if the error is a ContractFunctionExecutionError with a decoded error
+    if (error.message && error.message.includes('CliffNotReached')) {
+      // Extract the parameters from the error message
+      const regex = /CliffNotReached\(uint256 currentTime, uint256 startDate, uint256 cliffEnd\)\s*\((\d+), (\d+), (\d+)\)/;
+      const match = error.message.match(regex);
+      
+      if (match) {
+        const [_, currentTime, startDate, cliffEnd] = match.map(Number);
         const remainingTime = cliffEnd - currentTime;
         const daysRemaining = Math.ceil(remainingTime / (24 * 60 * 60));
-        return `Cliff period not reached. ${daysRemaining} days remaining until tokens can be claimed.`;
-      
-      case 'NoWalletBalance':
-        return 'You need to have tokens in your wallet to claim rewards.';
-      
-      case 'NothingDue':
-        return 'No tokens available to claim at this time.';
-      
-      // Add other error cases as needed
-      
-      default:
-        return `${errorName}: ${valueArray.join(', ')}`;
+        
+        return `Cliff period not reached. ${daysRemaining > 0 ? `${daysRemaining} days remaining until tokens can be claimed.` : 'The cliff date is set but tokens are not yet claimable.'}`;
+      }
     }
+    
+    // Extract error name and parameters for other errors
+    const errorMatch = error.message?.match(/Error: ([a-zA-Z]+)\((.*?)\)\s*\((.*?)\)/);
+    if (errorMatch) {
+      const [_, errorName, paramTypes, values] = errorMatch;
+      const valueArray = values.split(',').map(v => v.trim());
+  
+      switch (errorName) {
+        case 'NothingToClaim':
+          return 'No tokens available to claim at this time.';
+        
+        case 'NoWalletBalance':
+          return 'You need to have tokens in your wallet to claim rewards.';
+        
+        case 'InvalidAllocationParameters':
+          return 'Invalid allocation parameters. Please contact support.';
+          
+        case 'WalletNotInCap':
+          return 'Your wallet is not associated with this vesting cap.';
+          
+        case 'InvalidCapId':
+          return 'Invalid vesting cap ID.';
+        
+        // Add other error cases as needed
+        
+        default:
+          return `${errorName}: ${valueArray.join(', ')}`;
+      }
+    }
+  
+    // Default error message
+    return error instanceof Error ? error.message : String(error);
   };
 
   async function fetchVestingData() {
@@ -271,12 +346,23 @@ export function useVestingContract() {
 
             try {
               // Calculate claimable amount
-              claimableAmount = await publicClient.readContract({
-                address: contractAddress,
-                abi: contractAbi,
-                functionName: 'calculateDueTokens',
-                args: [userAddress as Address, capId]
-              }) as bigint
+              if (activeContract === CONTRACT_TYPES.AIRDROP) {
+                // For Airdrop, use custom ABI that matches the contract implementation
+                claimableAmount = await publicClient.readContract({
+                  address: contractAddress,
+                  abi: customAirdropCalculateDueTokensAbi,
+                  functionName: 'calculateDueTokens',
+                  args: [userAddress as Address, capId]
+                }) as bigint
+              } else {
+                // For regular Vesting
+                claimableAmount = await publicClient.readContract({
+                  address: contractAddress,
+                  abi: contractAbi,
+                  functionName: 'calculateDueTokens',
+                  args: [userAddress as Address, capId]
+                }) as bigint
+              }
             } catch (error: any) {
               errorMessage = parseContractError(error);
               console.error('Claim calculation error:', error);
@@ -349,7 +435,7 @@ export function useVestingContract() {
           address: contractAddress as Address,
           abi: contractAbi,
           functionName: 'getWalletsInCap',
-          args: [BigInt(0)]
+          args: [BigInt(0)],
         }) as Address[]
 
         if (!walletsInCap || !publicClient || !contractAddress) return
@@ -545,12 +631,23 @@ export function useVestingContract() {
 
               try {
                 // Calculate claimable amount
-                claimableAmount = await publicClient.readContract({
-                  address: contractAddress,
-                  abi: contractAbi,
-                  functionName: 'calculateDueTokens',
-                  args: [userAddress as Address, capId]
-                }) as bigint
+                if (activeContract === CONTRACT_TYPES.AIRDROP) {
+                  // For Airdrop, use custom ABI that matches the contract implementation
+                  claimableAmount = await publicClient.readContract({
+                    address: contractAddress,
+                    abi: customAirdropCalculateDueTokensAbi,
+                    functionName: 'calculateDueTokens',
+                    args: [userAddress as Address, capId]
+                  }) as bigint
+                } else {
+                  // For regular Vesting
+                  claimableAmount = await publicClient.readContract({
+                    address: contractAddress,
+                    abi: contractAbi,
+                    functionName: 'calculateDueTokens',
+                    args: [userAddress as Address, capId]
+                  }) as bigint
+                }
               } catch (error: any) {
                 errorMessage = parseContractError(error);
                 console.error('Claim calculation error:', error);
@@ -620,117 +717,102 @@ export function useVestingContract() {
   const { writeContractAsync } = useWriteContract()
 
   const handleClaim = async (capId: number) => {
-    if (!userAddress) return Promise.reject(new Error('Wallet not connected'))
-    if (!contractAddress) return Promise.reject(new Error('Contract not configured'))
+    if (!contractAddress || !userAddress) {
+      throw new Error('Contract or wallet not connected')
+    }
 
     try {
-      console.log("Initiating claim for capId:", capId)
-      console.log("Active Contract:", activeContract)
-      console.log("Substrate Wallet:", substrateWallet)
-      console.log("User Address:", userAddress)
-      console.log("Wallets in Cap:", walletsInCap)
-      console.log("contractAddress:", contractAddress)
-      console.log("contractAbi:", contractAbi)
-
+      let request;
+      
       if (activeContract === CONTRACT_TYPES.TESTNET_MINING) {
         if (!substrateWallet) {
-          console.log("Substrate wallet is missing")
-          return Promise.reject(new Error('Substrate wallet not provided'))
+          throw new Error('Substrate wallet not provided')
         }
-        try {
-          // Create a custom ABI entry for the claimTokens function with correct types
-          const customClaimFunction = {
-            name: 'claimTokens',
-            type: 'function',
-            stateMutability: 'nonpayable',
-            inputs: [
-              { name: 'substrateWallet', type: 'string' },
-              { name: 'capId', type: 'uint256' }
-            ],
-            outputs: []
-          };
-
-          console.log("Simulating contract call with params:", {
-            account: userAddress,
-            address: contractAddress,
-            functionName: 'claimTokens',
-            args: [substrateWallet, BigInt(capId)]
-          });
-
-          // First simulate the contract call with the custom ABI
-          const { request } = await publicClient.simulateContract({
-            account: userAddress,
-            address: contractAddress,
-            abi: [customClaimFunction],
-            functionName: 'claimTokens',
-            args: [substrateWallet, BigInt(capId)],
-            gas: BigInt(3000000),
-          })
-          
-          console.log("Simulation successful, simulation result:", request)
-          
-          // If simulation is successful, proceed with the actual transaction
-          console.log("Proceeding with actual transaction using request:", request)
-          const hash = await writeContractAsync(request)
-          
-          console.log("Transaction hash:", hash)
-          return hash
-        } catch (err) {
-          console.error("Full error object:", err)
-          // Try to extract more detailed error information
-          let errorMessage = err instanceof Error ? err.message : String(err)
-          
-          // Check for specific error types
-          if (err.cause) {
-            console.error("Error cause:", err.cause)
-            errorMessage += ` (Cause: ${err.cause})`
-          }
-          
-          // Log the error stack if available
-          if (err instanceof Error && err.stack) {
-            console.error("Error stack:", err.stack)
-          }
-          
-          console.error("Detailed claim error:", errorMessage)
-          throw new Error(errorMessage)
+        
+        // Create a custom ABI entry for the claimTokens function with correct types
+        const customAbi = {
+          name: 'claimTokens',
+          type: 'function',
+          stateMutability: 'nonpayable',
+          inputs: [
+            { name: 'substrateWallet', type: 'string' },
+            { name: 'capId', type: 'uint256' }
+          ],
+          outputs: []
         }
+        
+        // Simulate the transaction with the custom ABI
+        const simulateResult = await publicClient.simulateContract({
+          address: contractAddress,
+          abi: [customAbi],
+          functionName: 'claimTokens',
+          args: [substrateWallet, BigInt(capId)],
+          account: userAddress,
+        })
+        
+        request = simulateResult.request
+      } else if (activeContract === CONTRACT_TYPES.AIRDROP) {
+        // For Airdrop, use a custom ABI with the correct parameters
+        const customAbi = {
+          name: 'claimTokens',
+          type: 'function',
+          stateMutability: 'nonpayable',
+          inputs: [
+            { name: 'capId', type: 'uint256' },
+            { name: 'chainId', type: 'uint256' }
+          ],
+          outputs: []
+        }
+        
+        // Get the current chain ID
+        const currentChainId = chainId || 1; // Default to 1 if chainId is undefined
+        
+        // Simulate the transaction with the custom ABI
+        const simulateResult = await publicClient.simulateContract({
+          address: contractAddress,
+          abi: [customAbi],
+          functionName: 'claimTokens',
+          args: [BigInt(capId), BigInt(currentChainId)],
+          account: userAddress,
+        })
+        
+        request = simulateResult.request
       } else {
-        try {
-          if (!publicClient) {
-            throw new Error('Public client is not initialized');
-          }
-
-          console.log("Simulating non-testnet contract call with params:", {
-            account: userAddress,
-            address: contractAddress,
-            functionName: 'claimTokens',
-            args: [BigInt(capId), BigInt(chainId || 1)]
-          });
-
-          // For other contracts, follow the same pattern
-          const { request } = await publicClient.simulateContract({
-            account: userAddress,
-            address: contractAddress,
-            abi: contractAbi,
-            functionName: 'claimTokens',
-            args: [BigInt(capId), BigInt(chainId || 1)]
-          })
-          
-          console.log("Simulation successful, proceeding with transaction. Request:", request)
-          const hash = await writeContractAsync(request)
-          
-          console.log("Transaction hash:", hash)
-          return hash
-        } catch (err) {
-          console.error("Full error object:", err)
-          const errorMessage = err instanceof Error ? err.message : String(err)
-          console.error("Non-testnet claim error:", errorMessage)
-          throw new Error(errorMessage)
-        }
+        // For regular Vesting
+        const simulateResult = await publicClient.simulateContract({
+          address: contractAddress,
+          abi: contractAbi,
+          functionName: 'claimTokens',
+          args: [BigInt(capId)],
+          account: userAddress,
+        })
+        
+        request = simulateResult.request
       }
+      
+      console.log("Simulated request:", request)
+      const hash = await writeContractAsync(request)
+      
+      console.log("Transaction hash:", hash)
+      return hash
     } catch (err) {
-      console.error("Top-level error:", err)
-      return Promise.reject(err instanceof Error ? err : new Error(String(err)))
+      console.error("Full error object:", err)
+      // Try to extract more detailed error information
+      let errorMessage = err instanceof Error ? err.message : String(err)
+      
+      // Check for specific error types
+      if (err.cause) {
+        console.error("Error cause:", err.cause)
+        errorMessage += ` (Cause: ${err.cause})`
+      }
+      
+      // Log the error stack if available
+      if (err instanceof Error && err.stack) {
+        console.error("Error stack:", err.stack)
+      }
+      
+      console.error("Detailed claim error:", errorMessage)
+      throw new Error(errorMessage)
     }
   }
 

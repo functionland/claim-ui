@@ -1389,22 +1389,57 @@ export function useAdminContract() {
 
   const upgradeContract = async (newImplementation: string) => {
     if (!contractAddress) throw new Error('Contract address not found')
-    if (!ethers.isAddress(newImplementation)) throw new Error('Invalid implementation address')
+    if (!userAddress) throw new Error('Please connect your wallet')
+    if (!publicClient) throw new Error('Public client not found')
 
     try {
+      console.log('Upgrading contract to:', newImplementation)
+      
       const { request } = await publicClient.simulateContract({
         address: contractAddress,
         abi: contractAbi,
         functionName: 'upgradeToAndCall',
+        args: [newImplementation, '0x'],
         account: userAddress,
-        args: [newImplementation as Address, '0x' as `0x${string}`]
       })
 
       const hash = await writeContractAsync(request)
       return hash
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error upgrading contract:', err)
-      throw new Error(err.message)
+      throw err
+    }
+  }
+
+  const transferBackToStorage = async (amount: string) => {
+    if (!contractAddress) throw new Error('Contract address not found')
+    if (!userAddress) throw new Error('Please connect your wallet')
+    if (!publicClient) throw new Error('Public client not found')
+
+    try {
+      // Convert amount to BigInt with proper decimals
+      const amountInWei = ethers.parseEther(amount)
+      
+      console.log('Transferring tokens back to storage:', {
+        amount,
+        amountInWei: amountInWei.toString(),
+        contractAddress
+      })
+      
+      const { request } = await publicClient.simulateContract({
+        address: contractAddress,
+        abi: contractAbi,
+        functionName: 'transferBackToStorage',
+        args: [amountInWei],
+        account: userAddress,
+      })
+
+      const hash = await writeContractAsync(request)
+      console.log('Transfer back to storage transaction hash:', hash)
+      return hash
+    } catch (err) {
+      console.error('Error transferring tokens back to storage:', err)
+      throw err
     }
   }
 
@@ -1844,6 +1879,7 @@ export function useAdminContract() {
     addSubstrateAddress,
     batchAddSubstrateAddresses,
     batchRemoveAddresses,
-    getSubstrateAddressMappings
+    getSubstrateAddressMappings,
+    transferBackToStorage
   }
 }
