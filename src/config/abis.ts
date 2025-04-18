@@ -1299,6 +1299,17 @@ export const DISTRIBUTION_ABI = [
     stateMutability: "nonpayable",
     type: "function"
   },
+  // Override the calculateDueTokens function for Distribution contract (2 params)
+  {
+    inputs: [
+      { internalType: 'address', name: 'wallet', type: 'address' },
+      { internalType: 'uint256', name: 'capId', type: 'uint256' },
+    ],
+    name: 'calculateDueTokens',
+    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
   // Distribution-specific errors
   {
     type: "error",
