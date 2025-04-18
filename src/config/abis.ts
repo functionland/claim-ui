@@ -1310,6 +1310,17 @@ export const DISTRIBUTION_ABI = [
     stateMutability: 'view',
     type: 'function',
   },
+  // Override the claimTokens function for Distribution contract (2 params)
+  {
+    inputs: [
+      { internalType: 'uint256', name: 'capId', type: 'uint256' },
+      { internalType: 'uint256', name: 'chainId', type: 'uint256' },
+    ],
+    name: 'claimTokens',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
   // Distribution-specific errors
   {
     type: "error",

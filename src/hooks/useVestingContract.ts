@@ -783,7 +783,7 @@ export function useVestingContract() {
           address: contractAddress,
           abi: contractAbi,
           functionName: 'claimTokens',
-          args: [BigInt(capId)],
+          args: [BigInt(capId), BigInt(chainId)],
           account: userAddress,
         })
         
