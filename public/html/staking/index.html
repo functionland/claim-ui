@@ -663,6 +663,14 @@
         <div class="fula-stats-value" id="fula-total-referrers">Loading...</div>
       </div>
       <div class="fula-stats-box">
+        <div class="fula-stats-title">Total Staked on mining</div>
+        <div class="fula-stats-value" id="fula-total-staked-mining">3MM FULA</div>
+      </div>
+      <div class="fula-stats-box">
+        <div class="fula-stats-title">Total Stakers on mining</div>
+        <div class="fula-stats-value" id="fula-total-stakers-mining">100</div>
+      </div>
+      <div class="fula-stats-box">
         <div class="fula-stats-title">Your Total Staked</div>
         <div class="fula-stats-value" id="fula-user-staked">N/A</div>
       </div>
@@ -2096,6 +2104,18 @@
   
       function formatDate(date) {
         return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+    });
+  </script>
+  
+  <script>
+    // Set default network to Base on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      const networkSelect = document.getElementById('fula-network');
+      if (networkSelect) {
+        networkSelect.value = 'base';
+        const event = new Event('change');
+        networkSelect.dispatchEvent(event);
       }
     });
   </script>
