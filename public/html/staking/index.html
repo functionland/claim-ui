@@ -664,7 +664,7 @@
       </div>
       <div class="fula-stats-box">
         <div class="fula-stats-title">Total Staked on mining</div>
-        <div class="fula-stats-value" id="fula-total-staked-mining">3MM FULA</div>
+        <div class="fula-stats-value" id="fula-total-staked-mining">3M FULA</div>
       </div>
       <div class="fula-stats-box">
         <div class="fula-stats-title">Total Stakers on mining</div>
@@ -736,20 +736,19 @@
         </div>
       </div>
   
+      <div class="fula-hint-message" id="fula-stake-hint"></div>
       <button id="fula-stake-button" class="fula-action-button" disabled>Stake FULA</button>
-      <div id="fula-stake-hint" class="fula-hint-message" style="margin-top:8px; color:#d32f2f; font-size:13px;"></div>
     </div>
   
     <div id="fula-unstake-tab" class="fula-tab-content">
       <div class="fula-stakes-list" id="fula-stakes-container">
         <p id="fula-no-stakes-message">You don't have any active stakes.</p>
-        <!-- Stakes will be populated here dynamically -->
       </div>
     </div>
-    
+  
     <div id="fula-referrer-tab" class="fula-tab-content">
-      <div id="fula-referrer-stats" class="fula-referrer-stats">
-        <h3>Your Referrer Statistics</h3>
+      <div class="fula-referrer-stats">
+        <h3>Your Referrer Stats</h3>
         <div class="fula-referrer-stats-grid">
           <div class="fula-referrer-stat-item">
             <div class="fula-referrer-stat-label">Total Referred</div>
@@ -776,28 +775,32 @@
             <div class="fula-referrer-stat-value" id="fula-total-active-staked">0 FULA</div>
           </div>
         </div>
-        
-        <div id="fula-referrer-rewards-summary" class="fula-referrer-claim-section">
-          <div id="fula-referrer-rewards-summary-info" class="fula-referrer-claim-info"></div>
+        <div id="fula-referrer-rewards-summary-info"></div>
+      </div>
+  
+      <h3>Your Referrer Link</h3>
+      <div class="fula-input-group">
+        <div class="fula-input-wrapper">
+          <input type="text" id="fula-referrer-link" readonly>
+          <button class="fula-max-button" id="fula-copy-link">Copy</button>
         </div>
-        
-        <h3>Your Referrer Rewards</h3>
-        <div class="fula-referrer-rewards-list" id="fula-referrer-rewards-container">
-          <p id="fula-no-referrer-rewards-message">You don't have any referrer rewards yet.</p>
-          <!-- Referrer rewards will be populated here dynamically -->
-        </div>
+      </div>
+  
+      <h3>Your Referrer Rewards</h3>
+      <div class="fula-referrer-rewards-list" id="fula-referrer-rewards-container">
+        <p id="fula-no-referrer-rewards-message">You don't have any referrer rewards yet.</p>
       </div>
     </div>
   
     <div id="fula-info-tab" class="fula-tab-content">
       <div class="fula-info-section">
-        <h3>Staking Periods and Rewards</h3>
+        <h3>Staking Rewards</h3>
         <table class="fula-info-table">
           <thead>
             <tr>
-              <th>Lock Period</th>
-              <th>Duration</th>
-              <th>Fixed APY</th>
+              <th>Staking Period</th>
+              <th>Lock Duration</th>
+              <th>APY</th>
               <th>Referrer Reward</th>
             </tr>
           </thead>
@@ -841,6 +844,15 @@
   
   <!-- JavaScript Code -->
   <script>
+    // Helper functions
+    function formatAddress(address) {
+      return address.substring(0, 6) + '...' + address.substring(address.length - 4);
+    }
+  
+    function formatDate(date) {
+      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+  
     // Wait for DOM to be fully loaded
     document.addEventListener('DOMContentLoaded', function() {
       // Minimal ERC20 ABI for token contract
@@ -1133,7 +1145,7 @@
       let stakingContract;
       let tokenContract;
       let selectedAccount;
-      let selectedNetwork = 'hardhat'; // Default to local network for development
+      let selectedNetwork = 'base'; // Default to base network
       let selectedPeriod = null;
       let userStakes = [];
       let referrerRewards = [];
@@ -1189,6 +1201,13 @@
       init();
   
       function init() {
+        // Load saved network from localStorage
+        const savedNetwork = localStorage.getItem('fula-network-selected');
+        if (savedNetwork && Array.from(networkSelector.options).some(opt => opt.value === savedNetwork)) {
+          networkSelector.value = savedNetwork;
+          selectedNetwork = savedNetwork;
+        }
+  
         // Set up event listeners
         connectButton.addEventListener('click', () => {
           if (selectedAccount) {
@@ -1197,10 +1216,17 @@
             connectWallet();
           }
         });
+        
         networkSelector.addEventListener('change', async () => {
-          await switchNetwork(networkSelector.value); // Ask wallet to switch
+          // Save selected network to localStorage
+          localStorage.setItem('fula-network-selected', networkSelector.value);
+          selectedNetwork = networkSelector.value;
+          
+          await switchNetwork(selectedNetwork); // Ask wallet to switch
+          await waitForNetwork(selectedNetwork); // Wait for network to actually switch
           await handleNetworkChange(true); // Pass flag for user-initiated
         });
+        
         maxStakeButton.addEventListener('click', setMaxAmount);
         stakeButton.addEventListener('click', handleStake);
         
@@ -1221,9 +1247,6 @@
         
         // Check if Web3 is already injected
         checkWeb3Availability();
-        
-        // Load global stats even if wallet is not connected
-        loadGlobalStats();
       }
   
       function checkWeb3Availability() {
@@ -1235,7 +1258,6 @@
           
           // Listen for network changes
           window.ethereum.on('chainChanged', async (chainId) => {
-            // Optionally update selectedNetwork based on chainId
             // Gracefully handle network change without reloading
             await handleNetworkChange(false);
           });
@@ -1257,20 +1279,26 @@
             const publicRpcUrls = {
               base: 'https://mainnet.base.org',
               iotex: 'https://babel-api.mainnet.iotex.io',
-              skale: 'https://mainnet.skalenodes.com'
+              skale: 'https://mainnet.skalenodes.com/v1/elated-tan-skat'
             };
             
             web3 = new Web3(new Web3.providers.HttpProvider(publicRpcUrls[selectedNetwork]));
           }
           
           const contractAddress = contractAddresses[selectedNetwork];
-          const contract = new web3.eth.Contract(contractABI, contractAddress);
           
           // Check contract address validity before making contract calls
-          if (!contractAddress || contractAddress.startsWith('0x123') || contractAddress.startsWith('0x234') || contractAddress.startsWith('0x345')) {
-            showNotification('Contract address for selected network is not set or is a placeholder. Please deploy your contract and update contractAddresses in the frontend.', 'error');
+          if (!contractAddress || contractAddress === '0x0000000000000000000000000000000000000000') {
+            console.error('Invalid contract address for network:', selectedNetwork);
+            totalStakedElement.textContent = 'Contract not deployed';
+            totalStakersElement.textContent = 'N/A';
+            totalReferrersElement.textContent = 'N/A';
             return;
           }
+          
+          // Create a new contract instance for this specific call
+          // This ensures we're using the correct ABI and address for the current network
+          const contract = new web3.eth.Contract(contractABI, contractAddress);
           
           // Get total staked amount
           const totalStaked = await contract.methods.getTotalStaked().call();
@@ -1378,6 +1406,7 @@
           try {
             if (userInitiated) {
               await switchNetwork(selectedNetwork);
+              await waitForNetwork(selectedNetwork); // Wait for network to actually switch
             }
             initializeContracts();
             await loadUserData();
@@ -1390,6 +1419,8 @@
       }
   
       async function switchNetwork(networkName) {
+        if (!window.ethereum) return;
+        
         const networkParams = {
           base: {
             chainId: '0x2105', // 8453 in hex
@@ -1406,11 +1437,11 @@
             blockExplorerUrls: ['https://iotexscan.io']
           },
           skale: {
-            chainId: '0x50877ed6', // 1351057110 in hex
+            chainId: '0x79f99296', // 1351057110 in hex
             chainName: 'SKALE Network',
             nativeCurrency: { name: 'SKALE', symbol: 'SKL', decimals: 18 },
-            rpcUrls: ['https://mainnet.skalenodes.com'],
-            blockExplorerUrls: ['https://explorer.skale.network']
+            rpcUrls: ['https://mainnet.skalenodes.com/v1/elated-tan-skat'],
+            blockExplorerUrls: ['https://elated-tan-skat.explorer.mainnet.skalenodes.com']
           },
           hardhat: {
             chainId: '0x7A69', // 31337 in hex
@@ -1442,20 +1473,99 @@
         }
       }
   
-      function initializeContracts() {
-        const contractAddress = contractAddresses[selectedNetwork];
-        stakingContract = new web3.eth.Contract(contractABI, contractAddress);
+      async function waitForNetwork(targetNetwork) {
+        // Map your network names to chainIds (as lowercase hex strings with 0x prefix)
+        const chainIds = {
+          base: '0x2105',
+          iotex: '0x1251',
+          skale: '0x79f99296',
+          hardhat: '0x7a69'
+        };
+        const targetChainId = chainIds[targetNetwork]?.toLowerCase();
+        if (!targetChainId) {
+          console.error('Unknown network:', targetNetwork);
+          return;
+        }
         
-        // Always use the actual token contract for tokenContract
-        const tokenAddress = tokenAddresses[selectedNetwork];
-        if (tokenAddress) {
-          tokenContract = new web3.eth.Contract(tokenABI, tokenAddress);
-        } else {
-          tokenContract = null;
+        if (!window.ethereum) {
+          console.error('No ethereum provider available');
+          return;
+        }
+        
+        let currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+        currentChainId = currentChainId.toLowerCase();
+        
+        if (currentChainId === targetChainId) return; // Already on correct network
+        
+        // Prevent multiple simultaneous requests
+        if (window.fulaNetworkSwitchPending) {
+          showNotification('Please approve or reject the pending network switch in MetaMask.', 'error');
+          throw new Error('Network switch already pending. Please approve or reject in MetaMask.');
+        }
+        
+        window.fulaNetworkSwitchPending = true;
+        try {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: targetChainId }]
+          });
+        } catch (switchError) {
+          if (switchError.code === 4001) {
+            throw new Error('Please approve the network switch in MetaMask.');
+          } else if (switchError.message && switchError.message.includes('already pending')) {
+            showNotification('Please approve or reject the pending network switch in MetaMask.', 'error');
+            throw new Error('Network switch already pending. Please approve or reject in MetaMask.');
+          } else {
+            throw new Error('Network switch failed: ' + (switchError.message || switchError));
+          }
+        } finally {
+          window.fulaNetworkSwitchPending = false;
+        }
+        
+        // Wait for the network to actually switch
+        for (let i = 0; i < 30; i++) {
+          await new Promise(res => setTimeout(res, 100));
+          currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+          currentChainId = currentChainId.toLowerCase();
+          if (currentChainId === targetChainId) return;
+        }
+        
+        console.error('waitForNetwork timeout: wanted', targetChainId, 'got', currentChainId);
+        throw new Error('Network did not switch in time. Please check MetaMask and try again.');
+      }
+  
+      function initializeContracts() {
+        try {
+          if (!web3 || !selectedNetwork) {
+            console.error('Web3 or selectedNetwork not available');
+            return;
+          }
+          
+          const contractAddress = contractAddresses[selectedNetwork];
+          if (!contractAddress) {
+            console.error('No contract address for network:', selectedNetwork);
+            return;
+          }
+          
+          // Create new contract instances with the current web3 provider and network
+          stakingContract = new web3.eth.Contract(contractABI, contractAddress);
+          
+          // Always use the actual token contract for tokenContract
+          const tokenAddress = tokenAddresses[selectedNetwork];
+          if (tokenAddress) {
+            tokenContract = new web3.eth.Contract(tokenABI, tokenAddress);
+          } else {
+            tokenContract = null;
+            console.error('No token address for network:', selectedNetwork);
+          }
+        } catch (error) {
+          console.error('Error initializing contracts:', error);
+          showNotification('Failed to initialize contracts: ' + (error.message || 'Unknown error'), 'error');
         }
       }
   
       async function loadUserData() {
+        // Ensure network is switched before loading user data
         if (!selectedAccount || !stakingContract) return;
         
         try {
@@ -1469,7 +1579,10 @@
             let decimals = 18;
             try {
               decimals = await tokenContractInstance.methods.decimals().call();
-            } catch (e) {}
+            } catch (e) {
+              console.error('Error getting token decimals:', e);
+            }
+            
             const balance = await tokenContractInstance.methods.balanceOf(selectedAccount).call();
             tokenBalance = balance / (10 ** decimals);
             balanceElement.textContent = parseFloat(tokenBalance).toFixed(4);
@@ -1484,9 +1597,14 @@
           ethBalanceElement.textContent = parseFloat(ethBalance).toFixed(4);
           
           // Get user's total staked amount
-          const userTotalStaked = await stakingContract.methods.getUserTotalStaked(selectedAccount).call();
-          const userTotalStakedFormatted = web3.utils.fromWei(userTotalStaked, 'ether');
-          userStakedElement.textContent = parseFloat(userTotalStakedFormatted).toFixed(4) + ' FULA';
+          try {
+            const userTotalStaked = await stakingContract.methods.getUserTotalStaked(selectedAccount).call();
+            const userTotalStakedFormatted = web3.utils.fromWei(userTotalStaked, 'ether');
+            userStakedElement.textContent = parseFloat(userTotalStakedFormatted).toFixed(4) + ' FULA';
+          } catch (error) {
+            console.error('Error getting user total staked:', error);
+            userStakedElement.textContent = 'Error loading data';
+          }
           
           // Get user's stakes
           await loadUserStakes();
@@ -1724,223 +1842,59 @@
         }
       }
   
-      async function loadStakerRewards() {
-        try {
-          const stakes = await stakingContract.methods.getUserStakes(selectedAccount).call();
-          stakerRewardsContainer.innerHTML = '';
-          if (stakes.length === 0) {
-            stakerRewardsContainer.innerHTML = '<p>No active stakes found.</p>';
-            return;
-          }
-          const block = await web3.eth.getBlock('latest');
-          const blockTimestamp = block.timestamp;
-  
-          for (let i = 0; i < stakes.length; i++) {
-            const stake = await stakingContract.methods.getStakerRewardByIndex(selectedAccount, i).call();
-            if (!stake.isActive) continue;
-            const amountFula = web3.utils.fromWei(stake.amount, 'ether');
-            const startTime = new Date(stake.startTime * 1000);
-            const endTime = new Date((parseInt(stake.startTime) + parseInt(stake.lockPeriod)) * 1000);
-            const lockEnd = parseInt(stake.startTime) + parseInt(stake.lockPeriod);
-            const nowOrEnd = blockTimestamp < lockEnd ? blockTimestamp : lockEnd;
-            const timeElapsed = nowOrEnd - parseInt(stake.startTime);
-  
-            let fixedAPY = 0;
-            if (parseInt(stake.lockPeriod) === 90 * 24 * 60 * 60) fixedAPY = 2;
-            else if (parseInt(stake.lockPeriod) === 180 * 24 * 60 * 60) fixedAPY = 6;
-            else if (parseInt(stake.lockPeriod) === 365 * 24 * 60 * 60) fixedAPY = 15;
-  
-            const totalReward = (BigInt(stake.amount) * BigInt(fixedAPY) * BigInt(stake.lockPeriod)) / BigInt(100 * 365 * 24 * 60 * 60);
-            const claimable = (totalReward * BigInt(timeElapsed)) / BigInt(stake.lockPeriod);
-            const alreadyClaimed = BigInt(stake.rewardDebt);
-            const toClaim = claimable > alreadyClaimed ? claimable - alreadyClaimed : BigInt(0);
-            const claimableFula = web3.utils.fromWei(toClaim.toString(), 'ether');
-  
-            const rewardElement = document.createElement('div');
-            rewardElement.className = 'fula-staker-reward-item';
-            rewardElement.innerHTML = `
-              <div class="fula-staker-reward-header">
-                <div class="fula-staker-reward-amount">Staked: ${parseFloat(amountFula).toFixed(6)} FULA</div>
-                <div class="fula-staker-reward-apy">APY: ${fixedAPY}%</div>
-              </div>
-              <div class="fula-staker-reward-details">
-                <div>Start: ${formatDate(startTime)}</div>
-                <div>End: ${formatDate(endTime)}</div>
-              </div>
-              <div class="fula-staker-reward-details">
-                <div>Claimable: ${parseFloat(claimableFula).toFixed(6)} FULA</div>
-              </div>
-              <button class="fula-action-button" data-index="${i}" ${toClaim <= 0n ? 'disabled' : ''}>
-                Claim Reward
-              </button>
-            `;
-            const claimButton = rewardElement.querySelector('.fula-action-button');
-            claimButton.addEventListener('click', () => handleClaimStakerReward(i));
-            stakerRewardsContainer.appendChild(rewardElement);
-          }
-        } catch (error) {
-          console.error('Error loading staker rewards:', error);
-          stakerRewardsContainer.innerHTML = '<p>Error loading staker rewards. Please try again.</p>';
-        }
-      }
-  
-      async function loadStakerRewards() {
-        try {
-          const stakes = await stakingContract.methods.getUserStakes(selectedAccount).call();
-          stakerRewardsContainer.innerHTML = '';
-          if (stakes.length === 0) {
-            stakerRewardsContainer.innerHTML = '<p>No active stakes found.</p>';
-            return;
-          }
-          const block = await web3.eth.getBlock('latest');
-          const blockTimestamp = block.timestamp;
-  
-          for (let i = 0; i < stakes.length; i++) {
-            const stake = await stakingContract.methods.getStakerRewardByIndex(selectedAccount, i).call();
-            if (!stake.isActive) continue;
-            const amountFula = web3.utils.fromWei(stake.amount, 'ether');
-            const startTime = new Date(stake.startTime * 1000);
-            const endTime = new Date((parseInt(stake.startTime) + parseInt(stake.lockPeriod)) * 1000);
-            const lockEnd = parseInt(stake.startTime) + parseInt(stake.lockPeriod);
-            const nowOrEnd = blockTimestamp < lockEnd ? blockTimestamp : lockEnd;
-            const timeElapsed = nowOrEnd - parseInt(stake.startTime);
-  
-            let fixedAPY = 0;
-            if (parseInt(stake.lockPeriod) === 90 * 24 * 60 * 60) fixedAPY = 2;
-            else if (parseInt(stake.lockPeriod) === 180 * 24 * 60 * 60) fixedAPY = 6;
-            else if (parseInt(stake.lockPeriod) === 365 * 24 * 60 * 60) fixedAPY = 15;
-  
-            const totalReward = (BigInt(stake.amount) * BigInt(fixedAPY) * BigInt(stake.lockPeriod)) / BigInt(100 * 365 * 24 * 60 * 60);
-            const claimable = (totalReward * BigInt(timeElapsed)) / BigInt(stake.lockPeriod);
-            const alreadyClaimed = BigInt(stake.rewardDebt);
-            const toClaim = claimable > alreadyClaimed ? claimable - alreadyClaimed : BigInt(0);
-            const claimableFula = web3.utils.fromWei(toClaim.toString(), 'ether');
-  
-            const rewardElement = document.createElement('div');
-            rewardElement.className = 'fula-staker-reward-item';
-            rewardElement.innerHTML = `
-              <div class="fula-staker-reward-header">
-                <div class="fula-staker-reward-amount">Staked: ${parseFloat(amountFula).toFixed(6)} FULA</div>
-                <div class="fula-staker-reward-apy">APY: ${fixedAPY}%</div>
-              </div>
-              <div class="fula-staker-reward-details">
-                <div>Start: ${formatDate(startTime)}</div>
-                <div>End: ${formatDate(endTime)}</div>
-              </div>
-              <div class="fula-staker-reward-details">
-                <div>Claimable: ${parseFloat(claimableFula).toFixed(6)} FULA</div>
-              </div>
-              <button class="fula-action-button" data-index="${i}" ${toClaim <= 0n ? 'disabled' : ''}>
-                Claim Reward
-              </button>
-            `;
-            const claimButton = rewardElement.querySelector('.fula-action-button');
-            claimButton.addEventListener('click', () => handleClaimStakerReward(i));
-            stakerRewardsContainer.appendChild(rewardElement);
-          }
-        } catch (error) {
-          console.error('Error loading staker rewards:', error);
-          stakerRewardsContainer.innerHTML = '<p>Error loading staker rewards. Please try again.</p>';
-        }
-      }
-  
-      function selectStakingOption(option) {
-        // Remove selected class from all options
-        stakeOptions.forEach(opt => opt.classList.remove('selected'));
-        
-        // Add selected class to clicked option
-        option.classList.add('selected');
-        
-        // Store selected period
-        selectedPeriod = option.dataset.period;
-        
-        // Validate stake amount
-        validateStakeAmount();
-      }
-  
-      function validateStakeAmount() {
-        const amount = parseFloat(stakeAmountInput.value);
-        const hint = stakeHint;
-        hint.textContent = '';
-        if (amount > 0 && selectedPeriod && amount <= parseFloat(tokenBalance)) {
-          stakeButton.disabled = false;
-          hint.textContent = '';
-        } else {
-          stakeButton.disabled = true;
-          if (!selectedPeriod) {
-            hint.textContent = 'You need to select a staking period.';
-          } else if (!amount || amount <= 0) {
-            hint.textContent = 'Please enter an amount greater than 0.';
-          } else if (amount > parseFloat(tokenBalance)) {
-            hint.textContent = 'Amount exceeds your FULA balance.';
-          }
-        }
-      }
-  
-      function setMaxAmount() {
-        stakeAmountInput.value = parseFloat(tokenBalance).toFixed(4);
-        validateStakeAmount();
-      }
-  
       async function handleStake() {
-        if (!selectedAccount || !stakingContract) return;
+        if (!selectedAccount || !stakingContract || !tokenContract) return;
         
-        const amount = stakeAmountInput.value;
-        const amountWei = web3.utils.toWei(amount, 'ether');
-        const referrer = referrerInput.value.trim();
-        const lockPeriod = lockPeriods[selectedPeriod];
-        
-        // Check if referrer is the same as the connected wallet
-        if (referrer && web3.utils.isAddress(referrer) && referrer.toLowerCase() === selectedAccount.toLowerCase()) {
-          showNotification('Referrer address cannot be the same as your own wallet address.', 'error');
+        const amount = parseFloat(stakeAmountInput.value);
+        if (!amount || amount <= 0 || !selectedPeriod) {
+          showNotification('Please enter a valid amount and select a staking period.', 'error');
           return;
         }
+        
+        const amountWei = web3.utils.toWei(amount.toString(), 'ether');
+        const referrer = referrerInput.value.trim();
         
         try {
           stakeButton.disabled = true;
           stakeButton.innerHTML = '<span class="fula-loading"></span> Processing...';
           
           // Check allowance
-          const allowance = await tokenContract.methods.allowance(selectedAccount, stakingContract._address).call();
+          const allowance = await tokenContract.methods.allowance(selectedAccount, stakingContract.options.address).call();
           
-          // If allowance is insufficient, request approval
           if (BigInt(allowance) < BigInt(amountWei)) {
-            showNotification('Approving tokens for staking...', 'success');
-            
-            await tokenContract.methods.approve(stakingContract._address, amountWei).send({
+            // Approve token transfer
+            await tokenContract.methods.approve(stakingContract.options.address, amountWei).send({
               from: selectedAccount
             });
           }
           
           // Stake tokens
           if (referrer && web3.utils.isAddress(referrer) && referrer !== selectedAccount) {
-            await stakingContract.methods.stakeTokenWithReferrer(amountWei, lockPeriod, referrer).send({
+            await stakingContract.methods.stakeTokenWithReferrer(amountWei, lockPeriods[selectedPeriod], referrer).send({
               from: selectedAccount
             });
           } else {
-            await stakingContract.methods.stakeToken(amountWei, lockPeriod).send({
+            await stakingContract.methods.stakeToken(amountWei, lockPeriods[selectedPeriod]).send({
               from: selectedAccount
             });
           }
           
-          showNotification('Successfully staked ' + amount + ' FULA tokens!', 'success');
+          showNotification('Successfully staked ' + amount + ' FULA!', 'success');
           
           // Reset form
           stakeAmountInput.value = '';
           referrerInput.value = '';
           stakeOptions.forEach(opt => opt.classList.remove('selected'));
           selectedPeriod = null;
+          stakeButton.disabled = true;
           
-          // Reload user data and global stats
+          // Reload user data
           await loadUserData();
           await loadGlobalStats();
-          
-          // Switch to unstake tab
-          switchTab('unstake');
         } catch (error) {
           console.error('Error staking tokens:', error);
           showNotification('Failed to stake tokens: ' + (error.message || 'Unknown error'), 'error');
-          
+        } finally {
           stakeButton.disabled = false;
           stakeButton.textContent = 'Stake FULA';
         }
@@ -1958,9 +1912,9 @@
             from: selectedAccount
           });
           
-          showNotification('Successfully unstaked tokens!', 'success');
+          showNotification('Successfully unstaked FULA!', 'success');
           
-          // Reload user data and global stats
+          // Reload user data
           await loadUserData();
           await loadGlobalStats();
         } catch (error) {
@@ -2033,32 +1987,52 @@
         }
       }
   
-      function switchTab(tabName) {
-        console.log('Switching to tab:', tabName);
+      function selectStakingOption(option) {
+        // Remove selected class from all options
+        stakeOptions.forEach(opt => opt.classList.remove('selected'));
         
+        // Add selected class to clicked option
+        option.classList.add('selected');
+        
+        // Store selected period
+        selectedPeriod = option.dataset.period;
+        
+        // Validate stake amount
+        validateStakeAmount();
+      }
+  
+      function validateStakeAmount() {
+        const amount = parseFloat(stakeAmountInput.value);
+        const hint = stakeHint;
+        hint.textContent = '';
+        if (amount > 0 && selectedPeriod && amount <= parseFloat(tokenBalance)) {
+          stakeButton.disabled = false;
+          hint.textContent = '';
+        } else {
+          stakeButton.disabled = true;
+          if (!selectedPeriod) {
+            hint.textContent = 'You need to select a staking period.';
+          } else if (!amount || amount <= 0) {
+            hint.textContent = 'Please enter an amount greater than 0.';
+          } else if (amount > parseFloat(tokenBalance)) {
+            hint.textContent = 'Amount exceeds your FULA balance.';
+          }
+        }
+      }
+  
+      function setMaxAmount() {
+        stakeAmountInput.value = parseFloat(tokenBalance).toFixed(4);
+        validateStakeAmount();
+      }
+  
+      function switchTab(tabName) {
         // Remove active class from all tabs and tab contents
         tabs.forEach(tab => tab.classList.remove('active'));
         tabContents.forEach(content => content.classList.remove('active'));
         
         // Add active class to selected tab and tab content
-        const selectedTab = document.querySelector(`.fula-tab[data-tab="${tabName}"]`);
-        const selectedContent = document.getElementById(`fula-${tabName}-tab`);
-        
-        console.log('Selected tab:', selectedTab);
-        console.log('Selected content:', selectedContent);
-        
-        if (selectedTab) selectedTab.classList.add('active');
-        if (selectedContent) selectedContent.classList.add('active');
-        
-        // If switching to unstake tab, refresh stakes
-        if (tabName === 'unstake' && selectedAccount) {
-          loadUserStakes();
-        }
-        
-        // If switching to referrer tab, refresh referrer stats
-        if (tabName === 'referrer' && selectedAccount) {
-          loadReferrerStats();
-        }
+        document.querySelector(`.fula-tab[data-tab="${tabName}"]`).classList.add('active');
+        document.getElementById(`fula-${tabName}-tab`).classList.add('active');
       }
   
       async function updateBlockTime() {
@@ -2097,26 +2071,8 @@
       networkSelector.addEventListener('change', updateContractAddressDisplay);
       updateContractAddressDisplay();
   
-      // Helper functions
-      function formatAddress(address) {
-        return address.substring(0, 6) + '...' + address.substring(address.length - 4);
-      }
-  
-      function formatDate(date) {
-        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      }
-    });
-  </script>
-  
-  <script>
-    // Set default network to Base on page load
-    document.addEventListener('DOMContentLoaded', function() {
-      const networkSelect = document.getElementById('fula-network');
-      if (networkSelect) {
-        networkSelect.value = 'base';
-        const event = new Event('change');
-        networkSelect.dispatchEvent(event);
-      }
+      // Load global stats on page load
+      loadGlobalStats();
     });
   </script>
   
