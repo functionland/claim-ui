@@ -856,6 +856,19 @@
 
   // Wait for DOM to be fully loaded
   document.addEventListener('DOMContentLoaded', function() {
+    // Check for referrer parameter in URL and auto-fill referrer field
+    const referrerParam = getURLParameter('referrer');
+    if (referrerParam) {
+      const referrerInput = document.getElementById('fula-referrer');
+      if (referrerInput) {
+        referrerInput.value = referrerParam;
+      }
+    }
+
+    // Setup copy button for referrer link
+    setupCopyButton();
+
+
     // Minimal ERC20 ABI for token contract
     const tokenABI = [
       {
@@ -1258,6 +1271,36 @@
       checkWeb3Availability();
     }
 
+    // Function to extract URL parameters
+    function getURLParameter(name) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(name);
+    }
+
+    // Function to update referrer link with connected wallet address
+    function updateReferrerLink() {
+      console.log("updating referral link");
+      const referrerLinkInput = document.getElementById('fula-referrer-link');
+      if (referrerLinkInput && selectedAccount) {
+        referrerLinkInput.value = `https://fx.land/fula-staking?referrer=${selectedAccount}`;
+      }
+    }
+
+    // Function to handle copy button click
+    function setupCopyButton()  {
+      const copyButton = document.getElementById('fula-copy-link');
+      if (copyButton) {
+        copyButton.addEventListener('click', function() {
+          const referrerLinkInput = document.getElementById('fula-referrer-link');
+          if (referrerLinkInput) {
+            referrerLinkInput.select();
+            document.execCommand('copy');
+            showNotification('Referrer link copied to clipboard!', 'success');
+          }
+        });
+      }
+    }
+
     function checkWeb3Availability() {
       if (window.ethereum) {
         web3 = new Web3(window.ethereum);
@@ -1363,6 +1406,7 @@
         connectButton.disabled = false;
         connectButton.classList.add('connected');
         updateBlockTime();
+        updateReferrerLink();
       } catch (error) {
         console.error('Error connecting wallet:', error);
         showNotification('Failed to connect wallet: ' + (error.message || 'Unknown error'), 'error');
@@ -2139,6 +2183,10 @@
       // Add active class to selected tab and tab content
       document.querySelector(`.fula-tab[data-tab="${tabName}"]`).classList.add('active');
       document.getElementById(`fula-${tabName}-tab`).classList.add('active');
+      // Update referrer link when switching to referrer tab
+      if (tabName === 'referrer') {
+        updateReferrerLink();
+      }
     }
 
     async function updateBlockTime() {
