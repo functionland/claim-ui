@@ -680,7 +680,6 @@
     <div class="fula-network-selector">
       <label for="fula-network">Network:</label>
       <select id="fula-network">
-        <option value="hardhat">Hardhat</option>
         <option value="base">Base</option>
         <option value="iotex">IoTEx</option>
         <option value="skale">SKALE</option>
@@ -911,10 +910,10 @@
     
     // Contract addresses for different networks
     const contractAddresses = {
-      base: '0xf24aF8EEf50d209B585d01cae1dF0667a5C0EFCD',
-      iotex: '0x2C8417100FA4ca30b3E195bD63a46CA74Ee21B28',
-      skale: '0x44bcB0Be8baA333Ea3288924803E4643cE3edE5e',
-      hardhat: '0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e' // Hardhat
+      base: '0x32A2b049b1E7A6c8C26284DE49e7F05A00466a5d',
+      iotex: '0xfe3574Fc1CC7c389fd916e891A497A4D986a8268',
+      skale: '0xA002a09Fb3b9E8ac930B72C61De6F3979335bFa2',
+      hardhat: '0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0' // Hardhat
     };
 
     // Token contract addresses for different networks
@@ -1595,8 +1594,10 @@
         }
         
         const contractAddress = contractAddresses[selectedNetwork];
-        if (!contractAddress) {
-          console.error('No contract address for network:', selectedNetwork);
+        
+        // Check contract address validity before making contract calls
+        if (!contractAddress || contractAddress === '0x0000000000000000000000000000000000000000') {
+          console.error('Invalid contract address for network:', selectedNetwork);
           return;
         }
         
@@ -1847,8 +1848,27 @@
           const lockEnd = rewardInfo.startTime + rewardInfo.lockPeriod;
           const nowOrEnd = blockTimestamp < lockEnd ? blockTimestamp : lockEnd;
           const timeElapsed = nowOrEnd - rewardInfo.startTime;
-          const claimable = (parseFloat(rewardInfo.totalReward) * timeElapsed) / rewardInfo.lockPeriod - parseFloat(rewardInfo.claimedReward);
-          const claimableFula = claimable > 0 ? web3.utils.fromWei(claimable.toString(), 'ether') : '0';
+          
+          // Use BN for proper calculation without floating point issues
+          const totalRewardBN = web3.utils.toBN(rewardInfo.totalReward);
+          const timeElapsedBN = web3.utils.toBN(timeElapsed);
+          const lockPeriodBN = web3.utils.toBN(rewardInfo.lockPeriod);
+          const claimedRewardBN = web3.utils.toBN(rewardInfo.claimedReward);
+          
+          // Calculate: (totalReward * timeElapsed / lockPeriod) - claimedReward
+          let claimableBN;
+          try {
+            const rewardToDateBN = totalRewardBN.mul(timeElapsedBN).div(lockPeriodBN);
+            claimableBN = rewardToDateBN.sub(claimedRewardBN);
+            if (claimableBN.isNeg()) {
+              claimableBN = web3.utils.toBN(0);
+            }
+          } catch (calcError) {
+            console.error('Error in BN calculation:', calcError);
+            claimableBN = web3.utils.toBN(0);
+          }
+          
+          const claimableFula = web3.utils.fromWei(claimableBN, 'ether');
           totalClaimable += parseFloat(claimableFula);
           totalUnclaimed += remaining;
           totalRewards += total;
@@ -1875,7 +1895,7 @@
             <div class="fula-referrer-reward-progress">
               <div class="fula-referrer-reward-progress-bar" style="width: ${(timeElapsed / rewardInfo.lockPeriod) * 100}%"></div>
             </div>
-            <button class="fula-action-button" data-index="${i}" ${claimable <= 0 ? 'disabled' : ''}>
+            <button class="fula-action-button" data-index="${i}" ${claimableBN.isZero() ? 'disabled' : ''}>
               Claim Reward
             </button>
           `;
