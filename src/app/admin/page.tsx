@@ -13,7 +13,8 @@ import { VestingAdmin } from '@/components/admin/VestingAdmin'
 import { AirdropAdmin } from '@/components/admin/AirdropAdmin'
 import { TestnetMiningAdmin } from '@/components/admin/TestnetMiningAdmin'
 import { TokenAdmin } from '@/components/admin/TokenAdmin'
-import { CONTRACT_TYPES } from '@/config/constants'
+import { StakingAdmin } from '@/components/admin/StakingAdmin'
+import { CONTRACT_TYPES, ContractType } from '@/config/constants'
 import { useContractContext } from '@/contexts/ContractContext'
 
 export default function AdminPage() {
@@ -24,7 +25,7 @@ export default function AdminPage() {
     setActiveTab(newValue)
     // Update the global contract context when tab changes
     if (newValue !== 'token') {
-      setActiveContract(newValue as any)
+      setActiveContract(newValue as ContractType)
     }
   }
 
@@ -44,6 +45,7 @@ export default function AdminPage() {
           <Tab label="Distribution" value={CONTRACT_TYPES.VESTING} />
           <Tab label="Airdrop" value={CONTRACT_TYPES.AIRDROP} />
           <Tab label="Testnet Mining" value={CONTRACT_TYPES.TESTNET_MINING} />
+          <Tab label="Staking" value={CONTRACT_TYPES.STAKING} />
         </Tabs>
       </Box>
 
@@ -52,6 +54,7 @@ export default function AdminPage() {
         {activeTab === CONTRACT_TYPES.VESTING && <VestingAdmin />}
         {activeTab === CONTRACT_TYPES.AIRDROP && <AirdropAdmin />}
         {activeTab === CONTRACT_TYPES.TESTNET_MINING && <TestnetMiningAdmin />}
+        {activeTab === CONTRACT_TYPES.STAKING && <StakingAdmin />}
       </Paper>
     </Container>
   )

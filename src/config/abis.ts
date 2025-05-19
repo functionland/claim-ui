@@ -1723,3 +1723,347 @@ export const PROPOSAL_TYPES = {
   RemoveFromBlacklist: 10,
   ChangeTreasuryFee: 11
 } as const;
+
+// Staking Engine Linear Contract ABI
+export const STAKING_ABI = [
+  // Core functionality
+  {
+    inputs: [],
+    name: "initialize",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "_token", type: "address" },
+      { name: "_stakePool", type: "address" },
+      { name: "_rewardPool", type: "address" },
+      { name: "initialOwner", type: "address" },
+      { name: "initialAdmin", type: "address" }
+    ],
+    name: "initialize",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  // Staking functionality
+  {
+    inputs: [
+      { name: "amount", type: "uint256" },
+      { name: "lockPeriod", type: "uint256" }
+    ],
+    name: "stakeToken",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "amount", type: "uint256" },
+      { name: "lockPeriod", type: "uint256" },
+      { name: "referrer", type: "address" }
+    ],
+    name: "stakeTokenWithReferrer",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "index", type: "uint256" }],
+    name: "unstakeToken",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "stakeIndex", type: "uint256" }],
+    name: "claimStakerReward",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "rewardIndex", type: "uint256" }],
+    name: "claimReferrerReward",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  // Upgrade functionality
+  {
+    inputs: [{ name: "newImplementation", type: "address" }],
+    name: "proposeUpgrade",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "newImplementation", type: "address" }],
+    name: "approveUpgrade",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "cancelUpgrade",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  // State variables for upgrade process
+  {
+    inputs: [],
+    name: "pendingImplementation",
+    outputs: [{ name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "upgradeProposer",
+    outputs: [{ name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "upgradeProposalTime",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "UPGRADE_TIMELOCK",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  // Admin functions
+  {
+    inputs: [],
+    name: "emergencyPauseRewardDistribution",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "emergencyUnpauseRewardDistribution",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "amount", type: "uint256" }],
+    name: "addRewardsToPool",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  // View functions
+  {
+    inputs: [],
+    name: "getExcessRewards",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "calculateRequiredRewards",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "getPoolStatus",
+    outputs: [
+      { name: "totalPoolBalance", type: "uint256" },
+      { name: "stakedAmount", type: "uint256" },
+      { name: "rewardsAmount", type: "uint256" }
+    ],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "user", type: "address" }],
+    name: "getUserStakes",
+    outputs: [{ name: "", type: "tuple[]", components: [
+      { name: "amount", type: "uint256" },
+      { name: "rewardDebt", type: "uint256" },
+      { name: "lockPeriod", type: "uint256" },
+      { name: "startTime", type: "uint256" },
+      { name: "referrer", type: "address" },
+      { name: "isActive", type: "bool" }
+    ]}],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "user", type: "address" }],
+    name: "getUserTotalStaked",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "getTotalStaked",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "referrer", type: "address" }],
+    name: "getReferrerStats",
+    outputs: [{ name: "", type: "tuple", components: [
+      { name: "totalReferred", type: "uint256" },
+      { name: "totalReferrerRewards", type: "uint256" },
+      { name: "unclaimedRewards", type: "uint256" },
+      { name: "lastClaimTime", type: "uint256" },
+      { name: "referredStakersCount", type: "uint256" },
+      { name: "activeReferredStakersCount", type: "uint256" },
+      { name: "totalActiveStaked", type: "uint256" },
+      { name: "totalUnstaked", type: "uint256" },
+      { name: "totalActiveStaked90Days", type: "uint256" },
+      { name: "totalActiveStaked180Days", type: "uint256" },
+      { name: "totalActiveStaked365Days", type: "uint256" }
+    ]}],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "referrer", type: "address" }],
+    name: "getReferredStakers",
+    outputs: [{ name: "", type: "address[]" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "referrer", type: "address" }],
+    name: "getReferrerRewards",
+    outputs: [{ name: "", type: "tuple[]", components: [
+      { name: "stakeId", type: "uint256" },
+      { name: "amount", type: "uint256" },
+      { name: "lockPeriod", type: "uint256" },
+      { name: "startTime", type: "uint256" },
+      { name: "endTime", type: "uint256" },
+      { name: "totalReward", type: "uint256" },
+      { name: "claimedReward", type: "uint256" },
+      { name: "nextClaimTime", type: "uint256" },
+      { name: "isActive", type: "bool" },
+      { name: "referee", type: "address" }
+    ]}],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "referrer", type: "address" }],
+    name: "getClaimableReferrerRewards",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "updateRewards",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  // Token info
+  {
+    inputs: [],
+    name: "token",
+    outputs: [{ name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  // Constants
+  {
+    inputs: [],
+    name: "LOCK_PERIOD_1",
+    outputs: [{ name: "", type: "uint32" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "LOCK_PERIOD_2",
+    outputs: [{ name: "", type: "uint32" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "LOCK_PERIOD_3",
+    outputs: [{ name: "", type: "uint32" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  // Events
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "user", type: "address" },
+      { indexed: false, name: "amount", type: "uint256" },
+      { indexed: false, name: "lockPeriod", type: "uint256" }
+    ],
+    name: "Staked",
+    type: "event"
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "user", type: "address" },
+      { indexed: true, name: "referrer", type: "address" },
+      { indexed: false, name: "amount", type: "uint256" },
+      { indexed: false, name: "lockPeriod", type: "uint256" }
+    ],
+    name: "StakedWithReferrer",
+    type: "event"
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "user", type: "address" },
+      { indexed: false, name: "amount", type: "uint256" },
+      { indexed: false, name: "distributedReward", type: "uint256" },
+      { indexed: false, name: "penalty", type: "uint256" }
+    ],
+    name: "Unstaked",
+    type: "event"
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "proposer", type: "address" },
+      { indexed: true, name: "implementation", type: "address" },
+      { indexed: false, name: "proposalTime", type: "uint256" }
+    ],
+    name: "UpgradeProposed",
+    type: "event"
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "approver", type: "address" },
+      { indexed: true, name: "implementation", type: "address" }
+    ],
+    name: "UpgradeApproved",
+    type: "event"
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "canceller", type: "address" },
+      { indexed: true, name: "implementation", type: "address" }
+    ],
+    name: "UpgradeCancelled",
+    type: "event"
+  }
+] as const;

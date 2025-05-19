@@ -55,6 +55,7 @@ export const CONTRACT_TYPES = {
   VESTING: 'vesting',
   AIRDROP: 'airdrop',
   TESTNET_MINING: 'testnet_mining',
+  STAKING: 'staking',
 } as const
 
 export type ContractType = typeof CONTRACT_TYPES[keyof typeof CONTRACT_TYPES]
