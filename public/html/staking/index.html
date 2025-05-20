@@ -644,7 +644,7 @@
 <div id="fula-staking-widget">
   <div id="fula-blocktime"></div>
   <div class="fula-header">
-    <h2>$FULA Token Staking</h2>
+    <h2>$FULA Token Staking v2</h2>
     <p>Stake your $FULA tokens on Functionland Network and earn rewards</p>
   </div>
   
@@ -681,8 +681,8 @@
       <label for="fula-network">Network:</label>
       <select id="fula-network">
         <option value="base">Base</option>
-        <option value="iotex">IoTEx</option>
-        <option value="skale">SKALE</option>
+        <option value="iotex" disabled>IoTEx (coming back in 2 days)</option>
+        <option value="skale" disabled>SKALE (coming back in 2 days)</option>
       </select>
       <span id="fula-contract-address" style="margin-left: 16px; font-size: 12px; color: #888;"></span>
     </div>
@@ -842,6 +842,9 @@
 <!-- Web3.js library -->
 <script src="https://cdn.jsdelivr.net/npm/web3@1.8.0/dist/web3.min.js"></script>
 
+<!-- WalletConnect Provider -->
+<script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+
 <!-- JavaScript Code -->
 <script>
   // Helper functions
@@ -866,7 +869,6 @@
 
     // Setup copy button for referrer link
     setupCopyButton();
-
 
     // Minimal ERC20 ABI for token contract
     const tokenABI = [
@@ -1155,6 +1157,8 @@
 
     // State variables
     let web3;
+    let currentWeb3Provider = null; // To store the active provider (Metamask or WalletConnect)
+    let walletConnectProviderInstance = null; // To store WalletConnect provider instance specifically
     let stakingContract;
     let tokenContract;
     let selectedAccount;
