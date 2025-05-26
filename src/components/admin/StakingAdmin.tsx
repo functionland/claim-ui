@@ -20,6 +20,8 @@ import { useContractContext } from '@/contexts/ContractContext'
 import { ethers } from 'ethers'
 import { CONTRACT_CONFIG, CONTRACT_TYPES } from '@/config/contracts'
 import { STAKING_ABI } from '@/config/abis'
+import { useAccount, useWalletClient } from 'wagmi'
+import { walletClientToSigner } from '@/lib/ethersAdapters'
 
 interface UpgradeProposal {
   implementation: string
@@ -29,7 +31,9 @@ interface UpgradeProposal {
 }
 
 export const StakingAdmin = () => {
-  const { contracts, chainId, address } = useContractContext()
+  const { contracts, chainId, address: connectedWalletAddress } = useContractContext()
+  const { address: accountAddress, isConnected } = useAccount()
+  const { data: walletClient } = useWalletClient()
   
   // Get contract address from config for debugging
   const stakingContractAddress = chainId ? 
@@ -96,7 +100,7 @@ export const StakingAdmin = () => {
       setError('Invalid implementation address')
       return
     }
-    if (!address) {
+    if (!isConnected || !accountAddress || !walletClient) {
       setError('Please connect your wallet')
       return
     }
@@ -108,25 +112,19 @@ export const StakingAdmin = () => {
       
       console.log('Proposing upgrade to:', newImplementation)
       
-      // Create a Web3Provider from window.ethereum
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      // Get a signer from the provider
-      const signer = await provider.getSigner();
-      // Get the staking contract address
+      const signer = walletClientToSigner(walletClient)
       const stakingAddress = CONTRACT_CONFIG.address[CONTRACT_TYPES.STAKING]?.[chainId];
       
       if (!stakingAddress) {
         throw new Error(`No staking contract address found for chain ${chainId}`);
       }
       
-      // Create a new contract instance with the signer and explicit ABI
       const stakingContract = new ethers.Contract(
         stakingAddress,
         STAKING_ABI,
         signer
       );
       
-      // Call the proposeUpgrade function with the new implementation address
       const tx = await stakingContract.proposeUpgrade(newImplementation);
       console.log('Transaction submitted:', tx.hash);
       
@@ -166,7 +164,7 @@ export const StakingAdmin = () => {
       setError('No pending upgrade found')
       return
     }
-    if (!address) {
+    if (!isConnected || !accountAddress || !walletClient) {
       setError('Please connect your wallet')
       return
     }
@@ -178,18 +176,13 @@ export const StakingAdmin = () => {
       
       console.log('Approving upgrade to:', pendingUpgrade.implementation)
       
-      // Create a Web3Provider from window.ethereum
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      // Get a signer from the provider
-      const signer = await provider.getSigner();
-      // Get the staking contract address
+      const signer = walletClientToSigner(walletClient)
       const stakingAddress = CONTRACT_CONFIG.address[CONTRACT_TYPES.STAKING]?.[chainId];
       
       if (!stakingAddress) {
         throw new Error(`No staking contract address found for chain ${chainId}`);
       }
       
-      // Create a new contract instance with the signer and explicit ABI
       const stakingContract = new ethers.Contract(
         stakingAddress,
         STAKING_ABI,
@@ -226,11 +219,11 @@ export const StakingAdmin = () => {
 
   // Handle cancel upgrade
   const handleCancelUpgrade = async () => {
-    if (!contracts?.staking) {
-      setError('Staking contract not available')
+    if (!contracts?.staking || !pendingUpgrade) {
+      setError('No pending upgrade to cancel')
       return
     }
-    if (!address) {
+    if (!isConnected || !accountAddress || !walletClient) {
       setError('Please connect your wallet')
       return
     }
@@ -239,39 +232,31 @@ export const StakingAdmin = () => {
       setError('')
       setSuccess('')
       setIsCancelling(true)
-      
-      console.log('Cancelling upgrade proposal')
-      
-      // Create a Web3Provider from window.ethereum
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      // Get a signer from the provider
-      const signer = await provider.getSigner();
-      // Get the staking contract address
+
+      console.log('Cancelling upgrade proposal for:', pendingUpgrade.implementation)
+
+      const signer = walletClientToSigner(walletClient)
       const stakingAddress = CONTRACT_CONFIG.address[CONTRACT_TYPES.STAKING]?.[chainId];
-      
+
       if (!stakingAddress) {
         throw new Error(`No staking contract address found for chain ${chainId}`);
       }
-      
-      // Create a new contract instance with the signer and explicit ABI
+
       const stakingContract = new ethers.Contract(
         stakingAddress,
         STAKING_ABI,
         signer
       );
-      
+
       const tx = await stakingContract.cancelUpgrade();
-      console.log('Transaction submitted:', tx.hash);
+      console.log('Transaction submitted for cancel:', tx.hash);
+      setSuccess(`Cancel transaction submitted! Hash: ${tx.hash.slice(0, 10)}...${tx.hash.slice(-8)}`);
       
-      // Show transaction hash in UI
-      setSuccess(`Transaction submitted! Hash: ${tx.hash.slice(0, 10)}...${tx.hash.slice(-8)}`);
-      
-      // Wait for transaction confirmation
-      const receipt = await tx.wait();
-      console.log('Transaction confirmed:', receipt);
-      
+      await tx.wait();
+      console.log('Cancel transaction confirmed');
       setSuccess('Upgrade proposal cancelled successfully');
-      setPendingUpgrade(null);
+      setPendingUpgrade(null); // Clear pending upgrade state
+
     } catch (err: any) {
       console.error('Error cancelling upgrade:', err);
       setError(err.message || 'Failed to cancel upgrade');
