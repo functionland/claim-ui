@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Box, CircularProgress } from '@mui/material';
 import { useEmailAuth } from '@/contexts/EmailAuthContext';
 import { EmailGate } from './EmailGate';
@@ -11,6 +11,13 @@ interface AuthWrapperProps {
 
 export function AuthWrapper({ children }: AuthWrapperProps) {
   const { isAuthenticated, isLoading } = useEmailAuth();
+
+  // Load development utilities in development mode
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      import('@/utils/devUtils');
+    }
+  }, []);
 
   // Show loading spinner while checking authentication
   if (isLoading) {
