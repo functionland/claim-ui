@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readFileSync } from 'fs';
-import { join } from 'path';
+import { readFileSync, existsSync } from 'fs';
+import { join, isAbsolute } from 'path';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,8 +13,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Read emails from the emails.txt file
-    const emailsFilePath = join(process.cwd(), 'emails.txt');
+    // Get emails file path from environment variable or use default
+    const configuredPath = process.env.EMAILS_FILE_PATH || 'emails.txt';
+
+    // Handle both absolute and relative paths
+    const emailsFilePath = isAbsolute(configuredPath)
+      ? configuredPath
+      : join(process.cwd(), configuredPath);
+
+    // Check if file exists
+    if (!existsSync(emailsFilePath)) {
+      console.error(`Emails file not found at: ${emailsFilePath}`);
+      return NextResponse.json(
+        { isValid: false, error: 'Email validation service unavailable' },
+        { status: 500 }
+      );
+    }
+
     const emailsContent = readFileSync(emailsFilePath, 'utf-8');
     const whitelistedEmails = emailsContent
       .split('\n')
