@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { useContractContext } from '@/contexts/ContractContext'
 import { ContractType } from '@/config/contracts'
 import { useThemeContext } from '@/contexts/ThemeContext'
-import { useAccount, useChainId } from 'wagmi'
+import { useAccount, useChainId, useWatchAsset } from 'wagmi'
 import { VestingDashboard } from '@/components/vesting/VestingDashboard'
 import { ConnectButton } from '@/components/common/ConnectButton'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
@@ -47,7 +47,7 @@ interface ManualImportInfo {
 }
 
 export default function Home() {
-  const { isConnected } = useAccount()
+  const { isConnected, connector } = useAccount()
   const chainId = useChainId()
   const theme = useTheme()
   const { isDarkMode, toggleTheme } = useThemeContext()
@@ -57,6 +57,7 @@ export default function Home() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { activeContract, setActiveContract } = useContractContext()
+  const { watchAsset } = useWatchAsset()
 
   const getTitle = () => {
     return activeContract === CONTRACT_TYPES.VESTING 
@@ -80,7 +81,7 @@ export default function Home() {
       {
         icon: <AccessTimeIcon />,
         text: 'Import $FULA token in your wallet by clicking here',
-        action: (wallet: string | undefined) => {
+        action: (wallet: string | undefined) => { 
           const tokenAddress = TOKEN_ADDRESSES[chainId] || "Unsupported"
 
           const networkName = getNetworkName(chainId)
@@ -92,30 +93,30 @@ export default function Home() {
             network: networkName
           }
     
-          if (typeof window.ethereum !== 'undefined' && wallet === 'MetaMask') {
+          // Check if the connected wallet is MetaMask or if watchAsset is available
+          // The 'wallet' parameter was likely for the old logic, connector.name is more reliable with wagmi
+          if (watchAsset && (connector?.name === 'MetaMask' || connector?.name === 'WalletConnect')) { 
             return {
-              type: 'metamask',
+              type: 'watchAsset',
               handler: async (setManualImportInfo: Function, setShowManualImportModal: Function) => {
                 try {
-                  await window.ethereum.request({
-                    method: 'wallet_watchAsset',
-                    params: {
-                      type: 'ERC20',
-                      options: {
-                        address: tokenAddress,
-                        symbol: 'FULA',
-                        decimals: 18
-                      },
+                  await watchAsset({
+                    type: 'ERC20',
+                    options: {
+                      address: tokenAddress as `0x${string}`,
+                      symbol: 'FULA',
+                      decimals: 18,
                     },
                   })
                 } catch (error) {
-                  console.error('Error adding token:', error)
+                  console.error('Error adding token via watchAsset:', error)
                   setManualImportInfo(manualInfo)
                   setShowManualImportModal(true)
                 }
               }
             }
           }
+          // Fallback for other wallets or if watchAsset is not available for some reason
           return {
             type: 'manual',
             info: manualInfo
@@ -377,8 +378,8 @@ export default function Home() {
                   }}
                   onClick={async () => {
                     if (instruction.action) {
-                      const result = instruction.action('MetaMask') // You should get this from your wallet connection
-                      if (result.type === 'metamask') {
+                      const result = instruction.action('MetaMask') 
+                      if (result.type === 'watchAsset') {
                         await result.handler(setManualImportInfo, setShowManualImportModal)
                       } else if (result.type === 'manual') {
                         setManualImportInfo(result.info)

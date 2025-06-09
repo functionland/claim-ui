@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react' 
+import { useState } from 'react'
 import { WagmiProvider } from 'wagmi'
 import { RainbowKitProvider } from '@rainbow-me/rainbowkit'
 import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles'
@@ -9,6 +9,7 @@ import { config } from '@/lib/wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ContractProvider } from '@/contexts/ContractContext'
 import { ThemeProvider, useThemeContext } from '@/contexts/ThemeContext'
+import { EmailAuthProvider } from '@/contexts/EmailAuthContext'
 
 function ThemedApp({ children }: { children: React.ReactNode }) {
   const { isDarkMode } = useThemeContext();
@@ -53,9 +54,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <RainbowKitProvider>
           <ThemeProvider>
             <ThemedApp>
-              <ContractProvider>
-                {children}
-              </ContractProvider>
+              <EmailAuthProvider>
+                <ContractProvider>
+                  {children}
+                </ContractProvider>
+              </EmailAuthProvider>
             </ThemedApp>
           </ThemeProvider>
         </RainbowKitProvider>
