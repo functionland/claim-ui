@@ -2067,3 +2067,557 @@ export const STAKING_ABI = [
     type: "event"
   }
 ] as const;
+
+// Storage Pool Contract ABI
+export const STORAGE_POOL_ABI = [
+  ...GOVERNANCE_ABI,
+  // State variables
+  {
+    inputs: [],
+    name: "storageToken",
+    outputs: [{ name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "tokenPool",
+    outputs: [{ name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "createPoolLockAmount",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  // Pool data getter - matches the actual contract structure
+  {
+    inputs: [{ name: "poolId", type: "uint32" }],
+    name: "pools",
+    outputs: [
+      { name: "creator", type: "address" },
+      { name: "id", type: "uint32" },
+      { name: "maxChallengeResponsePeriod", type: "uint32" },
+      { name: "memberCount", type: "uint32" },
+      { name: "maxMembers", type: "uint32" },
+      { name: "requiredTokens", type: "uint256" },
+      { name: "minPingTime", type: "uint256" },
+      { name: "name", type: "string" },
+      { name: "region", type: "string" }
+    ],
+    stateMutability: "view",
+    type: "function"
+  },
+  // Pool member access functions
+  {
+    inputs: [{ name: "poolId", type: "uint32" }],
+    name: "getPoolMembers",
+    outputs: [{ name: "", type: "address[]" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "poolId", type: "uint32" },
+      { name: "member", type: "address" }
+    ],
+    name: "getMemberPeerIds",
+    outputs: [{ name: "", type: "bytes32[]" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "poolId", type: "uint32" },
+      { name: "peerId", type: "bytes32" }
+    ],
+    name: "getPeerIdInfo",
+    outputs: [
+      { name: "member", type: "address" },
+      { name: "lockedTokens", type: "uint256" }
+    ],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "poolId", type: "uint32" },
+      { name: "member", type: "address" }
+    ],
+    name: "getMemberIndex",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "poolId", type: "uint32" },
+      { name: "peerId", type: "bytes32" },
+      { name: "voterPeerId", type: "bytes32" }
+    ],
+    name: "getVote",
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "index", type: "uint256" }],
+    name: "poolIds",
+    outputs: [{ name: "", type: "uint32" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "poolId", type: "uint32" },
+      { name: "index", type: "uint256" }
+    ],
+    name: "joinRequestKeys",
+    outputs: [{ name: "", type: "string" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "poolId", type: "uint32" },
+      { name: "peerId", type: "string" }
+    ],
+    name: "joinRequests",
+    outputs: [
+      { name: "account", type: "address" },
+      { name: "poolId", type: "uint32" },
+      { name: "timestamp", type: "uint32" },
+      { name: "status", type: "uint8" },
+      { name: "approvals", type: "uint256" },
+      { name: "rejections", type: "uint256" },
+      { name: "peerId", type: "string" },
+      { name: "index", type: "uint32" }
+    ],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "account", type: "address" }],
+    name: "isForfeited",
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "peerId", type: "string" }],
+    name: "claimableTokens",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  // Pool management functions
+  {
+    inputs: [
+      { name: "name", type: "string" },
+      { name: "region", type: "string" },
+      { name: "requiredTokens", type: "uint256" },
+      { name: "maxChallengeResponsePeriod", type: "uint32" },
+      { name: "minPingTime", type: "uint256" },
+      { name: "maxMembers", type: "uint32" },
+      { name: "peerId", type: "bytes32" }
+    ],
+    name: "createPool",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "poolId", type: "uint32" }],
+    name: "deletePool",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "poolId", type: "uint32" },
+      { name: "newMax", type: "uint32" }
+    ],
+    name: "setMaxMembers",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "poolId", type: "uint32" },
+      { name: "newRequired", type: "uint256" }
+    ],
+    name: "setRequiredTokens",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "_amount", type: "uint256" }],
+    name: "setCreatePoolLockAmount",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  // Join request management
+  {
+    inputs: [
+      { name: "poolId", type: "uint32" },
+      { name: "peerId", type: "string" }
+    ],
+    name: "joinPoolRequest",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "poolId", type: "uint32" },
+      { name: "peerId", type: "string" },
+      { name: "voterPeerId", type: "string" },
+      { name: "approve", type: "bool" }
+    ],
+    name: "voteOnJoinRequest",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "poolId", type: "uint32" },
+      { name: "peerId", type: "string" }
+    ],
+    name: "cancelJoinRequest",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "poolId", type: "uint32" },
+      { name: "peerId", type: "string" }
+    ],
+    name: "approveJoinRequest",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  // Member management
+  {
+    inputs: [
+      { name: "poolId", type: "uint32" },
+      { name: "account", type: "address" },
+      { name: "peerId", type: "string" }
+    ],
+    name: "addMember",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "poolId", type: "uint32" },
+      { name: "peerId", type: "string" }
+    ],
+    name: "removeMemberPeerId",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "poolId", type: "uint32" },
+      { name: "count", type: "uint256" }
+    ],
+    name: "removeMembersBatch",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  // Admin functions
+  {
+    inputs: [
+      { name: "account", type: "address" },
+      { name: "flag", type: "bool" }
+    ],
+    name: "setForfeitFlag",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "amount", type: "uint256" }],
+    name: "emergencyRecoverTokens",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "peerId", type: "string" }],
+    name: "claimTokens",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  // View functions
+  {
+    inputs: [
+      { name: "poolId", type: "uint32" },
+      { name: "peerId", type: "string" }
+    ],
+    name: "isPeerIdMemberOfPool",
+    outputs: [
+      { name: "isMember", type: "bool" },
+      { name: "memberAddress", type: "address" }
+    ],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "getTotalMembers",
+    outputs: [{ name: "total", type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "poolId", type: "uint32" },
+      { name: "account", type: "address" }
+    ],
+    name: "getMemberReputation",
+    outputs: [
+      { name: "", type: "uint256" },
+      { name: "", type: "uint256" },
+      { name: "", type: "uint256" },
+      { name: "", type: "uint256" }
+    ],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "account", type: "address" }],
+    name: "isMemberOfAnyPool",
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  // Events
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "poolId", type: "uint32" },
+      { indexed: true, name: "creator", type: "address" },
+      { indexed: false, name: "name", type: "string" },
+      { indexed: false, name: "region", type: "string" },
+      { indexed: false, name: "requiredTokens", type: "uint256" },
+      { indexed: false, name: "maxMembers", type: "uint32" }
+    ],
+    name: "PoolCreated",
+    type: "event"
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "poolId", type: "uint32" },
+      { indexed: true, name: "account", type: "address" },
+      { indexed: false, name: "peerId", type: "string" }
+    ],
+    name: "JoinRequestSubmitted",
+    type: "event"
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "poolId", type: "uint32" },
+      { indexed: true, name: "account", type: "address" },
+      { indexed: false, name: "peerId", type: "string" },
+      { indexed: false, name: "approved", type: "bool" },
+      { indexed: false, name: "forfeited", type: "bool" }
+    ],
+    name: "JoinRequestResolved",
+    type: "event"
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "poolId", type: "uint32" },
+      { indexed: true, name: "account", type: "address" },
+      { indexed: false, name: "peerId", type: "string" },
+      { indexed: true, name: "addedBy", type: "address" }
+    ],
+    name: "MemberAdded",
+    type: "event"
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "poolId", type: "uint32" },
+      { indexed: false, name: "requiredTokens", type: "uint256" },
+      { indexed: false, name: "maxMembers", type: "uint32" }
+    ],
+    name: "PoolParametersUpdated",
+    type: "event"
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "account", type: "address" }
+    ],
+    name: "ForfeitFlagSet",
+    type: "event"
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "account", type: "address" }
+    ],
+    name: "ForfeitFlagCleared",
+    type: "event"
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: false, name: "amount", type: "uint256" }
+    ],
+    name: "EmergencyTokensRecovered",
+    type: "event"
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: false, name: "peerId", type: "string" },
+      { indexed: false, name: "amount", type: "uint256" }
+    ],
+    name: "TokensClaimed",
+    type: "event"
+  }
+] as const;
+
+// Reward Engine Contract ABI
+export const REWARD_ENGINE_ABI = [
+  ...GOVERNANCE_ABI,
+  // Initialization
+  {
+    inputs: [
+      { name: "_token", type: "address" },
+      { name: "_storagePool", type: "address" },
+      { name: "_stakingPool", type: "address" },
+      { name: "initialOwner", type: "address" },
+      { name: "initialAdmin", type: "address" }
+    ],
+    name: "initialize",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  // Admin functions
+  {
+    inputs: [
+      { name: "tokenAddress", type: "address" },
+      { name: "amount", type: "uint256" }
+    ],
+    name: "emergencyWithdraw",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "tokenAddress", type: "address" },
+      { name: "recipient", type: "address" },
+      { name: "amount", type: "uint256" }
+    ],
+    name: "adminRecoverERC20",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "newAmount", type: "uint256" }],
+    name: "setMonthlyRewardPerPeer",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "newPeriod", type: "uint256" }],
+    name: "setExpectedPeriod",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "tripCircuitBreaker",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "resetCircuitBreaker",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "action", type: "uint8" }],
+    name: "emergencyAction",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  },
+  // Reward calculation and claiming
+  {
+    inputs: [
+      { name: "account", type: "address" },
+      { name: "peerId", type: "string" },
+      { name: "poolId", type: "uint32" }
+    ],
+    name: "calculateEligibleMiningRewards",
+    outputs: [{ name: "eligibleRewards", type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "account", type: "address" },
+      { name: "peerId", type: "string" },
+      { name: "poolId", type: "uint32" }
+    ],
+    name: "calculateEligibleStorageRewards",
+    outputs: [{ name: "eligibleRewards", type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "account", type: "address" },
+      { name: "peerId", type: "string" },
+      { name: "poolId", type: "uint32" }
+    ],
+    name: "getEligibleRewards",
+    outputs: [
+      { name: "miningRewards", type: "uint256" },
+      { name: "storageRewards", type: "uint256" },
+      { name: "totalRewards", type: "uint256" }
+    ],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [
+      { name: "peerId", type: "string" },
+      { name: "poolId", type: "uint32" }
+    ],
+    name: "claimRewards",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function"
+  }
+] as const;

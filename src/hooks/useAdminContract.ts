@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useReadContract, useWriteContract, useAccount, usePublicClient, useSimulateContract, useWalletClient } from 'wagmi'
 import { type Address, parseAbiItem } from 'viem'
-import { CONTRACT_CONFIG, CONTRACT_TYPES } from '@/config/contracts'
+import { CONTRACT_CONFIG } from '@/config/contracts'
+import { CONTRACT_TYPES } from '@/config/constants'
 import { useContractContext } from '@/contexts/ContractContext'
 import { ethers } from 'ethers'
 import { PROPOSAL_TYPES } from '../config/constants';
@@ -53,7 +54,7 @@ export function useAdminContract() {
 
   useEffect(() => {
     const fetchVestingCapTable = async () => {
-      if (!contractAddress || !chainId || !publicClient || (activeContract !== CONTRACT_TYPES.VESTING && activeContract !== CONTRACT_TYPES.AIRDROP && activeContract !== CONTRACT_TYPES.TESTNET_MINING)) {
+      if (!contractAddress || !chainId || !publicClient || (activeContract !== CONTRACT_TYPES.VESTING && activeContract !== CONTRACT_TYPES.AIRDROP && activeContract !== CONTRACT_TYPES.TESTNET_MINING && activeContract !== CONTRACT_TYPES.STORAGE_POOL && activeContract !== CONTRACT_TYPES.REWARD_ENGINE)) {
         return
       }
 
@@ -262,6 +263,24 @@ export function useAdminContract() {
     }
   })
 
+  const { data: storagePoolProposals } = useReadContract({
+    address: contractAddress,
+    abi: contractAbi,
+    functionName: 'getProposals',
+    query: {
+      enabled: !!contractAddress && activeContract === CONTRACT_TYPES.STORAGE_POOL
+    }
+  })
+
+  const { data: rewardEngineProposals } = useReadContract({
+    address: contractAddress,
+    abi: contractAbi,
+    functionName: 'getProposals',
+    query: {
+      enabled: !!contractAddress && activeContract === CONTRACT_TYPES.REWARD_ENGINE
+    }
+  })
+
   type TimeConfig = {
     lastActivityTime: bigint;
     roleChangeTimeLock: bigint;
@@ -465,7 +484,7 @@ export function useAdminContract() {
 
   useEffect(() => {
     const fetchTGEStatus = async () => {
-      if (!contractAddress || !publicClient || (activeContract !== CONTRACT_TYPES.VESTING && activeContract !== CONTRACT_TYPES.AIRDROP && activeContract !== CONTRACT_TYPES.TESTNET_MINING)) {
+      if (!contractAddress || !publicClient || (activeContract !== CONTRACT_TYPES.VESTING && activeContract !== CONTRACT_TYPES.AIRDROP && activeContract !== CONTRACT_TYPES.TESTNET_MINING && activeContract !== CONTRACT_TYPES.STORAGE_POOL && activeContract !== CONTRACT_TYPES.REWARD_ENGINE)) {
         return;
       }
 
@@ -1034,7 +1053,7 @@ export function useAdminContract() {
     abi: contractAbi,
     functionName: 'proposalCount',
     query: {
-      enabled: !!contractAddress && (activeContract === CONTRACT_TYPES.TOKEN || activeContract === CONTRACT_TYPES.VESTING || activeContract === CONTRACT_TYPES.AIRDROP || activeContract === CONTRACT_TYPES.TESTNET_MINING),
+      enabled: !!contractAddress && (activeContract === CONTRACT_TYPES.TOKEN || activeContract === CONTRACT_TYPES.VESTING || activeContract === CONTRACT_TYPES.AIRDROP || activeContract === CONTRACT_TYPES.TESTNET_MINING || activeContract === CONTRACT_TYPES.STORAGE_POOL || activeContract === CONTRACT_TYPES.REWARD_ENGINE),
     }
   })
 
@@ -1042,6 +1061,8 @@ export function useAdminContract() {
   const [vestingProposalList, setVestingProposalList] = useState<(UnifiedProposal & { proposalId: string })[]>([])
   const [airdropProposalList, setAirdropProposalList] = useState<(UnifiedProposal & { proposalId: string })[]>([])
   const [testnetMiningProposalList, setTestnetMiningProposalList] = useState<(UnifiedProposal & { proposalId: string })[]>([])
+  const [storagePoolProposalList, setStoragePoolProposalList] = useState<(UnifiedProposal & { proposalId: string })[]>([])
+  const [rewardEngineProposalList, setRewardEngineProposalList] = useState<(UnifiedProposal & { proposalId: string })[]>([])
 
   const fetchProposals = async () => {
     if (!contractAddress || !publicClient || !proposalCount) {
@@ -1133,6 +1154,10 @@ export function useAdminContract() {
         setAirdropProposalList(proposals);
       } else if (activeContract === CONTRACT_TYPES.TESTNET_MINING) {
         setTestnetMiningProposalList(proposals);
+      } else if (activeContract === CONTRACT_TYPES.STORAGE_POOL) {
+        setStoragePoolProposalList(proposals);
+      } else if (activeContract === CONTRACT_TYPES.REWARD_ENGINE) {
+        setRewardEngineProposalList(proposals);
       }
     } catch (error) {
       console.error('Error fetching proposals:', error);
@@ -1838,6 +1863,8 @@ export function useAdminContract() {
     vestingProposals: vestingProposalList,
     airdropProposals: airdropProposalList,
     testnetMiningProposals: testnetMiningProposalList,
+    storagePoolProposals: storagePoolProposalList,
+    rewardEngineProposals: rewardEngineProposalList,
     addToWhitelist,
     setTransactionLimit,
     initiateTGE,

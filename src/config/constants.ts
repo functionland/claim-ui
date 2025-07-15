@@ -52,10 +52,13 @@ export const UI_CONSTANTS = {
 } as const
 
 export const CONTRACT_TYPES = {
+  TOKEN: 'token',
   VESTING: 'vesting',
   AIRDROP: 'airdrop',
   TESTNET_MINING: 'testnet_mining',
   STAKING: 'staking',
+  STORAGE_POOL: 'storage_pool',
+  REWARD_ENGINE: 'reward_engine',
 } as const
 
 export type ContractType = typeof CONTRACT_TYPES[keyof typeof CONTRACT_TYPES]
