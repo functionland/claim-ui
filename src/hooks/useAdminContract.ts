@@ -24,6 +24,8 @@ const getRoleHash = (role: string): string => {
     return ethers.keccak256(ethers.toUtf8Bytes("CONTRACT_OPERATOR_ROLE"));
   } else if (role === 'BRIDGE_OPERATOR_ROLE') {
     return ethers.keccak256(ethers.toUtf8Bytes("BRIDGE_OPERATOR_ROLE"));
+  } else if (role === 'POOL_ADMIN_ROLE') {
+    return ethers.keccak256(ethers.toUtf8Bytes("POOL_ADMIN_ROLE"));
   } else if (role === 'DEFAULT_ADMIN_ROLE') {
     return ethers.ZeroHash;
   } else {
@@ -1177,7 +1179,7 @@ export function useAdminContract() {
   }, [vestingProposalList]);
 
   useEffect(() => {
-    if (contractAddress && (activeContract === CONTRACT_TYPES.TOKEN || activeContract === CONTRACT_TYPES.VESTING || activeContract === CONTRACT_TYPES.AIRDROP || activeContract === CONTRACT_TYPES.TESTNET_MINING)) {
+    if (contractAddress && (activeContract === CONTRACT_TYPES.TOKEN || activeContract === CONTRACT_TYPES.VESTING || activeContract === CONTRACT_TYPES.AIRDROP || activeContract === CONTRACT_TYPES.TESTNET_MINING || activeContract === CONTRACT_TYPES.STORAGE_POOL || activeContract === CONTRACT_TYPES.REWARD_ENGINE)) {
       console.log('Fetching proposals due to dependencies change:', {
         contractAddress,
         activeContract,

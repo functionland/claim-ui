@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAccount, useWriteContract, usePublicClient } from 'wagmi'
 import {
   Box,
@@ -29,6 +29,9 @@ import {
   DialogActions,
   List,
   ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  Divider,
 
 
 } from '@mui/material'
@@ -47,6 +50,8 @@ import { useStoragePoolData, peerIdToBytes32 } from '@/hooks/useStoragePoolData'
 import { STORAGE_POOL_ABI } from '@/config/abis'
 import { STORAGE_POOL_CONTRACT_ADDRESSES } from '@/config/contracts'
 import { useChainId } from 'wagmi'
+import { useContractContext } from '@/contexts/ContractContext'
+import { CONTRACT_TYPES } from '@/config/constants'
 
 
 
@@ -135,6 +140,7 @@ export function StoragePoolAdmin() {
   const { isConnected, address } = useAccount()
   const chainId = useChainId()
   const publicClient = usePublicClient()
+  const { setActiveContract } = useContractContext()
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [selectedPool, setSelectedPool] = useState<number | null>(null)
@@ -177,6 +183,10 @@ export function StoragePoolAdmin() {
     memberAddress: '',
     tokenAddress: '',
     withdrawAmount: '',
+    transactionLimit: '',
+    quorum: '',
+    roleAddress: '',
+    roleType: '1', // Default to "Add Role" (1)
   })
 
   const {
@@ -186,6 +196,11 @@ export function StoragePoolAdmin() {
     approveProposal,
     executeProposal,
     storagePoolProposals,
+    handleSetRoleTransactionLimit,
+    handleSetRoleQuorum,
+    checkRoleConfig,
+    checkHasRole,
+    createRoleProposal,
   } = useAdminContract()
 
   const {
@@ -199,6 +214,11 @@ export function StoragePoolAdmin() {
   const contractAddress = STORAGE_POOL_CONTRACT_ADDRESSES[chainId]
   const { writeContractAsync } = useWriteContract()
 
+  // Set the active contract to STORAGE_POOL when the component mounts
+  useEffect(() => {
+    setActiveContract(CONTRACT_TYPES.STORAGE_POOL)
+  }, [setActiveContract])
+
   const [isCreatingPool, setIsCreatingPool] = useState(false)
   const [isSettingTokens, setIsSettingTokens] = useState(false)
   const [isUpgrading, setIsUpgrading] = useState(false)
@@ -210,11 +230,95 @@ export function StoragePoolAdmin() {
   const [isProcessingJoinRequests, setIsProcessingJoinRequests] = useState(false)
   const [isAddingMember, setIsAddingMember] = useState(false)
   const [isWithdrawing, setIsWithdrawing] = useState(false)
+  const [isSettingLimit, setIsSettingLimit] = useState(false)
+  const [roleCheckResult, setRoleCheckResult] = useState<{ transactionLimit: bigint, quorum: number } | null>(null)
+  const [isCheckingRole, setIsCheckingRole] = useState(false)
+  const [hasRoleResult, setHasRoleResult] = useState<boolean | null>(null)
 
   const clearMessages = () => {
     setError(null)
     setSuccess(null)
   }
+
+  // Role Configuration handlers
+  const handleCheckRoleConfig = async () => {
+    if (!formData.role) return;
+
+    try {
+      setIsCheckingRole(true);
+      setError(null);
+      const result = await checkRoleConfig(formData.role);
+      if (result && result.transactionLimit !== undefined && result.quorum !== undefined) {
+        setRoleCheckResult({
+          transactionLimit: result.transactionLimit,
+          quorum: Number(result.quorum)
+        });
+      } else {
+        setError('Failed to fetch role configuration');
+      }
+    } catch (error: any) {
+      setError(error.message || 'Failed to check role configuration');
+    } finally {
+      setIsCheckingRole(false);
+    }
+  };
+
+  const checkUserHasRole = async (address: string, role: string) => {
+    try {
+      setIsCheckingRole(true);
+      setHasRoleResult(null);
+      setError(null);
+
+      const result = await checkHasRole(address, role);
+      setHasRoleResult(result);
+    } catch (error: any) {
+      setError(error.message || 'Failed to check role');
+    } finally {
+      setIsCheckingRole(false);
+    }
+  };
+
+  const handleSetTransactionLimit = async () => {
+    try {
+      setError(null)
+      setIsSettingLimit(true)
+      await handleSetRoleTransactionLimit(formData.role, formData.transactionLimit)
+      // Clear form on success
+      setFormData(prev => ({
+        ...prev,
+        role: '',
+        transactionLimit: '',
+      }))
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setIsSettingLimit(false)
+    }
+  }
+
+  const handleSetQuorum = async () => {
+    try {
+      setError(null)
+      setIsSettingLimit(true)
+      await handleSetRoleQuorum(formData.role, formData.quorum)
+      // Clear form on success
+      setFormData(prev => ({
+        ...prev,
+        role: '',
+        quorum: '',
+      }))
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setIsSettingLimit(false)
+    }
+  }
+
+  // Format transaction limit for display (convert from wei to ETH)
+  const formatTransactionLimit = (limit: bigint | null) => {
+    if (!limit) return '0';
+    return ethers.formatEther(limit);
+  };
 
   const handleOpenMembersDialog = async (poolId: number) => {
     setDialogOpen({ type: 'members', poolId })
@@ -596,30 +700,24 @@ export function StoragePoolAdmin() {
       setIsCreatingRoleProposal(true)
       setError(null)
 
-      if (!formData.targetAddress || !formData.role) {
-        throw new Error('Please enter target address and select a role')
+      const { roleAddress, role, roleType } = formData
+
+      if (!roleAddress || !role) {
+        throw new Error('Please fill in all required fields')
       }
 
-      if (!ethers.isAddress(formData.targetAddress)) {
-        throw new Error('Invalid target address')
-      }
+      // Convert roleType to number
+      const proposalType = parseInt(roleType)
 
-      // Get role hash
-      const getRoleHash = (role: string): string => {
-        return ethers.keccak256(ethers.toUtf8Bytes(role))
-      }
+      // Create role proposal
+      await createRoleProposal(proposalType, roleAddress, role)
 
-      const hash = await createProposal(
-        1, // AddRole proposal type
-        0,
-        formData.targetAddress,
-        getRoleHash(formData.role),
-        '0',
-        ethers.ZeroAddress
-      )
-      console.log('Role proposal created with transaction hash:', hash)
-
-      setFormData(prev => ({ ...prev, targetAddress: '', role: '' }))
+      // Reset form
+      setFormData(prev => ({
+        ...prev,
+        roleAddress: '',
+        role: '',
+      }))
     } catch (error: any) {
       console.error(error)
       setError(error.message)
@@ -1036,46 +1134,212 @@ export function StoragePoolAdmin() {
         </AccordionDetails>
       </Accordion>
 
+      {/* Role Configuration */}
+      <Accordion sx={{ mt: 2 }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="h6">Role Configuration</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Box component="form" noValidate sx={{ mt: 1 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  select
+                  fullWidth
+                  label="Role"
+                  value={formData.role || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
+                  margin="normal"
+                >
+                  <MenuItem value="ADMIN_ROLE">Admin Role</MenuItem>
+                  <MenuItem value="CONTRACT_OPERATOR_ROLE">Contract Operator Role</MenuItem>
+                  <MenuItem value="BRIDGE_OPERATOR_ROLE">Bridge Operator Role</MenuItem>
+                  <MenuItem value="POOL_ADMIN_ROLE">Pool Admin Role</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Transaction Limit (ETH)"
+                  type="number"
+                  value={formData.transactionLimit || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, transactionLimit: e.target.value }))}
+                  margin="normal"
+                  inputProps={{
+                    step: "0.000000000000000001" // Allow for 18 decimal places
+                  }}
+                  helperText="Enter the limit in ETH"
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Quorum"
+                  type="number"
+                  value={formData.quorum || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, quorum: e.target.value }))}
+                  margin="normal"
+                  inputProps={{
+                    min: "1",
+                    max: "65535",
+                    step: "1"
+                  }}
+                  helperText="Enter a number between 1 and 65535"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Button
+                  variant="contained"
+                  onClick={handleSetTransactionLimit}
+                  disabled={!formData.role || !formData.transactionLimit || isSettingLimit}
+                  sx={{ mr: 1 }}
+                >
+                  {isSettingLimit ? <CircularProgress size={24} /> : 'Set Transaction Limit'}
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={handleSetQuorum}
+                  disabled={
+                    !formData.role ||
+                    !formData.quorum ||
+                    Number(formData.quorum) < 1 ||
+                    Number(formData.quorum) > 65535 ||
+                    isSettingLimit
+                  }
+                  sx={{ mr: 1 }}
+                >
+                  {isSettingLimit ? <CircularProgress size={24} /> : 'Set Quorum'}
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={handleCheckRoleConfig}
+                  disabled={!formData.role || isCheckingRole}
+                  sx={{ mr: 1 }}
+                >
+                  {isCheckingRole ? <CircularProgress size={24} /> : 'Check Role Config'}
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={async () => {
+                    if (!formData.role) return;
+                    try {
+                      const result = await checkRoleConfig(formData.role);
+                      if (result) {
+                        const formattedLimit = formatTransactionLimit(result.transactionLimit);
+                        setFormData(prev => ({
+                          ...prev,
+                          transactionLimit: formattedLimit,
+                          quorum: result.quorum.toString()
+                        }));
+                      }
+                    } catch (error: any) {
+                      console.error('Error loading current values:', error);
+                      setError(error.message || 'Failed to fetch current values');
+                    }
+                  }}
+                  disabled={!formData.role}
+                >
+                  Load Current Values
+                </Button>
+              </Grid>
+              {roleCheckResult && (
+                <Grid item xs={12}>
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    <Typography variant="subtitle2">Role Configuration:</Typography>
+                    <Typography>
+                      Transaction Limit: {formatTransactionLimit(roleCheckResult.transactionLimit)} ETH
+                    </Typography>
+                    <Typography>
+                      Quorum: {roleCheckResult.quorum}
+                    </Typography>
+                  </Alert>
+                </Grid>
+              )}
+            </Grid>
+          </Box>
+        </AccordionDetails>
+      </Accordion>
+
       <Accordion sx={{ mt: 2 }}>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Typography variant="h6">Role Management</Typography>
         </AccordionSummary>
         <AccordionDetails>
-          <Typography variant="subtitle1" gutterBottom>Grant Role</Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Target Address"
-                value={formData.targetAddress}
-                onChange={(e) => setFormData({ ...formData, targetAddress: e.target.value })}
-                helperText="Address to receive the role"
-              />
+          <Box component="form" noValidate sx={{ mt: 1 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Address"
+                  value={formData.roleAddress || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, roleAddress: e.target.value }))}
+                  margin="normal"
+                  placeholder="0x..."
+                  helperText="Address to check or modify role"
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  select
+                  fullWidth
+                  label="Role"
+                  value={formData.role || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
+                  margin="normal"
+                  helperText="Select the role to check or modify"
+                >
+                  <MenuItem value="ADMIN_ROLE">Admin Role</MenuItem>
+                  <MenuItem value="CONTRACT_OPERATOR_ROLE">Contract Operator Role</MenuItem>
+                  <MenuItem value="BRIDGE_OPERATOR_ROLE">Bridge Operator Role</MenuItem>
+                  <MenuItem value="POOL_ADMIN_ROLE">Pool Admin Role</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid item xs={12}>
+                <Button
+                  variant="outlined"
+                  onClick={() => checkUserHasRole(formData.roleAddress, formData.role)}
+                  disabled={!formData.roleAddress || !formData.role || isCheckingRole}
+                  sx={{ mr: 1 }}
+                >
+                  {isCheckingRole ? <CircularProgress size={24} /> : 'Check Role'}
+                </Button>
+                {hasRoleResult !== null && (
+                  <Typography sx={{ mt: 1 }}>
+                    {hasRoleResult
+                      ? `Address ${formData.roleAddress} HAS the ${formData.role} role.`
+                      : `Address ${formData.roleAddress} DOES NOT HAVE the ${formData.role} role.`}
+                  </Typography>
+                )}
+              </Grid>
+              <Grid item xs={12}>
+                <Divider sx={{ my: 2 }} />
+                <Typography variant="subtitle1" sx={{ mb: 2 }}>
+                  Create Role Proposal
+                </Typography>
+                <TextField
+                  select
+                  fullWidth
+                  label="Proposal Type"
+                  value={formData.roleType || '1'}
+                  onChange={(e) => setFormData(prev => ({ ...prev, roleType: e.target.value }))}
+                  margin="normal"
+                  sx={{ mb: 2 }}
+                >
+                  <MenuItem value="1">Add Role</MenuItem>
+                  <MenuItem value="2">Remove Role</MenuItem>
+                </TextField>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Note: Role changes require multi-signature approval through the proposal system.
+                </Typography>
+                <Button
+                  variant="contained"
+                  onClick={handleCreateRoleProposal}
+                  disabled={!formData.roleAddress || !formData.role || !formData.roleType || isCreatingRoleProposal}
+                >
+                  {isCreatingRoleProposal ? <CircularProgress size={24} /> : 'Create Role Proposal'}
+                </Button>
+              </Grid>
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                select
-                fullWidth
-                label="Role"
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                helperText="Select role to grant"
-              >
-                <MenuItem value="ADMIN_ROLE">Admin Role</MenuItem>
-                <MenuItem value="CONTRACT_OPERATOR_ROLE">Contract Operator Role</MenuItem>
-                <MenuItem value="BRIDGE_OPERATOR_ROLE">Bridge Operator Role</MenuItem>
-                <MenuItem value="POOL_ADMIN_ROLE">Pool Admin Role</MenuItem>
-              </TextField>
-            </Grid>
-          </Grid>
-          <Box sx={{ mt: 2 }}>
-            <Button
-              variant="contained"
-              onClick={handleCreateRoleProposal}
-              disabled={isCreatingRoleProposal}
-            >
-              {isCreatingRoleProposal ? <CircularProgress size={24} /> : 'Create Role Proposal'}
-            </Button>
           </Box>
         </AccordionDetails>
       </Accordion>

@@ -74,12 +74,14 @@ export const ROLES = {
   BRIDGE_OPERATOR_ROLE: keccak256(toBytes('BRIDGE_OPERATOR_ROLE')),
   CONTRACT_OPERATOR_ROLE: keccak256(toBytes('CONTRACT_OPERATOR_ROLE')),
   ADMIN_ROLE: keccak256(toBytes('ADMIN_ROLE')),
+  POOL_ADMIN_ROLE: keccak256(toBytes('POOL_ADMIN_ROLE')),
 } as const;
 
 export const ROLE_NAMES = {
   [ROLES.BRIDGE_OPERATOR_ROLE]: 'Bridge Operator',
   [ROLES.CONTRACT_OPERATOR_ROLE]: 'Contract Operator',
   [ROLES.ADMIN_ROLE]: 'Admin',
+  [ROLES.POOL_ADMIN_ROLE]: 'Pool Admin',
 } as const;
 
 export const PROPOSAL_TYPES = {
