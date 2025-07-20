@@ -36,7 +36,8 @@ import TokenIcon from '@mui/icons-material/Token'
 import Shield from '@mui/icons-material/Shield'
 import LightModeIcon from '@mui/icons-material/LightMode'
 import DarkModeIcon from '@mui/icons-material/DarkMode'
-import { CONTRACT_TYPES, TOKEN_ADDRESSES } from '@/config/contracts'
+import { TOKEN_ADDRESSES } from '@/config/contracts'
+import { CONTRACT_TYPES } from '@/config/constants'
 import { getNetworkName } from '@/config/chains'
 
 interface ManualImportInfo {

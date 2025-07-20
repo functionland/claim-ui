@@ -27,7 +27,7 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { ConnectButton } from '@/components/common/ConnectButton'
 import { useAdminContract } from '@/hooks/useAdminContract'
-import { CONTRACT_TYPES } from '@/config/contracts'
+import { CONTRACT_TYPES } from '@/config/constants'
 import ClientOnly from '../common/ClientOnly'
 import { useContractContext } from '@/contexts/ContractContext'
 import { ROLES, ROLE_NAMES } from '@/config/constants'

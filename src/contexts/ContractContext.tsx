@@ -3,7 +3,8 @@ import { createContext, useContext, useState, ReactNode, useEffect, useMemo } fr
 import { useAccount, usePublicClient, useReadContract, useBalance, useWalletClient } from 'wagmi'
 import { type Address } from 'viem'
 import { ethers } from 'ethers'
-import { ContractType, CONTRACT_TYPES, CONTRACT_CONFIG } from '@/config/contracts'
+import { ContractType, CONTRACT_CONFIG } from '@/config/contracts'
+import { CONTRACT_TYPES } from '@/config/constants'
 import { getContract } from 'viem'
 
 interface ContractContracts {
@@ -12,6 +13,8 @@ interface ContractContracts {
   token?: ethers.Contract;
   airdrop?: ethers.Contract;
   testnetMining?: ethers.Contract;
+  storagePool?: ethers.Contract;
+  rewardEngine?: ethers.Contract;
 }
 
 interface ContractContextType {
@@ -112,7 +115,27 @@ export function ContractProvider({ children }: { children: ReactNode }) {
           provider
         )
       }
-      
+
+      // Initialize storage pool contract
+      const storagePoolAddress = CONTRACT_CONFIG.address[CONTRACT_TYPES.STORAGE_POOL]?.[chainId]
+      if (storagePoolAddress) {
+        newContracts.storagePool = new ethers.Contract(
+          storagePoolAddress,
+          CONTRACT_CONFIG.abi[CONTRACT_TYPES.STORAGE_POOL],
+          provider
+        )
+      }
+
+      // Initialize reward engine contract
+      const rewardEngineAddress = CONTRACT_CONFIG.address[CONTRACT_TYPES.REWARD_ENGINE]?.[chainId]
+      if (rewardEngineAddress) {
+        newContracts.rewardEngine = new ethers.Contract(
+          rewardEngineAddress,
+          CONTRACT_CONFIG.abi[CONTRACT_TYPES.REWARD_ENGINE],
+          provider
+        )
+      }
+
       console.log('All contracts initialized:', Object.keys(newContracts))
     } catch (error) {
       console.error('Error initializing contracts:', error)

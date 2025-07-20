@@ -7,7 +7,7 @@ import { Alert, Typography, Box, TextField, Button } from '@mui/material'
 import { VestingInfo } from './VestingInfo'
 import ClientOnly from '@/components/common/ClientOnly'
 import { useContractContext } from '@/contexts/ContractContext'
-import { CONTRACT_TYPES } from '@/config/contracts'
+import { CONTRACT_TYPES } from '@/config/constants'
 
 export function VestingDashboard() {
   const { activeContract } = useContractContext()
