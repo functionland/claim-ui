@@ -73,8 +73,8 @@ export function useAdminContract() {
               address: contractAddress,
               abi: contractAbi,
               functionName: 'capIds',
-              args: [BigInt(index)],
-            }) as bigint
+              args: [BigInt(index)]
+            } as any) as bigint
             
             console.log("Found cap ID:", capId.toString())
             foundCapIds.push(capId)
@@ -91,8 +91,8 @@ export function useAdminContract() {
             address: contractAddress,
             abi: contractAbi,
             functionName: 'vestingCaps',
-            args: [capId],
-          }) as readonly [bigint, `0x${string}`, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
+            args: [capId]
+          } as any) as readonly [bigint, `0x${string}`, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]
 
           console.log("Cap tuple for debugging:", capTuple);
 
@@ -100,8 +100,8 @@ export function useAdminContract() {
             address: contractAddress,
             abi: contractAbi,
             functionName: 'getWalletsInCap',
-            args: [capId],
-          }) as Address[]
+            args: [capId]
+          } as any) as Address[]
 
           console.log(`Cap ${capId}: Found ${walletsInCap.length} wallets:`, walletsInCap);
 
@@ -119,8 +119,8 @@ export function useAdminContract() {
                 address: contractAddress,
                 abi: contractAbi,
                 functionName: 'vestingWallets',
-                args: [walletAddress, capId],
-              }) as VestingWalletInfo;
+                args: [walletAddress]
+              } as any) as VestingWalletInfo;
               
               console.log(`Successfully got wallet info for ${walletAddress}:`, walletInfo);
               
@@ -306,8 +306,8 @@ export function useAdminContract() {
         address: contractAddress,
         abi: contractAbi,
         functionName: 'timeConfigs',
-        args: [address as Address],
-      }) as TimeConfig;
+        args: [address]
+      } as any) as TimeConfig;
 
       // If whitelistLockTime is not 0, the address is whitelisted
       return timeConfig.whitelistLockTime > 0n;
@@ -320,7 +320,7 @@ export function useAdminContract() {
   const fetchWhitelistedAddresses = async () => {
     if (!contractAddress || !publicClient) {
       console.log('Missing requirements:', { contractAddress, hasPublicClient: !!publicClient });
-      return [];
+      return;
     }
 
     console.log('Fetching whitelisted addresses for contract:', contractAddress);
@@ -827,8 +827,8 @@ export function useAdminContract() {
           address: contractAddress,
           abi: contractAbi,
           functionName: 'roleConfigs',
-          args: [role],
-        }) as { transactionLimit: bigint; quorum: bigint };
+          args: [getRoleHash(role)]
+        } as any) as { transactionLimit: bigint; quorum: bigint };
 
         return {
           role,
@@ -956,8 +956,8 @@ export function useAdminContract() {
         address: contractAddress,
         abi: contractAbi,
         functionName: 'roleConfigs',
-        args: [getRoleHash(role)],
-      }) as { transactionLimit: bigint; quorum: bigint };
+        args: [getRoleHash(role)]
+      } as any) as { transactionLimit: bigint; quorum: bigint };
 
       console.log('Raw role config result:', config);
       
@@ -998,8 +998,8 @@ export function useAdminContract() {
         address: contractAddress as `0x${string}`,
         abi: contractAbi,
         functionName: 'timeConfigs',
-        args: [address],
-      }) as readonly [bigint, bigint, bigint]; // [lastActivityTime, roleChangeTimeLock, whitelistLockTime]
+        args: [address]
+      } as any) as readonly [bigint, bigint, bigint]; // [lastActivityTime, roleChangeTimeLock, whitelistLockTime]
       
       console.log('Raw whitelist config result:', config);
       
@@ -1089,8 +1089,8 @@ export function useAdminContract() {
             address: contractAddress,
             abi: contractAbi,
             functionName: 'proposalRegistry',
-            args: [BigInt(i)],
-          }) as `0x${string}`;
+            args: [BigInt(i)]
+          } as any) as `0x${string}`;
           
           console.log(`Got proposal ID from registry:`, proposalId);
 
@@ -1104,8 +1104,8 @@ export function useAdminContract() {
             address: contractAddress,
             abi: contractAbi,
             functionName: 'proposals',
-            args: [proposalId],
-          });
+            args: [proposalId]
+          } as any);
           
           console.log(`Got raw proposal details for ID ${proposalId}:`, rawProposal);
 
@@ -1488,7 +1488,7 @@ export function useAdminContract() {
       console.error('Error executing emergency action:', err)
       throw new Error(err.message)
     }
-  }
+  };
 
   const createRoleProposal = async (proposalType: number, targetAddress: string, role: string) => {
     if (!contractAddress) throw new Error('Contract address not found')
@@ -1517,7 +1517,7 @@ export function useAdminContract() {
       console.error('Error creating role proposal:', err)
       throw new Error(err.message)
     }
-  }
+  };
 
   const checkHasRole = async (address: string, role: string) => {
     if (!contractAddress) throw new Error('Contract address not found')
