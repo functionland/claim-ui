@@ -615,7 +615,7 @@ export function useVestingContract() {
               abi: contractAbi,
               functionName: 'getWalletsInCap',
               args: [capId]
-            }) as Address[]
+            } as any) as Address[]
 
             console.log(`Cap ${capId} wallets:`, walletsInThisCap)
             let claimableAmount = BigInt(0);
@@ -628,7 +628,7 @@ export function useVestingContract() {
                 abi: contractAbi,
                 functionName: 'vestingWallets',
                 args: [userAddress as Address, capId]
-              })
+              } as any)
 
               try {
                 // Calculate claimable amount
@@ -639,7 +639,7 @@ export function useVestingContract() {
                     abi: customAirdropCalculateDueTokensAbi,
                     functionName: 'calculateDueTokens',
                     args: [userAddress as Address, capId]
-                  }) as bigint
+                  } as any) as bigint
                 } else {
                   // For regular Vesting
                   claimableAmount = await publicClient.readContract({
@@ -647,7 +647,7 @@ export function useVestingContract() {
                     abi: contractAbi,
                     functionName: 'calculateDueTokens',
                     args: [userAddress as Address, capId]
-                  }) as bigint
+                  } as any) as bigint
                 }
               } catch (error: any) {
                 errorMessage = parseContractError(error);
