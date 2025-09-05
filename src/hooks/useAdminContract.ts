@@ -1676,8 +1676,8 @@ export function useAdminContract() {
         address: contractAddress,
         abi: contractAbi,
         functionName: 'getSubstrateRewards',
-        args: [wallet as Address],
-      }) as [bigint, bigint]; // [lastUpdate, amount]
+        args: [wallet as Address]
+      } as any) as [bigint, bigint]; // [lastUpdate, amount]
 
       return {
         lastUpdate: result[0],
