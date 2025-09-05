@@ -9,7 +9,7 @@ NODE_VERSION="20.x"
 # Function to print usage
 print_usage() {
     echo "Usage: $0 --domain <domain_name>"
-    echo "Example: $0 --domain claim.fx.land"
+    echo "Example: $0 --domain claim-ui.fx.land"
     exit 1
 }
 
