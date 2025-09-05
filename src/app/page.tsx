@@ -74,7 +74,7 @@ export default function Home() {
       {
         icon: <AccountBalanceWalletIcon />,
         text: contractType === CONTRACT_TYPES.VESTING 
-          ? 'Connect your wallet on Base  Mainnet to view your vesting allocations'
+          ? 'Connect your wallet on Ethereum  Mainnet to view your vesting allocations'
           : contractType === CONTRACT_TYPES.TESTNET_MINING
           ? 'Connect your wallet on SKALE Network to view your testnet mining allocations'
           : 'Connect your wallet on IOTEX Network to view your airdrop allocations'
