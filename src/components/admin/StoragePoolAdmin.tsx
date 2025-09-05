@@ -78,8 +78,8 @@ function ContractDiagnostics({ contractAddress }: { contractAddress: string }) {
         const lockAmount = await publicClient.readContract({
           address: contractAddress as `0x${string}`,
           abi: STORAGE_POOL_ABI,
-          functionName: 'createPoolLockAmount',
-        })
+          functionName: 'createPoolLockAmount'
+        } as any)
         results.createPoolLockAmount = lockAmount?.toString()
       } catch (err) {
         results.lockAmountError = (err as Error).message
@@ -90,8 +90,8 @@ function ContractDiagnostics({ contractAddress }: { contractAddress: string }) {
         const storageToken = await publicClient.readContract({
           address: contractAddress as `0x${string}`,
           abi: STORAGE_POOL_ABI,
-          functionName: 'storageToken',
-        })
+          functionName: 'storageToken'
+        } as any)
         results.storageToken = storageToken
       } catch (err) {
         results.storageTokenError = (err as Error).message
@@ -103,8 +103,8 @@ function ContractDiagnostics({ contractAddress }: { contractAddress: string }) {
           address: contractAddress as `0x${string}`,
           abi: STORAGE_POOL_ABI,
           functionName: 'hasRole',
-          args: [ethers.ZeroHash, address], // DEFAULT_ADMIN_ROLE
-        })
+          args: [ethers.ZeroHash, address] // DEFAULT_ADMIN_ROLE
+        } as any)
         results.hasAdminRole = hasAdminRole
       } catch (err) {
         results.adminRoleError = (err as Error).message
@@ -372,8 +372,8 @@ export function StoragePoolAdmin() {
         address: contractAddress,
         abi: STORAGE_POOL_ABI,
         functionName: 'setRequiredTokens',
-        args: [Number(formData.poolId), BigInt(formData.amount)], // uint32 poolId, uint256 newRequired
-      })
+        args: [Number(formData.poolId), BigInt(formData.amount)] // uint32 poolId, uint256 newRequired
+      } as any)
 
       setSuccess(`Required tokens for pool ${formData.poolId} updated successfully`)
       setFormData(prev => ({ ...prev, poolId: '', amount: '' }))
@@ -406,8 +406,8 @@ export function StoragePoolAdmin() {
         address: contractAddress,
         abi: STORAGE_POOL_ABI,
         functionName: 'setCreatePoolLockAmount',
-        args: [amount],
-      })
+        args: [amount]
+      } as any)
 
       setSuccess(`Pool creation lock amount updated to ${formData.createPoolLockAmount} tokens`)
       setFormData(prev => ({ ...prev, createPoolLockAmount: '' }))
@@ -448,8 +448,8 @@ export function StoragePoolAdmin() {
         const createPoolLockAmount = await publicClient?.readContract({
           address: contractAddress,
           abi: STORAGE_POOL_ABI,
-          functionName: 'createPoolLockAmount',
-        })
+          functionName: 'createPoolLockAmount'
+        } as any)
 
         console.log('Pool creation lock amount:', createPoolLockAmount?.toString())
 
@@ -477,14 +477,11 @@ export function StoragePoolAdmin() {
         functionName: 'createPool',
         args: [
           name,
-          region,
-          BigInt(requiredTokens),
-          Number(maxChallengeResponsePeriod), // uint32
-          BigInt(minPingTime),
-          Number(maxMembers), // uint32
-          peerIdBytes32, // Now sending as bytes32
-        ],
-      })
+          Number(maxMembers),
+          Number(requiredTokens),
+          peerId
+        ] // string, uint32, uint256, string
+      } as any)
 
       setSuccess('Data pool created successfully')
       await refreshData() // Refresh pool list
@@ -558,8 +555,8 @@ export function StoragePoolAdmin() {
         address: contractAddress,
         abi: STORAGE_POOL_ABI,
         functionName: 'deletePool',
-        args: [Number(targetPoolId)], // uint32
-      })
+        args: [Number(targetPoolId)] // uint32
+      } as any)
 
       setSuccess('Pool deleted successfully')
       await refreshData()
@@ -588,8 +585,8 @@ export function StoragePoolAdmin() {
         address: contractAddress,
         abi: STORAGE_POOL_ABI,
         functionName: 'addMember',
-        args: [Number(poolId), memberAddress as `0x${string}`, peerId], // uint32, address, string
-      })
+        args: [Number(poolId), memberAddress as `0x${string}`, peerId] // uint32, address, string
+      } as any)
 
       setSuccess('Member added successfully')
       await refreshData()
@@ -610,8 +607,8 @@ export function StoragePoolAdmin() {
         address: contractAddress,
         abi: STORAGE_POOL_ABI,
         functionName: 'removeMemberPeerId',
-        args: [Number(poolId), peerId], // uint32, string
-      })
+        args: [Number(poolId), peerId] // uint32, string
+      } as any)
 
       setSuccess('Member removed successfully')
       await refreshData()
@@ -630,8 +627,8 @@ export function StoragePoolAdmin() {
         address: contractAddress,
         abi: STORAGE_POOL_ABI,
         functionName: 'approveJoinRequest',
-        args: [Number(poolId), peerId], // uint32, string
-      })
+        args: [Number(poolId), peerId] // uint32, string
+      } as any)
 
       setSuccess('Join request approved successfully')
       await refreshData()
@@ -652,8 +649,8 @@ export function StoragePoolAdmin() {
         address: contractAddress,
         abi: STORAGE_POOL_ABI,
         functionName: 'cancelJoinRequest', // Using cancel since there's no direct reject
-        args: [Number(poolId), peerId], // uint32, string
-      })
+        args: [Number(poolId), peerId] // uint32, string
+      } as any)
 
       setSuccess('Join request rejected successfully')
       await refreshData()
@@ -668,6 +665,46 @@ export function StoragePoolAdmin() {
   // Note: Batch operations are not available in the current contract
   // Each join request must be processed individually
 
+  const handleBatchApproveJoinRequests = async (poolId: number, peerIds: string[]) => {
+    try {
+      setIsProcessingJoinRequests(true)
+      clearMessages()
+
+      for (const peerId of peerIds) {
+        await handleApproveJoinRequest(poolId, peerId)
+      }
+
+      setSuccess(`Approved ${peerIds.length} join requests successfully`)
+      // Clear selection after batch operation
+      setSelectedJoinRequests([])
+    } catch (err) {
+      console.error('Error in batch approve:', err)
+      setError(err instanceof Error ? err.message : 'Failed to approve join requests')
+    } finally {
+      setIsProcessingJoinRequests(false)
+    }
+  }
+
+  const handleBatchRejectJoinRequests = async (poolId: number, peerIds: string[]) => {
+    try {
+      setIsProcessingJoinRequests(true)
+      clearMessages()
+
+      for (const peerId of peerIds) {
+        await handleRejectJoinRequest(poolId, peerId)
+      }
+
+      setSuccess(`Rejected ${peerIds.length} join requests successfully`)
+      // Clear selection after batch operation
+      setSelectedJoinRequests([])
+    } catch (err) {
+      console.error('Error in batch reject:', err)
+      setError(err instanceof Error ? err.message : 'Failed to reject join requests')
+    } finally {
+      setIsProcessingJoinRequests(false)
+    }
+  }
+
   const handleEmergencyWithdraw = async () => {
     try {
       setIsWithdrawing(true)
@@ -681,8 +718,8 @@ export function StoragePoolAdmin() {
         address: contractAddress,
         abi: STORAGE_POOL_ABI,
         functionName: 'emergencyRecoverTokens',
-        args: [BigInt(formData.withdrawAmount)], // Only amount, recovers storage tokens
-      })
+        args: [BigInt(formData.withdrawAmount)] // Only amount, recovers storage tokens
+      } as any)
 
       setSuccess('Emergency token recovery completed successfully')
       setFormData(prev => ({ ...prev, withdrawAmount: '' }))
