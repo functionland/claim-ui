@@ -147,8 +147,8 @@ export function useStoragePoolData() {
             address: contractAddress as `0x${string}`,
             abi: STORAGE_POOL_ABI,
             functionName: 'pools',
-            args: [poolId],
-          }) as unknown as [string, number, number, number, number, bigint, bigint, string, string]
+            args: [poolId]
+          } as any) as unknown as [string, number, number, number, number, bigint, bigint, string, string]
 
           // Check if pool exists (id should be non-zero for existing pools)
           if (poolData && poolData[1] !== 0) { // poolData[1] is the id field
@@ -206,8 +206,8 @@ export function useStoragePoolData() {
             address: contractAddress as `0x${string}`,
             abi: STORAGE_POOL_ABI,
             functionName: 'pools',
-            args: [poolId],
-          }) as unknown as [string, number, number, number, number, bigint, bigint, string, string]
+            args: [poolId]
+          } as any) as unknown as [string, number, number, number, number, bigint, bigint, string, string]
 
           // Parse the pool data according to the contract structure:
           // [creator, id, maxChallengeResponsePeriod, memberCount, maxMembers, requiredTokens, minPingTime, name, region]
@@ -224,8 +224,8 @@ export function useStoragePoolData() {
                 address: contractAddress as `0x${string}`,
                 abi: STORAGE_POOL_ABI,
                 functionName: 'joinRequestKeys',
-                args: [poolId, BigInt(joinRequestIndex)],
-              }) as string
+                args: [poolId, BigInt(joinRequestIndex)]
+              } as any) as string
 
               if (!peerId) break
 
@@ -234,8 +234,8 @@ export function useStoragePoolData() {
                 address: contractAddress as `0x${string}`,
                 abi: STORAGE_POOL_ABI,
                 functionName: 'joinRequests',
-                args: [poolId, peerId],
-              }) as unknown as [string, number, number, number, number, number, string, number]
+                args: [poolId, peerId]
+              } as any) as unknown as [string, number, number, number, number, number, string, number]
 
               if (joinRequest && joinRequest[0] !== '0x0000000000000000000000000000000000000000') {
                 joinRequests.push({
@@ -359,8 +359,8 @@ export function useStoragePoolData() {
         address: contractAddress as `0x${string}`,
         abi: STORAGE_POOL_ABI,
         functionName: 'getPoolMembers',
-        args: [poolId],
-      }) as string[]
+        args: [poolId]
+      } as any) as string[]
 
       console.log(`Found ${memberAddresses.length} members in pool ${poolId}:`, memberAddresses)
 
@@ -380,16 +380,16 @@ export function useStoragePoolData() {
             address: contractAddress as `0x${string}`,
             abi: STORAGE_POOL_ABI,
             functionName: 'getMemberIndex',
-            args: [poolId, memberAddress as `0x${string}`],
-          }) as bigint
+            args: [poolId, memberAddress]
+          } as any) as bigint
 
           // Get all peer IDs for this member (returns bytes32[])
           const peerIdBytes32Array = await publicClient.readContract({
             address: contractAddress as `0x${string}`,
             abi: STORAGE_POOL_ABI,
             functionName: 'getMemberPeerIds',
-            args: [poolId, memberAddress as `0x${string}`],
-          }) as string[]
+            args: [poolId, memberAddress]
+          } as any) as string[]
 
           console.log(`Member ${memberAddress} has ${peerIdBytes32Array.length} peer IDs (as bytes32)`)
 
@@ -403,8 +403,8 @@ export function useStoragePoolData() {
                 address: contractAddress as `0x${string}`,
                 abi: STORAGE_POOL_ABI,
                 functionName: 'getPeerIdInfo',
-                args: [poolId, peerIdBytes32 as `0x${string}`],
-              }) as [string, bigint]
+                args: [poolId, peerIdBytes32]
+              } as any) as [string, bigint]
 
               // Convert bytes32 to readable string
               let displayPeerId = peerIdBytes32
@@ -476,8 +476,8 @@ export function useStoragePoolData() {
         address: contractAddress as `0x${string}`,
         abi: STORAGE_POOL_ABI,
         functionName: 'getPoolMembers',
-        args: [poolId],
-      }) as string[]
+        args: [poolId]
+      } as any) as string[]
 
       console.log(`Total members in pool ${poolId}: ${allMemberAddresses.length}`)
 
@@ -500,16 +500,16 @@ export function useStoragePoolData() {
             address: contractAddress as `0x${string}`,
             abi: STORAGE_POOL_ABI,
             functionName: 'getMemberIndex',
-            args: [poolId, memberAddress as `0x${string}`],
-          }) as bigint
+            args: [poolId, memberAddress]
+          } as any) as bigint
 
           // Get all peer IDs for this member (returns bytes32[])
           const peerIdBytes32Array = await publicClient.readContract({
             address: contractAddress as `0x${string}`,
             abi: STORAGE_POOL_ABI,
             functionName: 'getMemberPeerIds',
-            args: [poolId, memberAddress as `0x${string}`],
-          }) as string[]
+            args: [poolId, memberAddress]
+          } as any) as string[]
 
           console.log(`Member ${memberAddress} has ${peerIdBytes32Array.length} peer IDs`)
 
@@ -523,8 +523,8 @@ export function useStoragePoolData() {
                 address: contractAddress as `0x${string}`,
                 abi: STORAGE_POOL_ABI,
                 functionName: 'getPeerIdInfo',
-                args: [poolId, peerIdBytes32 as `0x${string}`],
-              }) as [string, bigint]
+                args: [poolId, peerIdBytes32]
+              } as any) as [string, bigint]
 
               // Convert bytes32 digest back to full PeerID
               const displayPeerId = bytes32ToPeerId(peerIdBytes32)
@@ -611,8 +611,8 @@ export function usePoolMembership(_poolId: number, userAddress?: string) {
         address: contractAddress as `0x${string}`,
         abi: STORAGE_POOL_ABI,
         functionName: 'isMemberOfAnyPool',
-        args: [userAddress as `0x${string}`],
-      })
+        args: [userAddress]
+      } as any)
 
       // For specific pool membership, we'd need to check the pool's member list
       // This is a simplified check - in practice you'd iterate through join requests
