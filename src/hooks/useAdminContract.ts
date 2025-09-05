@@ -1539,7 +1539,7 @@ export function useAdminContract() {
           getRoleHash(role) as `0x${string}`,
           address as `0x${string}`
         ]
-      })
+      } as any)
 
       return Boolean(hasRole)
     } catch (err: any) {
