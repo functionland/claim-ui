@@ -640,6 +640,42 @@
   }
 </style>
 
+<script>
+  (function(){
+    function isMobile(){
+      try {
+        var ua = navigator.userAgent || "";
+        var byUA = /Mobi|Android|iPhone|iPad|iPod|Windows Phone|IEMobile/i.test(ua);
+        var byViewport = Math.min(window.innerWidth, window.innerHeight) <= 820;
+        return byUA || byViewport;
+      } catch(e) { return false; }
+    }
+    function showOverlay(){
+      var overlay = document.createElement('div');
+      overlay.id = 'mobile-blocker';
+      overlay.style.position = 'fixed';
+      overlay.style.inset = '0';
+      overlay.style.zIndex = '999999';
+      overlay.style.display = 'flex';
+      overlay.style.alignItems = 'center';
+      overlay.style.justifyContent = 'center';
+      overlay.style.padding = '24px';
+      overlay.style.background = '#0b0e11';
+      overlay.style.color = '#ffffff';
+      overlay.innerHTML = '\n  <div style="max-width:560px;width:100%;text-align:center">\n    <h1 style="font-size:28px;line-height:1.2;margin-bottom:12px;font-weight:700">Desktop Only</h1>\n    <p style="opacity:.9;font-size:16px">This portal is only accessible on desktop browsers. Please open this page on a desktop or laptop computer.</p>\n  </div>\n';
+      document.addEventListener('touchmove', function(e){ e.preventDefault(); }, { passive: false });
+      document.body.appendChild(overlay);
+    }
+    if (isMobile()) {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', showOverlay);
+      } else {
+        showOverlay();
+      }
+    }
+  })();
+</script>
+
 <!-- HTML Structure -->
 <div id="fula-staking-widget">
   <div id="fula-blocktime"></div>
@@ -1332,6 +1368,7 @@
         if (!web3) {
           // Use a public RPC endpoint for the selected network
           const publicRpcUrls = {
+            mainnet: 'https://go.getblock.us/fd7b8edc55f744339da0893dc88175ec',
             base: 'https://mainnet.base.org',
             iotex: 'https://babel-api.mainnet.iotex.io',
             skale: 'https://mainnet.skalenodes.com/v1/elated-tan-skat'
@@ -1478,6 +1515,13 @@
       if (!window.ethereum) return;
       
       const networkParams = {
+        mainnet: {
+          chainId: '0x1', // 8453 in hex
+          chainName: 'Ethereum Mainnet',
+          nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+          rpcUrls: ['https://go.getblock.us/fd7b8edc55f744339da0893dc88175ec'],
+          blockExplorerUrls: ['https://etherscan.org']
+        },
         base: {
           chainId: '0x2105', // 8453 in hex
           chainName: 'Base Mainnet',

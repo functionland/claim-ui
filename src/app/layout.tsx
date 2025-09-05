@@ -1,6 +1,7 @@
 import './globals.css'
 import { Providers } from './providers'
 import { AuthWrapper } from '@/components/auth/AuthWrapper'
+import { MobileGate } from '@/components/MobileGate'
 
 export default function RootLayout({
   children,
@@ -14,6 +15,7 @@ export default function RootLayout({
       </head>
 
       <body>
+        <MobileGate />
         <Providers>
           <AuthWrapper>
             {children}
