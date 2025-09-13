@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useReadContract, useWriteContract, useAccount, usePublicClient, useSimulateContract, useWalletClient } from 'wagmi'
-import { type Address, parseAbiItem } from 'viem'
+import { type Address, parseAbiItem, type PublicClient } from 'viem'
 import { CONTRACT_CONFIG } from '@/config/contracts'
 import { CONTRACT_TYPES } from '@/config/constants'
 import { useContractContext } from '@/contexts/ContractContext'
@@ -15,6 +15,78 @@ type VestingWalletInfo = {
   amount: bigint;
   claimed: bigint;
 }
+
+// Helper function to get logs in chunks to avoid Alchemy free tier limits
+const getLogsInChunks = async (
+  publicClient: PublicClient,
+  params: {
+    address: Address;
+    event: any;
+    fromBlock?: bigint | 'earliest';
+    toBlock?: bigint | 'latest';
+  },
+  chunkSize: number = 10
+) => {
+  const { address, event, fromBlock = 'earliest', toBlock = 'latest' } = params;
+  
+  try {
+    // For small ranges or when using 'earliest'/'latest', try the full range first
+    // This handles testnets and local networks that don't have the same restrictions
+    return await publicClient.getLogs({
+      address,
+      event,
+      fromBlock,
+      toBlock
+    });
+  } catch (error: any) {
+    // If we get a block range error, fall back to chunked approach
+    if (error?.details?.includes('block range') || error?.code === -32600 || error?.message?.includes('Under the Free tier plan')) {
+      console.log('Block range too large, using chunked approach...');
+      
+      // Get current block number
+      const currentBlock = await publicClient.getBlockNumber();
+      const startBlock = fromBlock === 'earliest' ? 0n : (fromBlock as bigint);
+      const endBlock = toBlock === 'latest' ? currentBlock : (toBlock as bigint);
+      
+      const allEvents = [];
+      // Use smaller chunk size for Alchemy free tier (max 10 blocks)
+      const actualChunkSize = Math.min(chunkSize, 9); // Use 9 to be safe
+      const chunkSizeBigInt = BigInt(actualChunkSize);
+      
+      console.log(`Fetching events in chunks of ${actualChunkSize} blocks from ${startBlock} to ${endBlock}`);
+      
+      for (let from = startBlock; from <= endBlock; from += chunkSizeBigInt) {
+        const to = from + chunkSizeBigInt - 1n > endBlock ? endBlock : from + chunkSizeBigInt - 1n;
+        
+        try {
+          const chunkEvents = await publicClient.getLogs({
+            address,
+            event,
+            fromBlock: from,
+            toBlock: to
+          });
+          allEvents.push(...chunkEvents);
+          
+          if (allEvents.length > 0 && allEvents.length % 100 === 0) {
+            console.log(`Fetched ${allEvents.length} events so far...`);
+          }
+        } catch (chunkError: any) {
+          console.warn(`Failed to fetch events for blocks ${from}-${to}:`, chunkError?.message || chunkError);
+          // Continue with next chunk
+        }
+        
+        // Small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 150));
+      }
+      
+      console.log(`Completed chunked fetch: ${allEvents.length} total events`);
+      return allEvents;
+    }
+    
+    // Re-throw other errors
+    throw error;
+  }
+};
 
 // Helper function to get the bytes32 hash of a role string
 const getRoleHash = (role: string): string => {
@@ -115,11 +187,12 @@ export function useAdminContract() {
             
             try {
               console.log(`Attempting to read contract for wallet ${walletAddress}`);
+              // The vestingWallets mapping requires (address, capId) parameters
               const walletInfo = await publicClient.readContract({
                 address: contractAddress,
                 abi: contractAbi,
                 functionName: 'vestingWallets',
-                args: [walletAddress]
+                args: [walletAddress, BigInt(capId)] // Use the current capId being processed
               } as any) as VestingWalletInfo;
               
               console.log(`Successfully got wallet info for ${walletAddress}:`, walletInfo);
@@ -130,6 +203,15 @@ export function useAdminContract() {
               });
             } catch (error) {
               console.error(`Error fetching wallet info for ${walletAddress}:`, error);
+              // If index 0 fails, this wallet might not have any vesting info yet
+              // We'll add it with default values
+              walletDetails.push({
+                address: walletAddress,
+                capId: BigInt(capId),
+                name: '0x0000000000000000000000000000000000000000000000000000000000000000' as `0x${string}`,
+                amount: 0n,
+                claimed: 0n
+              });
             }
           };
 
@@ -328,7 +410,7 @@ export function useAdminContract() {
     try {
       // Get all WalletWhitelistedOp events
       console.log('Fetching WalletWhitelistedOp events...');
-      const events = await publicClient.getLogs({
+      const events = await getLogsInChunks(publicClient, {
         address: contractAddress,
         event: parseAbiItem('event WalletWhitelistedOp(address indexed target, address indexed operator, uint64 whitelistLockTime, uint8 operation)'),
         fromBlock: BigInt(0),
@@ -492,7 +574,7 @@ export function useAdminContract() {
 
       try {
         // Get TGEInitiated events
-        const events = await publicClient.getLogs({
+        const events = await getLogsInChunks(publicClient, {
           address: contractAddress,
           event: parseAbiItem('event TGEInitiated(uint256 totalRequiredTokens, uint256 timestamp)'),
           fromBlock: 0n,
@@ -801,13 +883,13 @@ export function useAdminContract() {
     try {
       // Get all role config update events
       const [limitEvents, quorumEvents] = await Promise.all([
-        publicClient.getLogs({
+        getLogsInChunks(publicClient, {
           address: contractAddress,
           event: parseAbiItem('event TransactionLimitUpdated(bytes32 indexed role, uint240 limit)'),
           fromBlock: 0n,
           toBlock: 'latest'
         }),
-        publicClient.getLogs({
+        getLogsInChunks(publicClient, {
           address: contractAddress,
           event: parseAbiItem('event QuorumUpdated(bytes32 indexed role, uint16 quorum)'),
           fromBlock: 0n,
@@ -1256,7 +1338,7 @@ export function useAdminContract() {
 
       try {
         // Fetch nonce events
-        const nonceEvts = await publicClient.getLogs({
+        const nonceEvts = await getLogsInChunks(publicClient, {
           address: contractAddress,
           event: parseAbiItem('event SupportedChainChanged(uint256 indexed chainId, address caller)'),
           fromBlock: 'earliest'
@@ -1271,7 +1353,7 @@ export function useAdminContract() {
         setNonceEvents(formattedNonceEvents)
 
         // Fetch bridge operation events
-        const bridgeOpEvts = await publicClient.getLogs({
+        const bridgeOpEvts = await getLogsInChunks(publicClient, {
           address: contractAddress,
           event: parseAbiItem('event BridgeOperationDetails(address indexed operator, uint8 opType, uint256 amount, uint256 chainId, uint256 timestamp)'),
           fromBlock: 'earliest'
@@ -1787,7 +1869,7 @@ export function useAdminContract() {
       if (!contractAddress) throw new Error('Contract address not found');
 
       // Get all AddressesAdded events
-      const addedEvents = await publicClient.getLogs({
+      const addedEvents = await getLogsInChunks(publicClient, {
         address: contractAddress,
         event: {
           type: 'event',
@@ -1801,7 +1883,7 @@ export function useAdminContract() {
       });
 
       // Get all AddressRemoved events
-      const removedEvents = await publicClient.getLogs({
+      const removedEvents = await getLogsInChunks(publicClient, {
         address: contractAddress,
         event: {
           type: 'event',
@@ -1815,7 +1897,7 @@ export function useAdminContract() {
       });
 
       // Get all SubstrateRewardsUpdated events
-      const rewardsEvents = await publicClient.getLogs({
+      const rewardsEvents = await getLogsInChunks(publicClient, {
         address: contractAddress,
         event: {
           type: 'event',

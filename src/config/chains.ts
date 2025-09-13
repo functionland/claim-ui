@@ -20,7 +20,7 @@ export const CHAIN_IDS = {
 
 // RPC Configuration
 export const RPC_URLS: Record<SupportedChain, string> = {
-  mainnet: `https://go.getblock.us/fd7b8edc55f744339da0893dc88175ec`,
+  mainnet: `https://rpc.flashbots.net`,
   sepolia: `https://eth-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
   hardhat: 'http://127.0.0.1:8545',
   iotex: 'https://babel-api.mainnet.iotex.one',
