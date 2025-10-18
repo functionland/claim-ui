@@ -267,20 +267,6 @@ export const GOVERNANCE_ABI = [
   },
   // Write functions
   {
-    inputs: [
-      { name: "proposalType", type: "uint8" },
-      { name: "id", type: "uint40" },
-      { name: "target", type: "address" },
-      { name: "role", type: "bytes32" },
-      { name: "amount", type: "uint96" },
-      { name: "tokenAddress", type: "address" }
-    ],
-    name: "createProposal",
-    outputs: [{ name: "", type: "bytes32" }],
-    stateMutability: "nonpayable",
-    type: "function"
-  },
-  {
     inputs: [{ name: "proposalId", type: "bytes32" }],
     name: "approveProposal",
     outputs: [],
@@ -384,18 +370,48 @@ export const GOVERNANCE_ABI = [
     type: "function"
   },
   {
-    inputs: [
-      { name: "proposalType", type: "uint8" },
-      { name: "id", type: "uint40" },
-      { name: "target", type: "address" },
-      { name: "role", type: "bytes32" },
-      { name: "amount", type: "uint96" },
-      { name: "tokenAddress", type: "address" }
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "proposalType",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint40",
+        "name": "id",
+        "type": "uint40"
+      },
+      {
+        "internalType": "address",
+        "name": "target",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "role",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint96",
+        "name": "amount",
+        "type": "uint96"
+      },
+      {
+        "internalType": "address",
+        "name": "tokenAddress",
+        "type": "address"
+      }
     ],
-    name: "createProposal",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function"
+    "name": "createProposal",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
     inputs: [{ name: "proposalId", type: "bytes32" }],

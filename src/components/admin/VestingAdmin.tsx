@@ -68,6 +68,7 @@ export function VestingAdmin() {
     checkRoleConfig,
     upgradeContract,
     emergencyAction,
+    checkTimelock,
   } = useAdminContract()
 
   const [isCreatingCap, setIsCreatingCap] = useState(false)
@@ -152,6 +153,31 @@ export function VestingAdmin() {
       setError(null)
       setIsAddingWallet(true)
       
+      // Validate inputs
+      if (!formData.walletAddress || !formData.capId || !formData.amount) {
+        setError("Please fill in all required fields (Wallet Address, Cap ID, Amount)")
+        return
+      }
+
+      // Validate wallet address
+      if (!ethers.isAddress(formData.walletAddress)) {
+        setError("Invalid wallet address")
+        return
+      }
+
+      // Validate amount
+      if (Number(formData.amount) <= 0) {
+        setError("Amount must be greater than 0")
+        return
+      }
+
+      // Validate cap exists
+      const capExists = vestingCapTable.find(cap => cap.capId === Number(formData.capId))
+      if (!capExists) {
+        setError(`Cap ID ${formData.capId} does not exist. Please create the cap first.`)
+        return
+      }
+
       // Validate note length - bytes32 can only store up to 32 bytes
       if (formData.note && formData.note.length > 31) {
         setError("Note must be 31 characters or less (bytes32 limit)")
@@ -611,7 +637,7 @@ export function VestingAdmin() {
                 fullWidth
                 label="Wallet Address"
                 value={formData.walletAddress}
-                onChange={(e) => setFormData({ ...formData, walletAddress: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, walletAddress: e.target.value.trim() })}
                 helperText="Beneficiary wallet address"
               />
             </Grid>
@@ -718,7 +744,7 @@ export function VestingAdmin() {
                 fullWidth
                 label="New Implementation Address"
                 value={formData.upgradeAddress || ''}
-                onChange={(e) => setFormData({ ...formData, upgradeAddress: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, upgradeAddress: e.target.value.trim() })}
                 helperText="Enter the new contract implementation address"
               />
             </Grid>

@@ -702,7 +702,7 @@ export function AirdropAdmin() {
                 fullWidth
                 label="Wallet Address"
                 value={formData.walletAddress}
-                onChange={(e) => setFormData({ ...formData, walletAddress: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, walletAddress: e.target.value.trim() })}
                 helperText="Beneficiary wallet address"
               />
             </Grid>

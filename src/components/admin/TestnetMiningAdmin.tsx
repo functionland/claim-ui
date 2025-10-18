@@ -900,7 +900,7 @@ export function TestnetMiningAdmin() {
                 fullWidth
                 label="Wallet Address"
                 value={formData.walletAddress}
-                onChange={(e) => setFormData({ ...formData, walletAddress: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, walletAddress: e.target.value.trim() })}
                 helperText="Beneficiary wallet address"
               />
             </Grid>
@@ -1012,7 +1012,7 @@ export function TestnetMiningAdmin() {
                 fullWidth
                 label="New Contract Address"
                 value={formData.upgradeAddress}
-                onChange={(e) => setFormData({ ...formData, upgradeAddress: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, upgradeAddress: e.target.value.trim() })}
                 helperText="Enter the new contract address"
               />
             </Grid>
@@ -1045,7 +1045,7 @@ export function TestnetMiningAdmin() {
                 fullWidth
                 label="New Implementation Address"
                 value={formData.upgradeAddress || ''}
-                onChange={(e) => setFormData({ ...formData, upgradeAddress: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, upgradeAddress: e.target.value.trim() })}
                 helperText="Enter the new contract implementation address"
               />
             </Grid>
