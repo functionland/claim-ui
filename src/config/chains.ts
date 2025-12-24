@@ -21,13 +21,13 @@ export const CHAIN_IDS = {
 // RPC Configuration
 export const RPC_URLS: Record<SupportedChain, string> = {
   mainnet: `https://rpc.flashbots.net`,
-  sepolia: `https://eth-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
+  sepolia: `https://1rpc.io/sepolia`,
   hardhat: 'http://127.0.0.1:8545',
   iotex: 'https://babel-api.mainnet.iotex.one',
   'skale-testnet': 'https://testnet.skalenodes.com/v1/juicy-low-small-testnet',
   "skale": 'https://mainnet.skalenodes.com/v1/elated-tan-skat',
   sfi: 'https://rpc-testnet.singularityfinance.ai',
-  base: `https://base.api.pocket.network`,
+  base: `https://base-rpc.publicnode.com`,
   'base-sepolia': 'https://sepolia.base.org',
 }
 
