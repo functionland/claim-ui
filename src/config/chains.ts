@@ -27,7 +27,7 @@ export const RPC_URLS: Record<SupportedChain, string> = {
   'skale-testnet': 'https://testnet.skalenodes.com/v1/juicy-low-small-testnet',
   "skale": 'https://mainnet.skalenodes.com/v1/elated-tan-skat',
   sfi: 'https://rpc-testnet.singularityfinance.ai',
-  base: `https://base-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
+  base: `https://base.api.pocket.network`,
   'base-sepolia': 'https://sepolia.base.org',
 }
 
